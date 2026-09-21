@@ -1,0 +1,11 @@
+**/__pycache__/
+**/.home/
+**/.tmp/
+**/build/
+**/*.o
+**/*.so
+
+01_hip_vector_add/vector_add
+02_hip_block_reduction/block_reduction
+03_hip_multistage_reduction/multistage_reduction
+04_pytorch_hip_vector_add/vector_add_kernel.hip

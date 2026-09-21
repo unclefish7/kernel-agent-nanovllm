@@ -1,0 +1,34 @@
+services:
+  rocm-dev:
+    image: jerryjwc/rocm-dev:10.0
+    pull_policy: never
+
+    container_name: kernel-agent-rocm-dev
+    hostname: kernel-agent-rocm-dev
+
+    stdin_open: true
+    tty: true
+
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+
+    ipc: host
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+
+    working_dir: /workspace/00_environment_check
+
+    command: sleep infinity
