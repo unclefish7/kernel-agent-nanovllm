@@ -1,6 +1,7 @@
 **/__pycache__/
 **/.home/
 **/.tmp/
+**/.triton_cache/
 **/build/
 **/*.o
 **/*.so
@@ -9,3 +10,4 @@
 02_hip_block_reduction/block_reduction
 03_hip_multistage_reduction/multistage_reduction
 04_pytorch_hip_vector_add/vector_add_kernel.hip
+07_pytorch_hip_tiled_softmax/tiled_softmax_kernel.hip

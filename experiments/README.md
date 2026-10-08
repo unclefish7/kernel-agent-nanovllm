@@ -11,6 +11,10 @@ Docker Compose 配置放在本目录根部。
 - `02_hip_block_reduction/`：使用 LDS 和同步完成 Block 内合作归约。
 - `03_hip_multistage_reduction/`：通过多个顺序执行的 kernel 完成全 GPU 归约。
 - `04_pytorch_hip_vector_add/`：将手写 HIP kernel 包装为 PyTorch 自定义扩展。
+- `05_triton_block_sum/`：使用 Triton Program 和 `tl.sum` 完成块内归约。
+- `06_triton_tiled_softmax/`：用二维 Grid、二维 Tile 和两次归约实现 Softmax。
+- `07_pytorch_hip_tiled_softmax/`：用 HIP Block、LDS 和两次归约实现相同 Softmax。
+- `08_softmax_benchmark/`：比较 PyTorch、Triton 和 HIP Softmax 的 GPU 延迟。
 
 ## 本地镜像要求
 
