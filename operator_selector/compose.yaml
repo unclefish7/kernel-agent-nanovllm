@@ -1,0 +1,51 @@
+name: operator-selector
+
+services:
+  rocm-dev:
+    image: jerryjwc/rocm-dev:10.0
+    pull_policy: never
+    container_name: operator-selector-rocm-dev
+    hostname: operator-selector-rocm-dev
+    stdin_open: true
+    tty: true
+    network_mode: host
+    ipc: host
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    env_file:
+      - path: ../references/reps/KernelBench/.env
+        required: false
+      - path: .env
+        required: false
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      TMPDIR: /workspace/operator_selector/cache/tmp
+      XDG_CACHE_HOME: /workspace/operator_selector/cache
+      HF_HOME: /workspace/operator_selector/cache/huggingface
+      TRITON_CACHE_DIR: /workspace/operator_selector/cache/triton
+      AMD_COMGR_CACHE_DIR: /workspace/operator_selector/cache/comgr
+      PIP_CACHE_DIR: /workspace/operator_selector/cache/pip
+      CANDIDATE_SOURCE: /references/swiglu_fwd.py
+      KERNELBENCH_TIMING_SOURCE: /references/timing.py
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace/operator_selector
+      - type: bind
+        source: ../references/reps/GEAK-eval/geak_eval/data/TritonBench/data/TritonBench_G_v1/swiglu_fwd.py
+        target: /references/swiglu_fwd.py
+        read_only: true
+      - type: bind
+        source: ../references/reps/KernelBench/src/kernelbench/timing.py
+        target: /references/timing.py
+        read_only: true
+    working_dir: /workspace/operator_selector
+    command: [sh, -c, "mkdir -p cache/tmp && exec sleep infinity"]
