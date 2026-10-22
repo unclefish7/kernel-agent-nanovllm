@@ -1,0 +1,34 @@
+{
+  "rmsnorm_fused.py": {
+    "repository": "https://github.com/AMD-AGI/GEAK-eval",
+    "commit": "453b0218c0062dde6018529e965d9772ea80c788",
+    "path": "geak_eval/data/TritonBench/data/TritonBench_G_v1/rmsnorm_fused.py",
+    "upstream_sha256": "4d1418788943919566f7fb7fe891c6268f9810b7a68bb26f99bed0eab0ec25d2",
+    "vendored_sha256": "0eb10bd856996873b0c8404734be375bbc1d6f1a15d790213e1b57a74bdce8d7",
+    "note": "仅保留原始前向定义及其依赖；未修改保留的函数和 kernel 正文"
+  },
+  "rmsnorm_implementation.py": {
+    "repository": "https://github.com/AMD-AGI/GEAK-eval",
+    "commit": "453b0218c0062dde6018529e965d9772ea80c788",
+    "path": "geak_eval/data/TritonBench/data/TritonBench_G_v1/rmsnorm_implementation.py",
+    "upstream_sha256": "518bca807cf5a6cc7f08b73d50bd696bc6bf3ba39eed25e78c4e1b9b91f9331d",
+    "vendored_sha256": "75e21ef9f8846629b71f6542f57b57a25ae4afa01fe00183ce055cf19c21d148",
+    "note": "仅保留原始前向定义及其依赖；未修改保留的函数和 kernel 正文"
+  },
+  "layer_norm_ops.py": {
+    "repository": "https://github.com/AMD-AGI/GEAK-eval",
+    "commit": "453b0218c0062dde6018529e965d9772ea80c788",
+    "path": "geak_eval/data/TritonBench/data/TritonBench_G_v1/layer_norm_ops.py",
+    "upstream_sha256": "8a66412462e46a39e9ee8b599fa03ec819d8340e6dffccdb1fbe710786dce4c9",
+    "vendored_sha256": "b1252fd25bb492e6dcd2ea1bce1fc572fd63c0464a1eed90c65b0a8e0e8e4f74",
+    "note": "仅保留原始前向定义及其依赖；未修改保留的函数和 kernel 正文"
+  },
+  "swiglu_triton.py": {
+    "repository": "https://github.com/AMD-AGI/GEAK-eval",
+    "commit": "453b0218c0062dde6018529e965d9772ea80c788",
+    "path": "geak_eval/data/TritonBench/data/TritonBench_G_v1/swiglu_triton.py",
+    "upstream_sha256": "a432b7b086474d78eb17839414657770d4b170f64a7197265fa3634db315f399",
+    "vendored_sha256": "1f3a2de8c3dc7a2e5395902e000b17369ef215bced6e80d9c113fa7b5f1b3e84",
+    "note": "仅保留原始前向定义及其依赖；未修改保留的函数和 kernel 正文"
+  }
+}

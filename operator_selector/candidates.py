@@ -98,6 +98,8 @@ def execute(steps, operators, values):
     for step in steps:
         result = operators[step["op"]](*(values[name] for name in step["inputs"]))
         if isinstance(step["output"], list):
+            if not isinstance(result, (tuple, list)) or len(result) != len(step["output"]):
+                raise ValueError(f"{step['op']} 的实际返回值与 output 数量不匹配")
             values.update(zip(step["output"], result))
         else:
             values[step["output"]] = result
