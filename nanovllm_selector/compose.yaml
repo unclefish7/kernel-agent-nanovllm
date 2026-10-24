@@ -1,0 +1,49 @@
+name: nanovllm-selector
+
+services:
+  rocm-dev:
+    image: jerryjwc/rocm-dev:10.0
+    pull_policy: never
+    container_name: nanovllm-selector-rocm-dev
+    hostname: nanovllm-selector-rocm-dev
+    stdin_open: true
+    tty: true
+    network_mode: host
+    ipc: host
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    environment:
+      HIP_VISIBLE_DEVICES: "0"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /workspace/nano-vllm
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      TMPDIR: /workspace/nanovllm_selector/cache/tmp
+      XDG_CACHE_HOME: /workspace/nanovllm_selector/cache
+      HF_HOME: /workspace/nanovllm_selector/cache/huggingface
+      TRITON_CACHE_DIR: /workspace/nanovllm_selector/cache/triton
+      AMD_COMGR_CACHE_DIR: /workspace/nanovllm_selector/cache/comgr
+      TORCHINDUCTOR_CACHE_DIR: /workspace/nanovllm_selector/cache/inductor
+      TORCH_EXTENSIONS_DIR: /workspace/nanovllm_selector/cache/extensions
+      PIP_CACHE_DIR: /workspace/nanovllm_selector/cache/pip
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace/nanovllm_selector
+      - type: bind
+        source: ../nano-vllm
+        target: /workspace/nano-vllm
+        read_only: true
+      - type: bind
+        source: ../tmp
+        target: /workspace/tmp
+    working_dir: /workspace/nanovllm_selector
+    command: [sh, -c, "mkdir -p cache/tmp outputs && exec sleep infinity"]

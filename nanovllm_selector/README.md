@@ -2,7 +2,30 @@
 
 ## 1. 当前状态与阶段目标
 
-**本目录目前只有计划文档，没有实现、运行命令或新的实验结果。** 本次整理没有修改 `nano-vllm/`，没有启动推理、调用 API、安装依赖或下载权重。
+**第一步原生推理基线已完成冒烟验证，尚未实现 Agent 接入。** 已在独立 Compose 容器内加载真实 Qwen3-0.6B，使用 MI100 单卡、BF16、小批量和 eager 模式完成文本生成、分块 prefill、多步 decode 和缓存复用。`nano-vllm/` 源码未修改；不将冒烟通过表述为严格数值等价或性能优化。
+
+用户已将模型下载到宿主机 `tmp/models/Qwen3-0.6B/`，容器内对应 `/workspace/tmp/models/Qwen3-0.6B/`。权重 SHA256 与下载元数据一致，311 个张量及配置、分词器均能离线读取。当前没有自动下载任务，也没有调用 Agent API。
+
+### 已完成的原生基线
+
+入口为 [baseline.py](baseline.py)，不依赖旧 `operator_selector/`，不安装替换算子。以下命令在宿主机仓库根目录执行，实际推理发生在新容器内：
+
+```bash
+docker exec nanovllm-selector-rocm-dev python -B baseline.py
+```
+
+容器已将工作目录设为 `/workspace/nanovllm_selector`。默认报告保存为宿主机 `nanovllm_selector/outputs/baseline.json`；也可在容器 shell 中执行 `python -B baseline.py`。
+
+本次运行环境为 PyTorch `2.12.0+rocm10.0.0`、HIP `7.15.26333`、Transformers `4.57.3`，nano-vLLM 子模块版本为 `04ea53a899650326fd1a3f90350d9fc83b8130e5`。配置为 BF16、单卡、eager、最大上下文 512、每次最多调度 128 个 token、最多 2 个请求、显存预算 25%。未安装 FlashAttention，Attention 使用仓库已有的 PyTorch math 兼容路径；eager 指禁用引擎的图捕获，原模块的 `torch.compile` 装饰器仍保持不变。
+
+实际验证结果：
+
+- 依赖检查和已有 4 项单元测试通过。
+- 原生随机采样完成中英文双请求生成；包括中文自我介绍和 `2 + 3 = 5`。
+- 固定输入的 1 次 prefill 和 7 步 decode，与同一 checkpoint、同一 BF16 dtype 的 Transformers 比较；8 步最高分 token 全部一致。
+- 281-token 提示词首次经过 3 次 prefill 和 7 步 decode；重复请求的首步复用 256 个缓存 token，只计算剩余 25 个。两次生成 token 完全一致。
+
+**数值边界：** 上述 Transformers 对照是在相同 token 前缀上进行，最大 logit 绝对误差为 `0.6875`，没有通过或宣称严格 `assert_close`。当前结果证明这些请求的原生完整推理链路跑通，不证明所有输入下与 Transformers 数值等价。后续替换算子需要另行制定数值门槛，并与同配置的 nano-vLLM 原生路径逐步对照；不能把本次 token 一致当作全面正确性保证。本次也不是正式性能 benchmark，不使用包含编译、调试和对照开销的耗时宣称推理性能。
 
 阶段目标：在 AMD MI100 上加载真实 Qwen3 checkpoint，通过已有 nano-vLLM 完整生成文本；让 Agent 在指定的计算位置选择已有实现，验证这些实现确实进入了真实推理，并且结果正确。
 
@@ -163,7 +186,7 @@ Agent 获得原模型 forward、MLP/Norm 源码、nano-vLLM 接口说明、实�
 
 ## 8. 阶段验收清单与边界
 
-- [ ] 真实 checkpoint 的原生 nano-vLLM 基线通过，不再用随机小模型代替。
+- [x] 真实 checkpoint 的原生 nano-vLLM 基线冒烟通过，不再用随机小模型代替；严格数值等价不在本次通过范围内。
 - [ ] Agent 使用真实运行规格选择已登记实现，保存方案和原始 API 记录。
 - [ ] 三个接口保持权重、残差、dtype、shape、device/stream 与输入修改约定。
 - [ ] 至少一个接入点在真实推理中实际调用非原生候选，并通过正确性验证；如果 Agent 全部选原生，只证明回退和流程，不替代优化候选接入验收，也不能人工改选后伪称 Agent 的决定。
@@ -175,10 +198,30 @@ Agent 获得原模型 forward、MLP/Norm 源码、nano-vLLM 接口说明、实�
 
 ## 9. 环境、目录与操作约束
 
-后续优先复用本地 ROCm 镜像，为本目录建立独立 Docker Compose 配置和容器。源码和 `nano-vllm/` 通过 bind mount 共享，不 COPY 进镜像；不复用旧原型的容器作为新方案的固定依赖。**目前没有创建 Compose 文件或启动这个新容器。**
+已复用本地镜像 `jerryjwc/rocm-dev:10.0`，通过本目录的 [compose.yaml](compose.yaml) 建立独立容器 `nanovllm-selector-rocm-dev`。源码和 `nano-vllm/` 通过 bind mount 共享，不 COPY 进镜像；其中 `nano-vllm/` 在容器内只读挂载。旧 `operator-selector-rocm-dev` 容器已移除，其宿主机文件和镜像保留。
+
+从仓库根目录管理容器：
+
+```bash
+docker compose -f nanovllm_selector/compose.yaml up -d --pull never --no-build
+docker exec -it nanovllm-selector-rocm-dev /usr/bin/zsh
+# 用完暂时停止；需要删除容器时再用 down，不会删除宿主机挂载文件。
+docker compose -f nanovllm_selector/compose.yaml stop
+```
+
+依赖清单见 [requirements.txt](requirements.txt)。当前容器已安装该清单，Torch/ROCm 沿用镜像；没有调用 Agent API。重建容器后需要重新安装这些容器内依赖，不需要重新下载宿主机已有模型。以下检查在容器内执行：
+
+```bash
+python -B -m pip check
+python -B -m unittest discover -s /workspace/nano-vllm/tests -v
+```
+
+已有检查结果为依赖检查通过，4 项单元测试通过，分别覆盖 CPU/GPU Attention 兼容路径、预热分块边界和 FP32 残差。容器只暴露 GPU 0；完整模型的原生冒烟结果及 BF16 数值对照边界见本文开头。
 
 运行前先确认本地模型位置。缺少权重时，说明下载来源、保存路径、缓存路径和预计大小，获得确认后再下载；遵守仓库关于 `tmp/` 和目录外写入的要求。不在检查环境时隐式拉取镜像、更新依赖或下载模型。
 
-新增运行产物计划放在本目录的 `outputs/`，包括规格、方案、验证、调用命中与测量记录；缓存显式设置在本目录 `cache/`，密钥仅存本地环境文件。开始实现前补充相应忽略规则，不能提交权重、密钥、缓存或运行产物。目前这些目录和文件都没有创建，因此本次没有新的临时产物需要清理。
+运行产物放在本目录的 `outputs/`；缓存通过 Compose 环境变量显式设置在本目录 `cache/`。当前产物包括安装日志 `outputs/install.log`、依赖检查 `outputs/pip_check.log`、单元测试 `outputs/unit_tests.log`、早期失败下载日志 `outputs/model_download.log`、原生生成日志 `outputs/native_smoke.log`、初次数值诊断 `outputs/reference_probe.log`，以及可复现入口生成的 `outputs/baseline.log` 和 `outputs/baseline.json`。`outputs/`、`cache/`、本地 `.env` 及仓库根目录 `tmp/` 已加入忽略规则，不提交模型、密钥或运行产物。
 
-后续若需要修改 nano-vLLM，应保持改动集中，先在子模块单独提交，再在父仓库提交引用更新；按仓库规范处理 fork 上的对应提交。当前本目录只有这份计划，不包含子模块改动或可执行的新命令。
+上述报告及日志如不再需要，可逐个用 `rm nanovllm_selector/outputs/<文件名>` 清理；缓存可在停止相关任务后清理 `nanovllm_selector/cache/` 中对应子目录，下次运行会重新生成或重新编译。这里仅说明清理方法，没有执行清理；`docker compose down` 不会清理这些宿主机文件，也不会删除模型。
+
+后续若需要修改 nano-vLLM，应保持改动集中，先在子模块单独提交，再在父仓库提交引用更新；按仓库规范处理 fork 上的对应提交。当前原生基线未修改子模块，尚无 Agent 接入结果或正式性能对比数据。
