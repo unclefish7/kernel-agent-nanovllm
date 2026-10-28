@@ -2,9 +2,54 @@
 
 ## 1. 当前状态与阶段目标
 
-**第一步原生推理基线已完成冒烟验证，尚未实现 Agent 接入。** 已在独立 Compose 容器内加载真实 Qwen3-0.6B，使用 MI100 单卡、BF16、小批量和 eager 模式完成文本生成、分块 prefill、多步 decode 和缓存复用。`nano-vllm/` 源码未修改；不将冒烟通过表述为严格数值等价或性能优化。
+**原生基线和第一版 MLP 激活 Agent 接入均已完成冒烟验证。** 本轮按用户要求优先打通“Agent 决策能安装并实际执行”，完整数值验收和性能调优后续再做。当前只接 MLP 激活，尚未接 RMSNorm/Add+RMSNorm。`nano-vllm/` 源码未修改；不将接入通过表述为严格数值等价或性能优化。
 
-用户已将模型下载到宿主机 `tmp/models/Qwen3-0.6B/`，容器内对应 `/workspace/tmp/models/Qwen3-0.6B/`。权重 SHA256 与下载元数据一致，311 个张量及配置、分词器均能离线读取。当前没有自动下载任务，也没有调用 Agent API。
+用户已将模型下载到宿主机 `tmp/models/Qwen3-0.6B/`，容器内对应 `/workspace/tmp/models/Qwen3-0.6B/`。权重 SHA256 与下载元数据一致，311 个张量及配置、分词器均能离线读取。当前没有自动下载任务；本轮只在选择阶段调用一次 DeepSeek，正式运行不调用 API。
+
+### 已完成的 Agent 接入：只选 MLP 激活
+
+本轮入口为 [run_selector.py](run_selector.py)，分三步，所有实验在已有的新容器 `nanovllm-selector-rocm-dev` 内运行：
+
+| 阶段 | 实际做什么 | 主要产物 |
+| --- | --- | --- |
+| prepare | 用真实权重执行原生模型，通过 hook 采集全部 28 层激活的实际输入规格；读取 Transformers 和 nano-vLLM 源码 | `context.json`：源码、接口、5 种输入规格、硬件、候选和版本绑定 |
+| select | DeepSeek 阅读 context，只返回候选 ID 和理由；检查 ID、替换位置及方案结构 | `request.json`、`response.json`、`plan.json` |
+| run | 离线读取 plan，在真实权重加载后、原 warmup 前安装激活模块，再执行原 `generate()` | `integration.json`：选择、逐层调用、回退、生成和恢复结果 |
+
+候选只有 `native` 和 `geak_packed_swiglu`。后者是现有 GEAK-eval 的 `_swiglu_fwd`，直接接收 packed gate/up；独立保存在 [vendor/swiglu_fwd.py](vendor/swiglu_fwd.py)，来源版本、哈希及移除导入测试的说明见 [manifest.json](vendor/manifest.json)，保留 Apache-2.0 许可证。不导入旧原型，不从零写 kernel，也不执行 Agent 返回的代码。
+
+Agent 本次真实选择了 `geak_packed_swiglu`，理由是 `[N, 6144]` 的连续 BF16 输入、gate/up 两半布局以及输出规格与候选一致；同时承认舍入和性能尚未验证。没有人工改写决定。全部 28 层安装成功，真实生成中累计调用候选 504 次：prefill 112 次、decode 392 次；warmup 另计 28 次，回退为 0。双请求和 281-token 提示词均生成了指定的 8 个 token；这是有限长度的接入测试，不是文本质量评测。
+
+安装器保留参数对象，结束后可恢复原激活。通过局部替换 `ModelRunner.warmup_model` 在原构造流程的正确时点安装；构造完成后这个类方法补丁立即撤销。该方式仅用于本轮固定单进程、TP=1、eager 试验，不声称已支持多进程或图捕获。
+
+当前只做方案结构、支持范围、返回规格及基本接口测试。非连续输入等不支持规格会走原生回退并记录原因；候选编译/执行异常直接报错，不会静默回退后伪称成功。完整模型的 logits 正确性、生成一致性与加速比尚未验证。上游 autotune 原样保留，配置质量未评估。
+
+从宿主机仓库根目录复现：
+
+```bash
+# 1. 原生模型采集真实输入，不调用 API。
+docker exec nanovllm-selector-rocm-dev python -B run_selector.py prepare
+
+# 2. 仅此步骤需要 API。先参照 .env.example 创建本目录的 .env 并填写密钥。
+docker exec --env-file nanovllm_selector/.env \
+  nanovllm-selector-rocm-dev python -B run_selector.py select
+
+# 3. 直接重放已有方案，无需 API 密钥，不重新选择。
+docker exec nanovllm-selector-rocm-dev python -B run_selector.py run
+```
+
+默认产物在宿主机 `nanovllm_selector/outputs/mlp_agent/`。需要保留不同试跑时，三条命令都传入同一个新的 `--run-dir outputs/<试跑名>`，不要覆盖已有记录；prepare/select 失败时不要继续 run，以免误用旧方案。方案绑定 checkpoint、配置、dtype、GPU 架构、Torch/Triton、原生目标源码和候选版本；不匹配时拒绝安装。
+
+本次首跑通过 `docker exec --env-file operator_selector/.env` 只注入旧位置中已有的 DeepSeek 配置，没有复制密钥、复用旧容器或导入旧模块。后续可将配置独立放在本目录 `.env`；它已忽略。请求记录只有正文，不记录 Authorization。正式运行只读方案，不需要 `.env`。目前 API 请求只发送公开模块源码和规格，不发送权重数值。
+
+新增逻辑分工：
+
+- [agent.py](agent.py)：固定任务边界的 prompt、一次 API 请求、解析与保存选择。
+- [candidates.py](candidates.py)：候选目录、支持检查、安装/恢复、按 warmup/prefill/decode 统计调用。
+- [run_selector.py](run_selector.py)：采集、决策、完整生成三个命令的编排。
+- [test_selector.py](test_selector.py)：5 项接口测试，包括非法方案拒绝、权重/恢复、回退、模拟 API 解析和 MI100 当前 stream 调用；不代表完整数值验收。
+
+检查命令：`docker exec nanovllm-selector-rocm-dev python -B -m unittest -v test_selector`。原生模式仍使用下面的 `baseline.py`，不会导入安装器或请求 Agent。
 
 ### 已完成的原生基线
 
@@ -107,8 +152,8 @@ Transformers 的 Qwen3 MLP 分别计算 gate_proj 和 up_proj，而本仓库 nan
 参考源码 + 接口约定 + 实测规格 + 硬件 + 已验证的候选
     ↓ Agent 选择
 结构化方案：每个接入点使用哪个候选
-    ↓ 静态检查、真实输入正确性检查
-可安装的已验证方案
+    ↓ 静态及支持范围检查（当前已实现）；完整数值检查后续补充
+可安装的接入试验方案（尚非完整正确性验收通过的方案）
 ```
 
 采集和检查可以额外执行参考计算，但这些开销不算入正式推理性能。优先保存规格和误差统计，不默认保存大量激活张量。
@@ -120,7 +165,7 @@ Transformers 的 Qwen3 MLP 分别计算 gate_proj 和 up_proj，而本仓库 nan
     ↓
 按原映射加载真实权重
     ↓
-读取已验证方案，安装选中的实现
+读取匹配当前环境的方案，安装选中的实现
     ↓
 warmup，随后由原框架管理缓存和执行
     ↓
@@ -131,7 +176,7 @@ warmup，随后由原框架管理缓存和执行
 
 ## 6. 需要准备的模块、输入和产出
 
-以下是职责规划，不代表这些文件已经存在；先保持一个入口和少量清楚的模块，不复制旧原型的交叉调用结构。
+以下是完整阶段的职责划分。目前已实现上文所述的 MLP 接入子集，候选完整数值验证、多接口覆盖和性能评测仍是规划，不复制旧原型的交叉调用结构。
 
 | 职责 | 输入 | 做什么 | 产出 |
 | --- | --- | --- | --- |
@@ -161,6 +206,8 @@ Agent 获得原模型 forward、MLP/Norm 源码、nano-vLLM 接口说明、实�
 
 ### 第二步：只接入 MLP 激活
 
+当前“Agent 返回方案并在真实生成中执行”的接入子目标已通过；下列完整数值完成标准尚未达到，不因调用成功而打勾。
+
 - 采集真实 packed 输入规格，准备原生实现与至少一个兼容的开源优化候选。
 - 先人工指定候选用于诊断，验证接口及同一输入上的输出，再让 Agent 选择；两种结果必须区分记录。
 - 先在单层试装，通过后扩展到同规格层，确认完整 generate 走到了所选实现。
@@ -187,9 +234,9 @@ Agent 获得原模型 forward、MLP/Norm 源码、nano-vLLM 接口说明、实�
 ## 8. 阶段验收清单与边界
 
 - [x] 真实 checkpoint 的原生 nano-vLLM 基线冒烟通过，不再用随机小模型代替；严格数值等价不在本次通过范围内。
-- [ ] Agent 使用真实运行规格选择已登记实现，保存方案和原始 API 记录。
+- [x] Agent 使用真实运行规格选择已登记的 MLP 激活实现，保存方案和原始 API 记录。
 - [ ] 三个接口保持权重、残差、dtype、shape、device/stream 与输入修改约定。
-- [ ] 至少一个接入点在真实推理中实际调用非原生候选，并通过正确性验证；如果 Agent 全部选原生，只证明回退和流程，不替代优化候选接入验收，也不能人工改选后伪称 Agent 的决定。
+- [ ] 至少一个接入点在真实推理中实际调用非原生候选，并通过正确性验证；目前真实调用已证明，完整正确性验证仍待完成。如果 Agent 全部选原生，只证明回退和流程，不替代优化候选接入验收，也不能人工改选后伪称 Agent 的决定。
 - [ ] prefill、多步 decode、小批量和缓存复用均经过验证，实际调用路径有证据。
 - [ ] 原生/Agent 开关可用，不支持的条件可以安全回退并记录原因。
 - [ ] 有相同配置下的完整推理测量；不能把片段加速比当作整个模型的加速比。
@@ -209,7 +256,7 @@ docker exec -it nanovllm-selector-rocm-dev /usr/bin/zsh
 docker compose -f nanovllm_selector/compose.yaml stop
 ```
 
-依赖清单见 [requirements.txt](requirements.txt)。当前容器已安装该清单，Torch/ROCm 沿用镜像；没有调用 Agent API。重建容器后需要重新安装这些容器内依赖，不需要重新下载宿主机已有模型。以下检查在容器内执行：
+依赖清单见 [requirements.txt](requirements.txt)。当前容器已具备清单中的依赖，Torch/ROCm 沿用镜像；新增的 requests 也已在容器中，无需再次下载。重建容器后需要重新安装这些容器内依赖，不需要重新下载宿主机已有模型。以下检查在容器内执行：
 
 ```bash
 python -B -m pip check
@@ -220,8 +267,10 @@ python -B -m unittest discover -s /workspace/nano-vllm/tests -v
 
 运行前先确认本地模型位置。缺少权重时，说明下载来源、保存路径、缓存路径和预计大小，获得确认后再下载；遵守仓库关于 `tmp/` 和目录外写入的要求。不在检查环境时隐式拉取镜像、更新依赖或下载模型。
 
-运行产物放在本目录的 `outputs/`；缓存通过 Compose 环境变量显式设置在本目录 `cache/`。当前产物包括安装日志 `outputs/install.log`、依赖检查 `outputs/pip_check.log`、单元测试 `outputs/unit_tests.log`、早期失败下载日志 `outputs/model_download.log`、原生生成日志 `outputs/native_smoke.log`、初次数值诊断 `outputs/reference_probe.log`，以及可复现入口生成的 `outputs/baseline.log` 和 `outputs/baseline.json`。`outputs/`、`cache/`、本地 `.env` 及仓库根目录 `tmp/` 已加入忽略规则，不提交模型、密钥或运行产物。
+运行产物放在本目录的 `outputs/`；缓存通过 Compose 环境变量显式设置在本目录 `cache/`。原生产物包括安装日志 `outputs/install.log`、依赖检查 `outputs/pip_check.log`、单元测试 `outputs/unit_tests.log`、早期失败下载日志 `outputs/model_download.log`、原生生成日志 `outputs/native_smoke.log`、初次数值诊断 `outputs/reference_probe.log`，以及 `outputs/baseline.log` 和 `outputs/baseline.json`。Agent 接入产物在 `outputs/mlp_agent/`；本次另有 `outputs/mlp_prepare.log`、`outputs/mlp_select.log`、`outputs/mlp_run.log`、`outputs/selector_tests.log`、`outputs/selector_regression.log` 和 `outputs/selector_pip_check.log`。`outputs/`、`cache/`、本地 `.env` 及仓库根目录 `tmp/` 已加入忽略规则，不提交模型、密钥或运行产物。
 
 上述报告及日志如不再需要，可逐个用 `rm nanovllm_selector/outputs/<文件名>` 清理；缓存可在停止相关任务后清理 `nanovllm_selector/cache/` 中对应子目录，下次运行会重新生成或重新编译。这里仅说明清理方法，没有执行清理；`docker compose down` 不会清理这些宿主机文件，也不会删除模型。
 
-后续若需要修改 nano-vLLM，应保持改动集中，先在子模块单独提交，再在父仓库提交引用更新；按仓库规范处理 fork 上的对应提交。当前原生基线未修改子模块，尚无 Agent 接入结果或正式性能对比数据。
+Agent 子目录内的记录可逐个用 `rm nanovllm_selector/outputs/mlp_agent/<文件名>` 清理；删除 `plan.json` 后将不能直接重放，需重新 select。单元测试的临时文件位于 `cache/tmp/`，由 `TemporaryDirectory` 在测试结束时自动删除，其余编译缓存保留。当前未清理真实运行记录。
+
+后续若需要修改 nano-vLLM，应保持改动集中，先在子模块单独提交，再在父仓库提交引用更新；按仓库规范处理 fork 上的对应提交。当前原生基线和 MLP 接入均未修改子模块，尚无完整数值验收或正式性能对比数据。

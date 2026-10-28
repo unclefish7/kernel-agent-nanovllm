@@ -1,0 +1,10 @@
+{
+  "swiglu_fwd.py": {
+    "repository": "https://github.com/AMD-AGI/GEAK-eval",
+    "commit": "453b0218c0062dde6018529e965d9772ea80c788",
+    "path": "geak_eval/data/TritonBench/data/TritonBench_G_v1/swiglu_fwd.py",
+    "upstream_sha256": "f344de3b8235e03d77ac42132aa0a6f5c21350ba2aecc9bb3a9865e3e752af89",
+    "vendored_sha256": "4020569588d600e9cc741063a76cd8cf89f7756c6cd44bcd5a5dfdb82ad4919c",
+    "changes": "保留原始前向及 autotune 定义；仅增加本项目改动说明并移除导入时执行的测试。许可见 LICENSE。"
+  }
+}
