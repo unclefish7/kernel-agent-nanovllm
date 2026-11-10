@@ -6,6 +6,8 @@
 
 用户已将模型下载到宿主机 `tmp/models/Qwen3-0.6B/`，容器内对应 `/workspace/tmp/models/Qwen3-0.6B/`。权重 SHA256 与下载元数据一致，311 个张量及配置、分词器均能离线读取。当前没有自动下载任务；本轮只在选择阶段调用一次 DeepSeek，正式运行不调用 API。
 
+另有一条独立能力：从 HuggingFace 模型目录直接还原整张计算图（不依赖类名，靠 hook + aten 算子实测 + 对账），见第 10 节。这是"给 nano-vLLM 跑一个它没适配的模型"的前置步骤。
+
 ### 已完成的 Agent 接入：只选 MLP 激活
 
 本轮入口为 [run_selector.py](run_selector.py)，分三步，所有实验在已有的新容器 `nanovllm-selector-rocm-dev` 内运行：
@@ -274,3 +276,60 @@ python -B -m unittest discover -s /workspace/nano-vllm/tests -v
 Agent 子目录内的记录可逐个用 `rm nanovllm_selector/outputs/mlp_agent/<文件名>` 清理；删除 `plan.json` 后将不能直接重放，需重新 select。单元测试的临时文件位于 `cache/tmp/`，由 `TemporaryDirectory` 在测试结束时自动删除，其余编译缓存保留。当前未清理真实运行记录。
 
 后续若需要修改 nano-vLLM，应保持改动集中，先在子模块单独提交，再在父仓库提交引用更新；按仓库规范处理 fork 上的对应提交。当前原生基线和 MLP 接入均未修改子模块，尚无完整数值验收或正式性能对比数据。
+
+## 10. 计算图抽取（extract）
+
+`extract/` 解决的是另一类问题：**给一个 HuggingFace 模型目录，不读它的类名、只看它实际跑了什么，把整张计算图还原出来**。这是"跑一个 nano-vLLM 没适配的模型"的前置步骤——Qwen3 有现成实现所以不需要图，新模型没有实现，才需要把 HF 的规格翻译成图。
+
+当前是 M1：只做参考侧（HF）的图、只做 prefill、CPU/fp32、随机初始化权重（只读 `config.json`，不需要 safetensors）。参考图与 nano-vLLM 可执行图的差集在 M3。
+
+### 一条命令
+
+```bash
+# 容器内，工作目录 /workspace
+python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --check
+python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --text      # 终端树
+python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --summary   # Markdown 表
+python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdir nanovllm_selector/outputs/graph_qwen3
+```
+
+退出码：0 对账通过，1 对账未通过，2 出错。`--out` 只写 JSON，`--outdir` 一次写六种文件。
+
+### 输出（六种，JSON 给机器，其余给人）
+
+| 文件 | 用途 |
+| --- | --- |
+| `graph.json` | 机器可读的完整图：节点、边、张量形状、状态、证据 |
+| `graph.md` | 概览 + 逐节点表 + 内嵌 Mermaid |
+| `graph.mmd` | Mermaid 源码，可粘到任何支持 Mermaid 的地方 |
+| `graph.dot` | Graphviz 源码，需要的话自己 `dot -Tpng` |
+| `graph.svg` | 自带的离线分层布局，不依赖外部工具 |
+| `graph.html` | **推荐的入口**：内嵌 SVG + 算子覆盖 + 对账表 + 逐节点明细，双击即可看 |
+
+模板折叠：28 层结构相同，图上只画 1 个模板节点并标 `×28层`（JSON 里是 `instances: [0..27]`）。Qwen3-0.6B 折叠后 **22 个节点 / 28 条边**，展开是 453 个实例节点。层与层之间的两条边（残差直接喂下一层）单独标 `kind=layer`，不画在图上，避免出现假环。
+
+### 数据契约
+
+- `Node`：`id / op / inputs / outputs / state / attrs / impl / semantics / evidence / origin / template_id / instances`
+- `Edge`：`from_node / to_node / tensor / role / kind(data|state|layer)`
+- `evidence.kind`：`observed`（hook 实测）/ `dispatch`（aten 算子）/ `param`（参数形状）/ `source`（源码 file:line + sha256）/ `rule`（规则编号）
+
+**没有证据的标签不写。** `op` 的判定来自实测 aten 算子集合，不是模块类名：例如 `rsqrt + mean` 判 `rmsnorm`，`mm + 该模块 out_features == vocab_size` 判 `lm_head`。
+
+### 对账（`--check`，16 项）
+
+模块 427、命名参数 310、matmul 197、rmsnorm 113、silu 28、残差 add 56、embedding 1、lm_head 1，另查边端点存在、每节点至少 1 条证据、unknown 算子为 0。这些数字同时与 HF 模块树和计划 §8.1 的常量比对，两边都过才算通过。Qwen3-0.6B 当前 16/16。
+
+### 三个实现上的坑（都已修）
+
+1. **节点不是模块**：一个 `nn.Linear` 内部有 `mm/t/view` 四个 aten 算子，语义上只有一个矩阵乘；一个 `Qwen3DecoderLayer` 只做两次残差 add。所以节点 = "同一次模块调用里连续执行的一串非透明算子"，透明算子（view/transpose/reshape/…）只传播别名、不建节点。
+2. **权重不能当图输入**：权重常以 `weight.t()` 视图进入算子，张量对象变了但 storage 没变。只按对象身份过滤会多出 215 个"权重输入节点"，必须按 storage 过滤。
+3. **折叠会造假环**：第 0 层的残差输入来自 embedding，折叠后看起来像 `L*.residual_add@1 → L*.input_layernorm` 的回边。按原始层号判断跨层边并单独标记后，拓扑分层才正常。
+
+### 单测
+
+```bash
+python -B -m unittest -v nanovllm_selector.test_extract   # 17 项，约 48 秒
+```
+
+模型目录不存在时整组跳过，可用 `EXTRACT_MODEL` 指向别处。

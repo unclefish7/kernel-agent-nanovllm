@@ -1,0 +1,132 @@
+"""对外 API：`extract_graph(model_path) -> Graph`。
+
+这一层只做编排，所有判断都在下面各模块里，方便单独测试。
+"""
+
+from __future__ import annotations
+
+import platform
+import sys
+
+import torch
+import transformers
+
+from .decompose import GraphBuilder
+from .edges import build_edges, to_tensor_meta
+from .loader import load_model
+from .recorder import record_forward
+from .reconcile import reconcile
+from .schema import Graph
+from .template import fold
+
+__all__ = ["extract_graph"]
+
+
+def extract_graph(
+    model_path: str,
+    dtype: str = "float32",
+    device: str = "cpu",
+    seq_len: int = 8,
+    phases=("prefill",),
+    collapse_template: bool = True,
+    weights: bool = False,
+    trust_remote_code: bool = False,
+    batch_size: int = 1,
+    reconcile_graph: bool = True,
+) -> Graph:
+    """从一个 HuggingFace 模型目录重建计算图。
+
+    参数
+    ----
+    model_path : 本地模型目录（只需 config.json；weights=False 时不读权重）
+    dtype : float32 / float16 / bfloat16
+    device : cpu / cuda
+    seq_len : 造多长的输入序列
+    phases : M1 只支持 ("prefill",)
+    collapse_template : 是否把结构相同的层折成模板 + instances
+    """
+    if tuple(phases) != ("prefill",):
+        raise NotImplementedError("M1 只支持 prefill；decode 走 KV cache 路径，计划在 M2")
+
+    model, config = load_model(
+        model_path,
+        weights=weights,
+        dtype=dtype,
+        device=device,
+        trust_remote_code=trust_remote_code,
+    )
+
+    vocab = int(getattr(config, "vocab_size", 1000))
+    generator = torch.Generator().manual_seed(0)
+    input_ids = torch.randint(0, vocab, (batch_size, seq_len), generator=generator).to(device)
+
+    rec, _ = record_forward(model, input_ids)
+
+    builder = GraphBuilder(model, rec, config, dtype=dtype)
+    instance_nodes = builder.build(phase="prefill")
+    edges, all_nodes, edge_info = build_edges(instance_nodes, builder)
+    tensors = to_tensor_meta(builder)
+
+    if collapse_template:
+        graph_nodes, graph_edges, fold_report = fold(all_nodes, edges)
+    else:
+        graph_nodes, graph_edges, fold_report = all_nodes, edges, {"templates": len(all_nodes)}
+
+    report = (
+        reconcile(instance_nodes, all_nodes, edges, model, config, rec)
+        if reconcile_graph
+        else {"ok": True, "checks": [], "stats": {}}
+    )
+    report["stats"]["instance_nodes"] = len(instance_nodes)
+    report["stats"]["templates"] = fold_report.get("templates")
+    report["stats"]["template_mismatches"] = fold_report.get("mismatches", [])
+    report["stats"]["edges_unresolved"] = edge_info["unresolved"]
+    report["stats"]["graph_inputs"] = edge_info["inputs"]
+
+    meta = getattr(model, "_extract_meta", {})
+    graph = Graph(
+        model={
+            "model_path": meta.get("model_path"),
+            "model_type": meta.get("model_type"),
+            "architectures": meta.get("architectures"),
+            "num_layers": meta.get("num_layers"),
+            "config_sha256": meta.get("config_sha256"),
+            "weights_sha256": meta.get("weights_sha256"),
+            "weights_loaded": meta.get("weights_loaded"),
+        },
+        env={
+            "dtype": dtype,
+            "device": device,
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+            "python": sys.version.split()[0],
+            "platform": platform.platform(),
+        },
+        phases=list(phases),
+        nodes=graph_nodes,
+        edges=graph_edges,
+        tensors=tensors,
+        params=_collect_params(model),
+        graph_inputs=[n.id for n in graph_nodes if n.origin == "input"],
+        conflicts=report["stats"].get("template_mismatches", []),
+        reconcile=report,
+    )
+    problems = graph.validate()
+    report["validate_problems"] = problems
+    report["ok"] = bool(report.get("ok")) and not problems
+    return graph
+
+
+def _collect_params(model) -> list[dict]:
+    out = []
+    for name, p in model.named_parameters():
+        out.append(
+            {
+                "name": name,
+                "shape": list(p.shape),
+                "dtype": str(p.dtype).replace("torch.", ""),
+                "numel": int(p.numel()),
+                "storage": hex(p.untyped_storage().data_ptr()),
+            }
+        )
+    return out
