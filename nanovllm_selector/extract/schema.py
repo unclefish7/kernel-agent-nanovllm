@@ -50,11 +50,35 @@ class Evidence:
 
 @dataclass
 class TensorRef:
+    """节点的一个输入/输出。
+
+    只记 `tensor` 是"吃了哪个张量"，不够生成代码用：`SiluAndMul` 要求
+    打包张量的前一半是 gate、后一半是 up；`store_kvcache(key, value, ...)`
+    的 key/value 同形同源，传反了不报错、结果全错。所以要额外记清
+    "这个张量摆在这次调用的第几个参数位"。
+
+    - `index`：在节点 inputs/outputs 列表里的下标（0 起）。
+    - `path`：在原始调用里的位置表达式，如 `args[0]`、`args[1][2]`、
+      `kwargs['hidden_states']`；来自 aten 算子的合成输入记成
+      `aten.mul.Tensor#1` 这种形式（`#` 后是该算子的参数下标）。
+    - `arg_name`：该位置对应的形参名。模块调用从 `forward` 签名取，
+      aten 算子从 schema 取。取不到时为 None。
+    """
+
     tensor: str
     role: str | None = None
+    index: int | None = None
+    path: str | None = None
+    arg_name: str | None = None
 
     def to_dict(self) -> dict:
-        return {"tensor": self.tensor, "role": self.role}
+        return {
+            "tensor": self.tensor,
+            "role": self.role,
+            "index": self.index,
+            "path": self.path,
+            "arg_name": self.arg_name,
+        }
 
 
 @dataclass

@@ -126,10 +126,17 @@ def render_text(graph: Graph, width: int = 110) -> str:
     edges = graph.edges
     rank, _ = _ranks(nodes, edges)
     by_id = {n.id: n for n in nodes}
-    producers: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    # 按"目标节点 + 张量"索引生产者：这样一个节点的每条输入都能单独标出
+    # 它摆在参数的第几位、叫什么名字（这是生成代码时必须的信息）。
+    producers: dict[tuple[str, str], str] = {}
+    state_from: dict[str, list[str]] = defaultdict(list)
     for e in edges:
-        if e.from_node != e.to_node and e.kind != "layer":
-            producers[e.to_node].append((e.from_node, e.kind))
+        if e.from_node == e.to_node or e.kind == "layer":
+            continue
+        if e.kind == "state":
+            state_from[e.to_node].append(e.from_node)
+        else:
+            producers[(e.to_node, e.tensor)] = e.from_node
 
     ordered = sorted(nodes, key=lambda n: (rank.get(n.id, 0), n.id))
     lines = []
@@ -151,9 +158,20 @@ def render_text(graph: Graph, width: int = 110) -> str:
         head = f"[{i:02d}] {n.id}{instances}"
         pad = max(1, 34 - len(head))
         lines.append(f"{head}{' ' * pad}{n.op:<12} {ins:>16} → {outs:<16} {_state_summary(n)}")
-        for p, kind in producers.get(n.id, []):
-            tag = "状态" if kind == "state" else "数据"
-            lines.append(f"       ↑ {tag}来自 {p}")
+        empty = set(n.attrs.get("empty_inputs") or [])
+        for ref in n.inputs:
+            src = producers.get((n.id, ref.tensor))
+            name = ref.arg_name or "?"
+            where = f"  [{ref.path}]" if ref.path else ""
+            if src:
+                arrow = src
+            elif ref.tensor in empty:
+                arrow = "空张量（0 元素，prefill 时无内容）"
+            else:
+                arrow = "（无生产者）"
+            lines.append(f"       ↑ in{ref.index} {name} ← {arrow}{where}")
+        for src in state_from.get(n.id, []):
+            lines.append(f"       ↑ 状态来自 {src}")
     layer_edges = [e for e in edges if e.kind == "layer"]
     if layer_edges:
         lines.append("-" * width)

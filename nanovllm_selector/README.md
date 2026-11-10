@@ -311,10 +311,36 @@ python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdi
 ### 数据契约
 
 - `Node`：`id / op / inputs / outputs / state / attrs / impl / semantics / evidence / origin / template_id / instances`
+- `TensorRef`（每个输入/输出）：`tensor / role / index / path / arg_name`
 - `Edge`：`from_node / to_node / tensor / role / kind(data|state|layer)`
 - `evidence.kind`：`observed`（hook 实测）/ `dispatch`（aten 算子）/ `param`（参数形状）/ `source`（源码 file:line + sha256）/ `rule`（规则编号）
 
 **没有证据的标签不写。** `op` 的判定来自实测 aten 算子集合，不是模块类名：例如 `rsqrt + mean` 判 `rmsnorm`，`mm + 该模块 out_features == vocab_size` 判 `lm_head`。
+
+### 输入位置：图里不只有"谁连谁"
+
+节点只记"吃了哪几个张量"是不够的。`SiluAndMul` 要求打包张量的前一半是 gate、后一半是 up
+（`x, y = x.chunk(2, -1)`）；`store_kvcache(key, value, ...)` 的 key/value 同形同源，传反了不报错、结果全错。
+所以每个输入还带三个字段：
+
+| 字段 | 含义 | 例子 |
+| --- | --- | --- |
+| `index` | 在节点 `inputs` 里的下标 | `0` |
+| `path` | 原始调用里的位置表达式 | `args[0]`、`kwargs['position_embeddings'][0]`、`aten.cat` 里的 `args[0][1]` |
+| `arg_name` | 该位置对应的形参名 | `hidden_states`、`input`、`self` |
+
+节点的 `semantics.bindings` 再把公式变量绑到位置：`L*.mlp.mul` 是 `{"a": "in[0]", "b": "in[1]"}`，
+配合边就能读出 `in0 ← act_fn`、`in1 ← up_proj`。终端视图直接显示：
+
+```
+[17] L*.mlp.mul ×28层            mul     1×8×3072 → 1×8×3072   —
+       ↑ in0 self ← L*.mlp.act_fn  [args[0]]
+       ↑ in1 other ← L*.mlp.up_proj  [args[1]]
+```
+
+`arg_name` 优先取 `inspect.signature(module.forward)` 的形参名；模块内部先 view/cast
+（`F.linear` 会把 3D 输入摊成 2D）导致对象和 storage 都变了时，退回 aten schema 的参数名
+（`self` / `other` / `tensors`），`path` 仍是真实参数树位置，不会把列表下标误当成参数下标。
 
 ### 对账（`--check`，16 项）
 
@@ -329,7 +355,7 @@ python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdi
 ### 单测
 
 ```bash
-python -B -m unittest -v nanovllm_selector.test_extract   # 17 项，约 48 秒
+python -B -m unittest -v nanovllm_selector.test_extract   # 19 项，约 48 秒
 ```
 
 模型目录不存在时整组跳过，可用 `EXTRACT_MODEL` 指向别处。

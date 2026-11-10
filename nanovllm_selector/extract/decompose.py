@@ -126,15 +126,19 @@ class _Cluster:
     in_tensors: list = field(default_factory=list)  # 去重后的 tensor id
     out_tensors: list = field(default_factory=list)
     in_srcs: dict = field(default_factory=dict)  # tid -> src tuple
+    # tid -> {"path": "args[0]", "arg_name": "hidden_states"}：输入摆在参数的第几位
+    in_slots: dict = field(default_factory=dict)
     internal: set = field(default_factory=set)  # 簇内产生又被簇内消费的中间张量
     min_seq: int = 1 << 60
     max_seq: int = -1
+    call: object = None  # 产生这个簇的模块调用（decompose 用）
 
     def merge(self, other: "_Cluster") -> None:
         self.ops.extend(other.ops)
         self.in_tensors.extend(other.in_tensors)
         self.out_tensors.extend(other.out_tensors)
         self.in_srcs.update(other.in_srcs)
+        self.in_slots.update(other.in_slots)
         self.internal |= other.internal
         self.min_seq = min(self.min_seq, other.min_seq)
         self.max_seq = max(self.max_seq, other.max_seq)
@@ -215,7 +219,8 @@ class GraphBuilder:
                 cluster = current
             else:
                 self._next_cid += 1
-                cluster = _Cluster(cid=self._next_cid, path=call.path, call_seq=call.seq_start)
+                cluster = _Cluster(cid=self._next_cid, path=call.path, call_seq=call.seq_start,
+                                   call=call)
                 self._clusters[cluster.cid] = cluster
                 self._uf.add(cluster.cid)
                 current, current_call, broken = cluster, call, False
@@ -235,6 +240,16 @@ class GraphBuilder:
                     continue
                 cluster.in_tensors.append(tid)
                 cluster.in_srcs[tid] = src
+                slot = None
+                if call is not None:
+                    slot = call.input_slots.get(id(t))
+                    if slot is None:
+                        # 模块内部先 view 再算（`F.linear` 会把 3D 输入摊成 2D），
+                        # 对象换了但 storage 没换，靠 storage 把参数位找回来。
+                        slot = call.input_storage_slots.get(
+                            hex(t.untyped_storage().data_ptr())
+                        )
+                cluster.in_slots[tid] = slot or _aten_slot(d, t)
             for t in d.outputs:
                 tid = self.tid(t)
                 cluster.out_tensors.append(tid)
@@ -255,7 +270,8 @@ class GraphBuilder:
             root = self._uf.find(cid)
             if root not in merged:
                 merged[root] = _Cluster(cid=root, path=cl.path, call_seq=cl.call_seq,
-                                        min_seq=cl.min_seq, max_seq=cl.max_seq)
+                                        min_seq=cl.min_seq, max_seq=cl.max_seq,
+                                        call=cl.call)
             merged[root].merge(cl)
         return merged
 
@@ -393,14 +409,28 @@ class GraphBuilder:
             if s.kind == "parameter":
                 evidence.append(Evidence("param", f"{name} shape={s.shape}", ref=nid))
 
+        inputs = []
+        for i, (tid, _, _) in enumerate(in_refs):
+            slot = cl.in_slots.get(tid) or {}
+            inputs.append(
+                TensorRef(
+                    tensor=tid,
+                    role="in",
+                    index=i,
+                    path=slot.get("path"),
+                    arg_name=slot.get("arg_name"),
+                )
+            )
+        outputs = [TensorRef(tensor=tid, role="out", index=i) for i, tid in enumerate(outs)]
+
         node = Node(
             id=nid,
             op=op,
             op_confidence=confidence,
             origin="module",
             phase=phase,
-            inputs=[TensorRef(tensor=tid, role="in") for tid, _, _ in in_refs],
-            outputs=[TensorRef(tensor=tid, role="out") for tid in outs],
+            inputs=inputs,
+            outputs=outputs,
             state=state,
             attrs=attrs,
             impl={
@@ -408,12 +438,52 @@ class GraphBuilder:
                 "module_path": cl.path or "R",
                 "source": source_ref(module) if module is not None else None,
             },
-            semantics={"formula": FORMULAS.get(op, ""), "op": op},
+            semantics={
+                "formula": FORMULAS.get(op, ""),
+                "op": op,
+                "bindings": _bindings(op, inputs),
+            },
             evidence=evidence,
         )
         node._in_srcs = {tid: s for tid, s, _ in in_refs}  # type: ignore[attr-defined]
         node._start_seq = cl.min_seq  # type: ignore[attr-defined]
         return node
+
+
+# 公式变量名 -> 输入位置。只给"单个算子、且输入顺序就是数学式里的顺序"的类型
+# 写死名字。复合节点（attention 是 rope + 写 cache + sdpa 合出来的）输入里
+# 还有 cos/sin 和 cache，叫 q/k/v 就是撒谎，一律退化成 in0/in1。
+BINDING_NAMES = {
+    "mul": ("a", "b"),
+    "add": ("a", "b"),
+    "matmul": ("x",),
+    "lm_head": ("x",),
+    "rmsnorm": ("x",),
+    "silu": ("x",),
+    "embedding": ("input_ids",),
+}
+
+
+def _bindings(op: str, inputs: list) -> dict:
+    """公式变量 -> `in[i]`。配合 TensorRef 的 path/arg_name 用。"""
+    names = BINDING_NAMES.get(op, ())
+    out = {}
+    for i, ref in enumerate(inputs):
+        key = names[i] if i < len(names) else f"in{i}"
+        out[key] = f"in[{i}]"
+    return out
+
+
+def _aten_slot(d, t) -> dict | None:
+    """合成输入的参数位：来自哪个 aten 算子的第几个参数。
+
+    形如 `aten.cat.default` 的 `tensors` 列表会被展开成 `args[0][1]`，
+    所以位置是真实的参数树位置，不会把列表下标误当成参数下标。
+    """
+    slot = getattr(d, "input_slots", {}).get(id(t))
+    if slot is not None:
+        return slot
+    return None
 
 
 def _op_name(op: str) -> str:

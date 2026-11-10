@@ -13,6 +13,9 @@
 
 from __future__ import annotations
 
+import inspect
+from functools import lru_cache
+
 import torch
 from dataclasses import dataclass, field
 from torch.utils._python_dispatch import TorchDispatchMode
@@ -28,6 +31,12 @@ class Call:
     depth: int
     inputs: list = field(default_factory=list)
     outputs: list = field(default_factory=list)
+    # id(tensor) -> {"path": "args[0]", "arg_name": "hidden_states"}
+    # 记"这个张量摆在这次调用的第几个参数位"，见 schema.TensorRef 的说明。
+    input_slots: dict = field(default_factory=dict)
+    # 按 storage 索引的同一份信息：模块内部做了 view/reshape 之后，张量对象变了
+    # 但仍是同一个参数的内容（`F.linear` 会先把 3D 输入 view 成 2D），靠它补回位置。
+    input_storage_slots: dict = field(default_factory=dict)
 
     @property
     def is_leaf(self) -> bool:
@@ -41,6 +50,10 @@ class Dispatch:
     inputs: list
     outputs: list
     inside: str
+    # aten 算子本身，留着取参数名（`_schema.arguments[i].name`）
+    func: object = None
+    # id(tensor) -> {"path": "args[0][1]", "arg_name": "tensors"}，口径同 Call.input_slots
+    input_slots: dict = field(default_factory=dict)
 
 
 def flatten_tensors(obj, out: list | None = None) -> list:
@@ -58,6 +71,83 @@ def flatten_tensors(obj, out: list | None = None) -> list:
     return out
 
 
+def flatten_with_paths(obj, path: str, out: list | None = None) -> list:
+    """拍平张量，同时保留位置表达式，如 `args[1][2]`、`kwargs['hidden_states']`。
+
+    返回 `[(tensor, path), ...]`，顺序与递归顺序一致。
+    """
+    if out is None:
+        out = []
+    if isinstance(obj, torch.Tensor):
+        out.append((obj, path))
+    elif isinstance(obj, (list, tuple)):
+        for i, x in enumerate(obj):
+            flatten_with_paths(x, f"{path}[{i}]", out)
+    elif isinstance(obj, dict):
+        for k, x in obj.items():
+            flatten_with_paths(x, f"{path}[{k!r}]", out)
+    return out
+
+
+@lru_cache(maxsize=512)
+def _forward_param_names(cls: type) -> tuple[str, ...]:
+    """模块 forward 的形参名（去掉 self，只保留可接收位置参数的）。"""
+    try:
+        params = inspect.signature(cls.forward).parameters.values()
+    except (ValueError, TypeError):
+        return ()
+    names = []
+    for p in params:
+        if p.name == "self":
+            continue
+        if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD):
+            names.append(p.name)
+    return tuple(names)
+
+
+def _slots(names, args, kwargs) -> dict:
+    """按形参名把 `args[i]` / `kwargs['name']` 里的张量标上位置。"""
+    slots: dict[int, dict] = {}
+    for i, a in enumerate(args):
+        arg_name = names[i] if i < len(names) else None
+        for t, p in flatten_with_paths(a, f"args[{i}]"):
+            slots.setdefault(id(t), {"path": p, "arg_name": arg_name})
+    for k, v in (kwargs or {}).items():
+        for t, p in flatten_with_paths(v, f"kwargs[{k!r}]"):
+            slots.setdefault(id(t), {"path": p, "arg_name": k})
+    return slots
+
+
+def call_input_slots(module, args, kwargs) -> tuple[dict, dict]:
+    """记录一次模块调用里每个张量出现在哪个参数位。
+
+    返回 `(按对象索引, 按 storage 索引)`。位置优先取最外层的
+    `args[i]` / `kwargs['name']`，嵌套结构继续往下标；形参名取最外层的那个
+    （`args[1][0]` 的 arg_name 仍是 `args` 的第 1 个形参）。
+    """
+    slots = _slots(_forward_param_names(type(module)), args, kwargs)
+    by_storage = {}
+    for t, p in flatten_with_paths(args, "args"):
+        by_storage.setdefault(hex(t.untyped_storage().data_ptr()),
+                              slots.get(id(t), {"path": p, "arg_name": None}))
+    for k, v in (kwargs or {}).items():
+        for t, p in flatten_with_paths(v, f"kwargs[{k!r}]"):
+            by_storage.setdefault(hex(t.untyped_storage().data_ptr()),
+                                  slots.get(id(t), {"path": p, "arg_name": k}))
+    return slots, by_storage
+
+
+def _aten_param_names(func) -> tuple[str, ...]:
+    try:
+        return tuple(a.name for a in func._schema.arguments)
+    except Exception:
+        return ()
+
+
+def dispatch_input_slots(func, args, kwargs) -> dict:
+    return _slots(_aten_param_names(func), args, kwargs)
+
+
 class _RecorderMode(TorchDispatchMode):
     def __init__(self, rec: "Recorder"):
         super().__init__()
@@ -65,6 +155,7 @@ class _RecorderMode(TorchDispatchMode):
 
     def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         kwargs = kwargs or {}
+        slots = dispatch_input_slots(func, args, kwargs)
         out = func(*args, **kwargs)
         ins = flatten_tensors((args, kwargs))
         outs = flatten_tensors(out)
@@ -78,6 +169,8 @@ class _RecorderMode(TorchDispatchMode):
                 inputs=ins,
                 outputs=outs,
                 inside=rec._stack[-1] if rec._stack else "",
+                func=func,
+                input_slots=slots,
             )
         )
         return out
@@ -107,6 +200,7 @@ class Recorder:
             seq = self._next_seq()
             ins = flatten_tensors((args, kwargs))
             self._keep.extend(ins)
+            by_obj, by_storage = call_input_slots(module, args, kwargs)
             call = Call(
                 seq_start=seq,
                 seq_end=-1,
@@ -115,6 +209,8 @@ class Recorder:
                 qualname=qualname,
                 depth=depth,
                 inputs=ins,
+                input_slots=by_obj,
+                input_storage_slots=by_storage,
             )
             self.calls.append(call)
             self._open.append(call)

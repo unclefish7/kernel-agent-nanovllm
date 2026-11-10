@@ -39,7 +39,8 @@ class TestSchema(unittest.TestCase):
                      outputs=[{"tensor": "t0", "role": "out"}],
                      evidence=[{"kind": "observed", "detail": "测试构造", "ref": None}]),
                 Node(id="b", op="matmul",
-                     inputs=[{"tensor": "t0", "role": "in"}],
+                     inputs=[{"tensor": "t0", "role": "in", "index": 0,
+                              "path": "args[0]", "arg_name": "x"}],
                      outputs=[{"tensor": "t1", "role": "out"}],
                      evidence=[{"kind": "observed", "detail": "测试构造", "ref": None}]),
             ],
@@ -52,6 +53,10 @@ class TestSchema(unittest.TestCase):
         self.assertEqual([n.id for n in again.nodes], ["a", "b"])
         self.assertEqual(again.validate(), [])
         self.assertEqual(json.loads(g.to_json())["edges"][0]["from_node"], "a")
+        # 输入位置信息必须原样穿过 JSON：path / arg_name 丢了，生成代码时
+        # 就分不出 `SiluAndMul` 的前后两半、`store_kvcache` 的 key/value。
+        ref = again.nodes[1].inputs[0]
+        self.assertEqual((ref.index, ref.path, ref.arg_name), (0, "args[0]", "x"))
 
     def test_validate_catches_dangling_edge(self):
         g = Graph(nodes=[Node(id="a", op="input")],
@@ -81,6 +86,29 @@ class TestExtractQwen3(unittest.TestCase):
         self.assertEqual(counts.get("add"), 56)
         self.assertEqual(counts.get("embedding"), 1)
         self.assertNotIn("unknown", counts)
+
+    def test_input_slots(self):
+        """每个输入都要说清"摆在第几个参数位"（导师指出的缺口）。"""
+        for n in self.graph.nodes:
+            for i, t in enumerate(n.inputs):
+                self.assertEqual(t.index, i, f"{n.id} 的输入下标不对")
+                self.assertTrue(t.path, f"{n.id} 的输入 {t.tensor} 没有 path")
+                self.assertTrue(t.arg_name, f"{n.id} 的输入 {t.tensor} 没有 arg_name")
+
+    def test_mul_input_order_is_recoverable(self):
+        """SwiGLU 的两路必须能区分先后，否则换成 SiluAndMul 的 chunk 就错。"""
+        node = self.graph.node("L*.mlp.mul")
+        self.assertEqual(node.semantics["bindings"], {"a": "in[0]", "b": "in[1]"})
+        self.assertEqual([t.path for t in node.inputs], ["args[0]", "args[1]"])
+        self.assertEqual([t.arg_name for t in node.inputs], ["self", "other"])
+        # in[0] 必须是 silu(gate) 那一路，in[1] 是 up 那一路
+        producers = {
+            e.tensor: e.from_node
+            for e in self.graph.edges
+            if e.to_node == "L*.mlp.mul"
+        }
+        self.assertEqual(producers[node.inputs[0].tensor], "L*.mlp.act_fn")
+        self.assertEqual(producers[node.inputs[1].tensor], "L*.mlp.up_proj")
 
     def test_every_node_has_evidence(self):
         for n in self.graph.nodes:
