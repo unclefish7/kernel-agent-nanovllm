@@ -137,6 +137,7 @@ class _Cluster:
     produced: set = field(default_factory=set)       # 所有算子产出过的 tid（含视图）
     produced_at: dict = field(default_factory=dict)  # tid -> 第一次被产出的 seq
     out_tensors: list = field(default_factory=list)  # 非透明算子的产出（节点的输出）
+    internal_out: set = field(default_factory=set)   # 被本簇非透明算子继续消费的产出（不算节点输出）
     min_seq: int = 1 << 60
     max_seq: int = -1
     call: object = None  # 产生这个簇的模块调用（decompose 用）
@@ -154,6 +155,7 @@ class _Cluster:
             if tid not in self.produced_at or seq < self.produced_at[tid]:
                 self.produced_at[tid] = seq
         self.out_tensors.extend(other.out_tensors)
+        self.internal_out |= other.internal_out
         self.min_seq = min(self.min_seq, other.min_seq)
         self.max_seq = max(self.max_seq, other.max_seq)
 
@@ -261,6 +263,10 @@ class GraphBuilder:
             cluster.op_seqs.append(d.seq)
 
             for t in d.inputs:
+                tid_in = self.tid(t)
+                if tid_in in cluster.produced:
+                    # 本簇自己的产出又被本簇的下一个算子吃掉：它还是中间量。
+                    cluster.internal_out.add(tid_in)
                 # 每个操作数有它自己的参数位置，不能拿第一个对上的套给全组。
                 slot = None
                 if call is not None:
@@ -277,7 +283,7 @@ class GraphBuilder:
                     slot = _aten_slot(d, t)
                     if slot is not None:
                         slot = dict(slot, source="aten")
-                self._note_consumed(cluster, self.tid(t), slot, d.seq)
+                self._note_consumed(cluster, tid_in, slot, d.seq)
             for t in d.outputs:
                 tid = self.tid(t)
                 cluster.produced.add(tid)
@@ -452,7 +458,7 @@ class GraphBuilder:
         seen_out: set[tuple] = set()
         outs: list[str] = []
         for tid in dict.fromkeys(cl.out_tensors):
-            if tid in internal:
+            if tid in cl.internal_out:
                 continue
             m = self._tensors[tid]
             key = (m["storage"], m["offset"], m["numel"])

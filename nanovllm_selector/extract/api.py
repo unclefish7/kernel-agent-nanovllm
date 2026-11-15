@@ -16,6 +16,7 @@ from .edges import build_edges, to_tensor_meta
 from .loader import load_model
 from .recorder import record_forward
 from .checks import check_invariants
+from .replay import replay_nodes
 from .reconcile import reconcile
 from .schema import Graph
 from .template import fold
@@ -34,6 +35,7 @@ def extract_graph(
     trust_remote_code: bool = False,
     batch_size: int = 1,
     reconcile_graph: bool = True,
+    replay_graph: bool = True,
 ) -> Graph:
     """从一个 HuggingFace 模型目录重建计算图。
 
@@ -78,6 +80,20 @@ def extract_graph(
         if reconcile_graph
         else {"ok": True, "checks": [], "stats": {}}
     )
+    if replay_graph:
+        rep = replay_nodes(instance_nodes, builder, config, input_ids)
+        report["replay"] = rep
+        report["ok"] = report["ok"] and rep["ok"]
+        report["stats"]["replay_checked"] = rep["stats"]["checked"]
+        report["stats"]["replay_failed"] = rep["stats"]["failed"]
+        report["checks"].append({
+            "name": "R1 逐节点重放",
+            "expected": 0,
+            "actual": rep["stats"]["failed"],
+            "ok": rep["ok"],
+            "note": f"{rep['stats']['checked']} 个实例节点按图重算，"
+                    f"{rep['stats']['skipped']} 个暂不重放",
+        })
     if reconcile_graph:
         inv = check_invariants(builder, rec, instance_nodes, edges)
         report["checks"].extend(inv["checks"])

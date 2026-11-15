@@ -95,6 +95,13 @@ class TestExtractQwen3(unittest.TestCase):
                 self.assertTrue(t.path, f"{n.id} 的输入 {t.tensor} 没有 path")
                 self.assertTrue(t.arg_name, f"{n.id} 的输入 {t.tensor} 没有 arg_name")
 
+    def test_replay_passes(self):
+        """逐节点重放：用独立实现复算每个节点，必须和原模型一致。"""
+        rep = self.graph.reconcile["replay"]
+        self.assertTrue(rep["ok"], rep["failures"][:3])
+        self.assertEqual(rep["stats"]["failed"], 0)
+        self.assertGreaterEqual(rep["stats"]["checked"], 400)
+
     def test_invariants_pass(self):
         """三条机械不变量：dispatch 全覆盖、张量有主、入参有槽。"""
         rec = self.graph.reconcile
