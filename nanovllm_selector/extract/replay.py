@@ -78,15 +78,26 @@ def _rotate_half(x):
 
 
 def _attention(inputs, state, attrs, ctx):
-    q, cos, sin, k, *rest = inputs
-    v = rest[-1]
+    q, cos, sin, k = inputs[0], inputs[1], inputs[2], inputs[3]
+    rest = [t for t in inputs[4:] if t.numel() > 0]
+    past_k = past_v = None
+    if len(rest) == 3:
+        # decode：多出来的是历史 cache，按位置拼到当前 k/v 前面
+        past_k, past_v, v = rest
+    else:
+        v = rest[-1]
     q = (q * cos) + (_rotate_half(q) * sin)
     k = (k * cos) + (_rotate_half(k) * sin)
+    if past_k is not None:
+        k = torch.cat([past_k, k], dim=-2)
+        v = torch.cat([past_v, v], dim=-2)
     n_rep = q.shape[1] // k.shape[1]
     if n_rep > 1:
         k = k.repeat_interleave(n_rep, dim=1)
         v = v.repeat_interleave(n_rep, dim=1)
-    return F.scaled_dot_product_attention(q, k, v, is_causal=True)
+    # 单 query 的 decode 没有下三角可言，直接看全部 k/v
+    causal = q.shape[-2] > 1
+    return F.scaled_dot_product_attention(q, k, v, is_causal=causal)
 
 
 IMPL = {
@@ -122,9 +133,9 @@ def _state_of(node, module):
     return out
 
 
-def replay_nodes(nodes, builder, config, input_ids) -> dict:
+def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
     """按 dispatch 顺序逐节点重算，和实际输出比对。"""
-    tensors = builder._tensors
+    tensors = tensors if tensors is not None else builder._tensors
     ctx = {
         "seq_len": int(input_ids.shape[-1]),
         "device": input_ids.device,
@@ -155,7 +166,11 @@ def replay_nodes(nodes, builder, config, input_ids) -> dict:
             skipped.append(node.id)
             continue
 
-        got = impl(inputs, _state_of(node, module), node.attrs, ctx)
+        try:
+            got = impl(inputs, _state_of(node, module), node.attrs, ctx)
+        except Exception as exc:  # noqa: BLE001 - 重放失败要留证据，不能中断整张图
+            failures.append({"node": node.id, "op": node.op, "why": f"{type(exc).__name__}: {exc}"})
+            continue
         got = got[0] if isinstance(got, list) else got
 
         # 一个节点可能有多个产出（比如 attention 的 output 与中间量），

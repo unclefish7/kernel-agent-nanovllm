@@ -46,7 +46,7 @@ def _external_role(tid: str, consumer: Node, meta: dict) -> str:
     return f"ext_{tid}"
 
 
-def build_edges(nodes: list[Node], builder) -> tuple[list[Edge], list[Node], dict]:
+def build_edges(nodes: list[Node], builder, id_prefix: str = "") -> tuple[list[Edge], list[Node], dict]:
     id_of_cid = getattr(builder, "id_of_cid", {})
     meta = builder.tensor_meta()
     node_by_id = {n.id: n for n in nodes}
@@ -67,6 +67,8 @@ def build_edges(nodes: list[Node], builder) -> tuple[list[Edge], list[Node], dic
         for tid, src in getattr(n, "_in_srcs", {}).items():
             if src[0] == "node":
                 pid = id_of_cid.get(src[1])
+                if pid is not None:
+                    pid = id_prefix + pid
                 if pid is None:
                     unresolved[f"cluster:{src[1]}"] = unresolved.get(f"cluster:{src[1]}", 0) + 1
                     continue
@@ -94,6 +96,7 @@ def build_edges(nodes: list[Node], builder) -> tuple[list[Edge], list[Node], dic
                     continue
                 role = _external_role(tid, n, meta)
                 iid = f"state.{role}" if role in STATE_ROLES else f"input.{role}"
+                iid = id_prefix + iid
                 if iid not in input_nodes:
                     input_nodes[iid] = _make_input_node(iid, tid, meta, role)
                 add(

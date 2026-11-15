@@ -14,6 +14,7 @@ import transformers
 from .decompose import GraphBuilder
 from .edges import build_edges, to_tensor_meta
 from .loader import load_model
+from .schema import StateRef
 from .recorder import record_forward
 from .checks import check_invariants
 from .replay import replay_nodes
@@ -48,8 +49,9 @@ def extract_graph(
     phases : M1 只支持 ("prefill",)
     collapse_template : 是否把结构相同的层折成模板 + instances
     """
-    if tuple(phases) != ("prefill",):
-        raise NotImplementedError("M1 只支持 prefill；decode 走 KV cache 路径，计划在 M2")
+    phases = tuple(phases)
+    if phases not in (("prefill",), ("prefill", "decode")):
+        raise NotImplementedError(f"不支持的 phases={phases}；只接受 prefill 或 prefill+decode")
 
     model, config = load_model(
         model_path,
@@ -63,12 +65,31 @@ def extract_graph(
     generator = torch.Generator().manual_seed(0)
     input_ids = torch.randint(0, vocab, (batch_size, seq_len), generator=generator).to(device)
 
-    rec, _ = record_forward(model, input_ids)
+    rec, out = record_forward(model, input_ids)
 
     builder = GraphBuilder(model, rec, config, dtype=dtype)
     instance_nodes = builder.build(phase="prefill")
     edges, all_nodes, edge_info = build_edges(instance_nodes, builder)
     tensors = to_tensor_meta(builder)
+
+    decode_tensors: dict = {}
+    if "decode" in phases:
+        past = getattr(out, "past_key_values", None)
+        if past is not None:
+            step = torch.tensor([input_ids.shape[-1]], device=input_ids.device)
+            rec2, _ = record_forward(
+                model, input_ids[:, -1:], past_key_values=past,
+                cache_position=step, seq_offset=rec._seq,
+            )
+            builder2 = GraphBuilder(model, rec2, config, dtype=dtype)
+            dec_nodes = _prefixed(builder2.build(phase="decode"))
+            dec_edges, _, _ = build_edges(dec_nodes, builder2, id_prefix="D.")
+            instance_nodes = instance_nodes + dec_nodes
+            edges = edges + dec_edges
+            all_nodes = all_nodes + dec_nodes
+            decode_tensors.update({f"d{k}": v for k, v in builder2._tensors.items()})
+            _mark_cross_step_state(dec_nodes, builder2, builder, model)
+            tensors.update({f"d{k}": v for k, v in to_tensor_meta(builder2).items()})
 
     if collapse_template:
         graph_nodes, graph_edges, fold_report = fold(all_nodes, edges)
@@ -81,7 +102,10 @@ def extract_graph(
         else {"ok": True, "checks": [], "stats": {}}
     )
     if replay_graph:
-        rep = replay_nodes(instance_nodes, builder, config, input_ids)
+        rep = replay_nodes(
+            instance_nodes, builder, config, input_ids,
+            tensors={**builder._tensors, **decode_tensors},
+        )
         report["replay"] = rep
         report["ok"] = report["ok"] and rep["ok"]
         report["stats"]["replay_checked"] = rep["stats"]["checked"]
@@ -141,6 +165,54 @@ def extract_graph(
     report["validate_problems"] = problems
     report["ok"] = bool(report.get("ok")) and not problems
     return graph
+
+
+def _mark_cross_step_state(nodes, builder2, builder_pre, model):
+    """decode 里"不是这一步造的、但在 prefill 里出现过"的张量 = 跨 step 状态。
+
+    典型就是 KV cache：prefill 写入，decode 读出来拼到当前 k/v 前面。
+    这不是普通数据输入，它是节点自己的状态，要单独标出来。
+    """
+    pre_storages = {m["storage"] for m in builder_pre._tensors.values()}
+    param_storages = {hex(p.untyped_storage().data_ptr()) for p in model.parameters()}
+    for n in nodes:
+        if n.op != "attention":
+            continue
+        for t in n.inputs:
+            m = builder2._tensors.get(t.tensor.lstrip("d"))
+            if m is None or m["storage"] in param_storages:
+                continue
+            if m["storage"] in pre_storages and len(m["shape"]) == 4:
+                t.role = "state"
+                n.state.append(StateRef(
+                    name=f"kv_cache_{len(n.state)}",
+                    kind="runtime_tensor",
+                    role="read_write",
+                    shape=list(m["shape"]),
+                    dtype=m["dtype"],
+                ))
+
+
+def _prefixed(nodes):
+    """decode 的节点 id 与张量 id 都加前缀，避免和 prefill 撞名。
+
+    两个 builder 各自从 t0000 开始编号，不区分就会把 decode 的张量
+    元数据覆盖到 prefill 上。
+    """
+    for n in nodes:
+        n.id = "D." + n.id
+        if n.template_id:
+            n.template_id = "D." + n.template_id
+        for t in n.inputs:
+            t.tensor = "d" + t.tensor
+        for t in n.outputs:
+            t.tensor = "d" + t.tensor
+        if getattr(n, "_in_srcs", None):
+            n._in_srcs = {f"d{k}": v for k, v in n._in_srcs.items()}
+        empty = n.attrs.get("empty_inputs")
+        if empty:
+            n.attrs["empty_inputs"] = [f"d{tid}" for tid in empty]
+    return nodes
 
 
 def _collect_params(model) -> list[dict]:

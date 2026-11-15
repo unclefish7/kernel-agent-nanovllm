@@ -190,6 +190,15 @@ class Recorder:
         self._leaf_paths: set[str] = set()
 
     # ---- 序号 -------------------------------------------------------
+    def shift(self, offset: int) -> None:
+        """把这次 trace 的序号整体后移，接在上一次后面。"""
+        for c in self.calls:
+            c.seq_start += offset
+            c.seq_end += offset
+        for d in self.dispatches:
+            d.seq += offset
+        self._seq += offset
+
     def _next_seq(self) -> int:
         self._seq += 1
         return self._seq
@@ -293,10 +302,26 @@ class Recorder:
         return [d for d in self.dispatches if d.inside == path]
 
 
-def record_forward(model, input_ids: torch.Tensor) -> tuple[Recorder, object]:
-    """跑一次 forward，返回 recorder 和模型输出。"""
+def record_forward(
+    model,
+    input_ids: torch.Tensor,
+    past_key_values=None,
+    cache_position: torch.Tensor | None = None,
+    seq_offset: int = 0,
+) -> tuple[Recorder, object]:
+    """跑一次 forward，返回 recorder 和模型输出。
+
+    `past_key_values` 非空时走的就是 decode 分支；`seq_offset` 把这一次的
+    算子序号接在上一次后面，两次 trace 才能放进同一个时间轴。
+    """
     rec = Recorder(model)
+    kw = {"input_ids": input_ids, "use_cache": True}
+    if past_key_values is not None:
+        kw["past_key_values"] = past_key_values
+        kw["cache_position"] = cache_position
     with torch.no_grad():
         with rec:
-            out = model(input_ids=input_ids, use_cache=True)
+            out = model(**kw)
+    if seq_offset:
+        rec.shift(seq_offset)
     return rec, out

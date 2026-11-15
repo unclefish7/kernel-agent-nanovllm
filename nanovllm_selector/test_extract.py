@@ -210,6 +210,35 @@ class TestExtractQwen3(unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.isdir(MODEL), f"模型目录不存在：{MODEL}")
+class TestDecode(unittest.TestCase):
+    """decode 走的是另一条分支，必须单独抽、单独验。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.graph = extract_graph(
+            MODEL, dtype="float32", device="cpu", seq_len=8, phases=("prefill", "decode")
+        )
+
+    def test_decode_nodes_exist(self):
+        self.assertEqual(self.graph.phases, ["prefill", "decode"])
+        dec = [n for n in self.graph.nodes if n.phase == "decode"]
+        self.assertGreater(len(dec), 100)
+        self.assertTrue(any(n.id.startswith("D.") for n in dec))
+
+    def test_decode_replays(self):
+        rep = self.graph.reconcile["replay"]
+        self.assertTrue(rep["ok"], rep["failures"][:3])
+        self.assertEqual(rep["stats"]["failed"], 0)
+        self.assertGreater(rep["stats"]["checked"], 800)
+
+    def test_kv_cache_is_cross_step_state(self):
+        """KV cache 不是普通输入：它是节点自己的、跨 step 活着的状态。"""
+        n = self.graph.node("D.L0.self_attn")
+        kinds = [s.kind for s in n.state]
+        self.assertIn("runtime_tensor", kinds)
+        self.assertEqual(sum(1 for t in n.inputs if t.role == "state"), 2)
+
+
 class TestRender(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

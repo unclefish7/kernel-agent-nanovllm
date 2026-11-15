@@ -37,8 +37,8 @@
 |---|---|---|---|
 | ① 输入 = 集合差 | 节点的输入集合是否等于"吃进去的 − 自己造的 − 自带的" | 三分桶 + 覆盖等式 | 已完成 |
 | ② 三条机械不变量 | 每个算子、每个张量、每个参数位是否都有归属 | 可数的等式 | 已完成 |
-| ③ 逐节点重放 | 按图重新算一遍，结果是否和原模型一致 | 解释执行 + 数值比对 | 下一步 |
-| ④ decode 与状态 | 跨 step 的 cache 读写在图里是否可见 | 第二次前向 + 合并 trace | 待做 |
+| ③ 逐节点重放 | 按图重新算一遍，结果是否和原模型一致 | 独立实现 + 数值比对 | 已完成 |
+| ④ decode 与状态 | 跨 step 的 cache 读写在图里是否可见 | 第二次前向 + 合并 trace | 已完成 |
 
 四层查的是**不同**的错误，任何一层都不能替代另一层：
 
@@ -128,7 +128,7 @@ total == in_nodes + transparent_only + both
 
 ---
 
-## 5. 第三层：逐节点重放（下一步）
+## 5. 第三层：逐节点重放
 
 不变量只能保证"没漏"，保证不了"标签对"。`rope_table` 曾经被标成 `rope`——输入输出都在、边也在、槽也对，但语义是错的。
 
@@ -142,9 +142,11 @@ total == in_nodes + transparent_only + both
 
 这一步同时是"图能不能被别的程序读懂"的检验：如果解释器只能靠偷看源码才能算出结果，说明图里的信息不够。
 
+**已落地**：`nanovllm_selector/extract/replay.py`，每个 op 一份独立实现（matmul / rmsnorm / add / mul / silu / embedding / arange / rope_table / attention / lm_head），只用节点自己的 `op`、`inputs`、`state`、`attrs`。prefill 的 453 个实例节点 + decode 的 452 个，全部对上（fp32 `rtol=1e-5`）。
+
 ---
 
-## 6. 第四层：decode 与状态（待做）
+## 6. 第四层：decode 与状态
 
 现在只跑了 prefill。`recorder.py` 里只有一行 `model(input_ids=..., use_cache=True)`，所以 decode 那条分支（`past_key_values` 非空、mask 形状不同、cache 先读再 cat）在图里完全不存在。
 
@@ -157,6 +159,10 @@ total == in_nodes + transparent_only + both
 同时补 `state`：KV cache 是节点的**跨 step 状态**，不是普通输入。判据是"这个张量在一次 forward 之外还活着"——它是 `runtime_tensor`，有 `read`/`write` 两种 `effects`。
 
 注意边界：**存储布局（block table、slot_mapping）是引擎的事，不进参考图**；进图的只有"这个节点读写了一份跨 step 的状态"这个事实。
+
+**已落地**：`extract_graph(..., phases=("prefill","decode"))` 会先跑 prefill 拿到 `DynamicCache`，再用 1 个 token 跑第二次，两次 trace 用 `seq_offset` 接在同一根时间轴上。decode 的节点 id 和张量 id 都加 `D.` / `d` 前缀（两个 builder 各自从 `t0000` 编号，不区分会互相覆盖）。
+
+跨 step 状态的判定是机械的：**decode 中某个输入，在 decode 里没有生产者、但在 prefill 的存储块里出现过、且不是参数** —— 它就是 cache。判定后把该输入的 `role` 改成 `state`，并在节点 `state` 里记一条 `kind="runtime_tensor", role="read_write"`。Qwen3 上每层 attention 得到两条（k cache、v cache）。
 
 ---
 
@@ -174,6 +180,6 @@ total == in_nodes + transparent_only + both
 python -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --check
 ```
 
-19 项全部通过，其中 16 项是对账（模块数/参数数/算子数），3 项是本节的三条不变量。
+20 项全部通过：16 项对账（模块数/参数数/算子数）、3 项不变量、1 项逐节点重放。
 
-单测 22 项：`python -m unittest nanovllm_selector.test_extract`。
+单测 26 项：`python -m unittest nanovllm_selector.test_extract`。
