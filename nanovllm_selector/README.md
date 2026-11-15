@@ -306,7 +306,7 @@ python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdi
 | `graph.svg` | 自带的离线分层布局，不依赖外部工具 |
 | `graph.html` | **推荐的入口**：内嵌 SVG + 算子覆盖 + 对账表 + 逐节点明细，双击即可看 |
 
-模板折叠：28 层结构相同，图上只画 1 个模板节点并标 `×28层`（JSON 里是 `instances: [0..27]`）。Qwen3-0.6B 折叠后 **22 个节点 / 28 条边**，展开是 453 个实例节点。层与层之间的两条边（残差直接喂下一层）单独标 `kind=layer`，不画在图上，避免出现假环。
+模板折叠：28 层结构相同，图上只画 1 个模板节点并标 `×28层`（JSON 里是 `instances: [0..27]`）。Qwen3-0.6B 折叠后 **22 个节点 / 29 条边**，展开是 453 个实例节点。层与层之间的两条边（残差直接喂下一层）单独标 `kind=layer`，不画在图上，避免出现假环。
 
 ### 数据契约
 
@@ -315,7 +315,7 @@ python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdi
 - `Edge`：`from_node / to_node / tensor / role / kind(data|state|layer)`
 - `evidence.kind`：`observed`（hook 实测）/ `dispatch`（aten 算子）/ `param`（参数形状）/ `source`（源码 file:line + sha256）/ `rule`（规则编号）
 
-**没有证据的标签不写。** `op` 的判定来自实测 aten 算子集合，不是模块类名：例如 `rsqrt + mean` 判 `rmsnorm`，`mm + 该模块 out_features == vocab_size` 判 `lm_head`。
+**没有证据的标签不写。** `op` 的判定来自实测 aten 算子集合，不是模块类名：例如 `rsqrt + mean` 判 `rmsnorm`，`mm + 该模块 out_features == vocab_size` 判 `lm_head`，`cos + sin` 判 `rope_table`（只算频率表，不旋转任何张量；真正的旋转发生在 attention 簇内部，所以 cos/sin 是 attention 节点的输入）。
 
 ### 输入位置：图里不只有"谁连谁"
 
@@ -355,7 +355,7 @@ python -B -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdi
 ### 单测
 
 ```bash
-python -B -m unittest -v nanovllm_selector.test_extract   # 19 项，约 48 秒
+python -B -m unittest -v nanovllm_selector.test_extract   # 20 项，约 50 秒
 ```
 
 模型目录不存在时整组跳过，可用 `EXTRACT_MODEL` 指向别处。

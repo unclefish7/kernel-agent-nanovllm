@@ -93,6 +93,9 @@ def extract_graph(
             "config_sha256": meta.get("config_sha256"),
             "weights_sha256": meta.get("weights_sha256"),
             "weights_loaded": meta.get("weights_loaded"),
+            # 完整 config 进图：eps、rope_theta、tie_word_embeddings 这些值
+            # 在写模型文件时要用，而它们不在任何一个节点的 state 里。
+            "config": meta.get("config_json"),
         },
         env={
             "dtype": dtype,

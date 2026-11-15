@@ -57,9 +57,14 @@ def fold(nodes: list[Node], edges: list[Edge]) -> tuple[list[Node], list[Edge], 
         for m in members:
             id_map[m.id] = tid
 
-    seen: set[tuple[str, str, str]] = set()
-    out_edges: list[Edge] = []
-    parallel: dict[tuple[str, str], int] = {}
+    # 同一层里，同一个生产者给同一个消费者喂两个不同张量（cos 与 sin、q 与 k）
+    # 是"并行的多个输入"，不是重复的边。跨层要折叠、层内不能折叠，所以去重键
+    # 要带上"这是该节点的第几个输入"。
+    slot_of: dict[tuple[str, str], int] = {}
+    for n in nodes:
+        for ref in n.inputs:
+            slot_of[(n.id, ref.tensor)] = ref.index if ref.index is not None else -1
+
     self_loops = 0
     # 一条折叠后的边，可能既来自"层内"（第 k 层里的 a→b），也来自"层间"
     # （第 k 层的 a → 第 k+1 层的 b）。只有纯层间的那条要标成 layer，
@@ -71,28 +76,22 @@ def fold(nodes: list[Node], edges: list[Edge]) -> tuple[list[Node], list[Edge], 
         if a == b:
             self_loops += 1
         key = (a, b, e.kind)
-        parallel[key] = parallel.get(key, 0) + 1
         li, lj = layer_index(e.from_node), layer_index(e.to_node)
         cross = li is not None and lj is not None and li != lj
         f = flags.setdefault(key, {"intra": False, "cross": False})
         f["cross" if cross else "intra"] = True
-        dedupe_key = (a, b, e.tensor)
-        if dedupe_key in seen:
-            continue
-        seen.add(dedupe_key)
-        out_edges.append(
-            replace(e, from_node=a, to_node=b, tensor=e.tensor if parallel[key] == 1 else "aggregated")
-        )
 
-    # 同一 (from,to,kind) 的平行边（28 层各一条）合并成一条
-    collapsed: dict[tuple[str, str, str], Edge] = {}
-    for e in out_edges:
-        key = (e.from_node, e.to_node, e.kind)
+    collapsed: dict[tuple, Edge] = {}
+    for e in edges:
+        a = id_map.get(e.from_node, e.from_node)
+        b = id_map.get(e.to_node, e.to_node)
+        slot = slot_of.get((e.to_node, e.tensor), -1)
+        key = (a, b, e.kind, slot)
         if key in collapsed:
             continue
-        f = flags.get(key, {})
+        f = flags.get((a, b, e.kind), {})
         kind = "layer" if (f.get("cross") and not f.get("intra")) else e.kind
-        collapsed[key] = replace(e, kind=kind)
+        collapsed[key] = replace(e, from_node=a, to_node=b, kind=kind)
     final_edges = list(collapsed.values())
     layer_edges = sum(1 for e in final_edges if e.kind == "layer")
 

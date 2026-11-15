@@ -24,6 +24,7 @@ OP_FAMILIES = {
     "add": "elementwise",
     "attention": "attention",
     "rope": "attention",
+    "rope_table": "attention",
     "kv_write": "memory",
     "arange": "shape",
     "identity": "shape",

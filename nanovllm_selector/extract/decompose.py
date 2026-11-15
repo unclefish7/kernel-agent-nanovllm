@@ -59,6 +59,7 @@ FORMULAS = {
     "silu": "y = x * sigmoid(x)",
     "gelu": "y = x * Phi(x)",
     "rope": "(q, k) -> (q*cos + rotate_half(q)*sin, k*cos + rotate_half(k)*sin)",
+    "rope_table": "cos, sin = cos_sin(position_ids; inv_freq)",
     "attention": "y = softmax(q @ k^T / sqrt(d) + mask) @ v",
     "mul": "y = a * b",
     "add": "y = a + b",
@@ -342,18 +343,22 @@ class GraphBuilder:
             op, confidence = classify_ops(cl.ops, module, self.config)
             in_refs, outs = [], []
             state_storages = self._own_state_storages(module)
-            seen_src: set[tuple] = set()
+            seen_in: set[tuple] = set()
             for tid in cl.in_tensors:
                 # 权重/buffer 不是数据流输入，它们已经记在 node.state 里。
                 # 不排掉的话，图上会多出几百个"输入节点"，每个权重都冒充一次图输入。
                 src = resolve_src(cl.in_srcs.get(tid, ("ext", tid)))
                 if src[0] == "ext" and self._tensors[tid]["storage"] in state_storages:
                     continue
-                # 同一个生产者经 view/transpose 过来的多个别名只算一个输入，
-                # 否则 `[1,8,1024] 等 6 个` 这种噪声会盖住真正的信息。
-                if src in seen_src:
+                # 同一个"生产者 + 同一块存储"的别名（view / transpose / slice）只算
+                # 一个输入：rotate_half(q) 会把 q 切两半，那不 q 又吃了两次。
+                # 但 cos 与 sin 虽然同一个生产者，存储不同，必须各算一个——
+                # 只按生产者去重会把 sin 整条边吞掉。
+                m_in = self._tensors[tid]
+                key = (src, m_in["storage"])
+                if key in seen_in:
                     continue
-                seen_src.add(src)
+                seen_in.add(key)
                 in_refs.append((tid, src, "input"))
             seen_out: set[tuple] = set()
             for tid in dict.fromkeys(cl.out_tensors):
@@ -389,7 +394,9 @@ class GraphBuilder:
             for name, b in module.named_buffers(recurse=False):
                 state.append(StateRef(name=name, kind="buffer", role=_state_role(name, op),
                                       shape=list(b.shape), dtype=_dtype_str(b)))
-            for attr in ("eps", "scale", "negative_slope"):
+            # 标量也算 state：eps / variance_epsilon 这类归一化参数不写在 config 里
+            # 就得到别处去找，模型文件里还得再用一次。
+            for attr in ("eps", "variance_epsilon", "scale", "negative_slope"):
                 if hasattr(module, attr) and isinstance(getattr(module, attr), (int, float)):
                     state.append(StateRef(name=attr, kind="scalar", role=attr,
                                           shape=None, dtype=type(getattr(module, attr)).__name__))
@@ -543,7 +550,9 @@ def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str,
     if any("gelu" in x for x in o):
         return "gelu", "exact"
     if "aten.cos.default" in o and "aten.sin.default" in o:
-        return "rope", "exact"
+        # 这一簇只算 cos/sin 表（Qwen3RotaryEmbedding），不旋转任何张量。
+        # 旋转（q*cos + rotate_half(q)*sin）发生在 attention 簇内部。
+        return "rope_table", "exact"
     if "aten.mul.Tensor" in o and "aten.add.Tensor" in o and "aten.cat.default" in o:
         # rope 展开后的乘法/加法/拼接群
         return "rope", "inferred"

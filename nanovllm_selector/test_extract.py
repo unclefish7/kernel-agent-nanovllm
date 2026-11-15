@@ -95,6 +95,29 @@ class TestExtractQwen3(unittest.TestCase):
                 self.assertTrue(t.path, f"{n.id} 的输入 {t.tensor} 没有 path")
                 self.assertTrue(t.arg_name, f"{n.id} 的输入 {t.tensor} 没有 arg_name")
 
+    def test_rope_split_and_config_are_present(self):
+        """cos/sin 是两张表、rope 只在 attention 里做、eps 与 config 不能缺。"""
+        # 旋转发生在 attention 簇内部，所以 cos 与 sin 都是 attention 的两个输入。
+        attn = self.graph.node("L*.self_attn")
+        emb = [t for t in attn.inputs if (t.arg_name or "") == "position_embeddings"]
+        self.assertEqual(len(emb), 2, "cos 和 sin 必须各算一个输入，不能按生产者去重")
+        self.assertEqual(
+            [t.path for t in emb],
+            ["kwargs['position_embeddings'][0]", "kwargs['position_embeddings'][1]"],
+        )
+        # 频率表节点只算 cos/sin，不旋转任何张量，所以不能叫 rope。
+        table = self.graph.node("rotary_emb")
+        self.assertEqual(table.op, "rope_table")
+        self.assertIn("cos", table.semantics["formula"])
+        self.assertNotIn("rotate_half", table.semantics["formula"])
+        self.assertNotIn("rope", self.graph.op_counts())
+        # eps 在每个 norm 节点上，config 在 model 段里。
+        rms = self.graph.node("L*.input_layernorm")
+        self.assertIn("variance_epsilon", [s.name for s in rms.state])
+        cfg = self.graph.model["config"]
+        self.assertEqual(cfg["rms_norm_eps"], 1e-06)
+        self.assertEqual(cfg["rope_theta"], 1000000)
+
     def test_mul_input_order_is_recoverable(self):
         """SwiGLU 的两路必须能区分先后，否则换成 SiluAndMul 的 chunk 就错。"""
         node = self.graph.node("L*.mlp.mul")

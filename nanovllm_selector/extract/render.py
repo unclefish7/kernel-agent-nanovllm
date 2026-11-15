@@ -55,6 +55,7 @@ OP_CN = {
     "add": "残差加",
     "attention": "注意力",
     "rope": "旋转位置编码",
+    "rope_table": "RoPE 频率表",
     "arange": "生成位置索引",
     "unknown": "未知",
 }
@@ -241,8 +242,10 @@ def render_mermaid(graph: Graph, with_header: bool = True) -> str:
         label = f"{n.id}<br/><b>{n.op}</b>"
         if ins != "—" or outs != "—":
             label += f"<br/><small>{ins} → {outs}</small>"
-        shape_l, shape_r = "([", "])" if n.origin == "input" else ("[", "]")
-        lines.append(f'    {_mid(n.id)}{shape_l}"{label}"{shape_r}')
+        # 输入节点画成圆角，其余画成方角。原来的三元表达式把右半边也塞进了
+        # 条件里，输入节点会拿到字符串 "]），语法上不报错但画出来是坏的。
+        opened, closed = ("([", "])") if n.origin == "input" else ("[", "]")
+        lines.append(f'    {_mid(n.id)}{opened}"{label}"{closed}')
     for n in graph.nodes:
         fam = n.family
         lines.append(f"    class {_mid(n.id)} {fam if fam in FAMILY_COLORS else 'unknown'}")
@@ -252,7 +255,9 @@ def render_mermaid(graph: Graph, with_header: bool = True) -> str:
             continue
         if e.from_node == e.to_node:
             continue
-        key = (e.from_node, e.to_node, e.kind)
+        # 同一个生产者给同一个消费者喂两个不同张量（cos 与 sin）要画两条线，
+        # 所以去重键带上张量；折叠后的图里每条边本来就代表一个输入位。
+        key = (e.from_node, e.to_node, e.kind, e.tensor)
         if key in emitted:
             continue
         emitted.add(key)
