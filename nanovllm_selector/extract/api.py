@@ -15,6 +15,7 @@ from .decompose import GraphBuilder
 from .edges import build_edges, to_tensor_meta
 from .loader import load_model
 from .recorder import record_forward
+from .checks import check_invariants
 from .reconcile import reconcile
 from .schema import Graph
 from .template import fold
@@ -77,6 +78,12 @@ def extract_graph(
         if reconcile_graph
         else {"ok": True, "checks": [], "stats": {}}
     )
+    if reconcile_graph:
+        inv = check_invariants(builder, rec, instance_nodes, edges)
+        report["checks"].extend(inv["checks"])
+        report["ok"] = report["ok"] and inv["ok"]
+        report["stats"].update(inv["stats"])
+        report["invariants"] = inv["problems"]
     report["stats"]["instance_nodes"] = len(instance_nodes)
     report["stats"]["templates"] = fold_report.get("templates")
     report["stats"]["template_mismatches"] = fold_report.get("mismatches", [])

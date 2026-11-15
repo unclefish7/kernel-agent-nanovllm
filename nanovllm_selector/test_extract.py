@@ -95,6 +95,23 @@ class TestExtractQwen3(unittest.TestCase):
                 self.assertTrue(t.path, f"{n.id} 的输入 {t.tensor} 没有 path")
                 self.assertTrue(t.arg_name, f"{n.id} 的输入 {t.tensor} 没有 arg_name")
 
+    def test_invariants_pass(self):
+        """三条机械不变量：dispatch 全覆盖、张量有主、入参有槽。"""
+        rec = self.graph.reconcile
+        for key in ("I1", "I2", "I3"):
+            hits = [c for c in rec["checks"] if c["name"].startswith(key + " ")]
+            self.assertEqual(len(hits), 1, f"{key} 没有报告")
+            self.assertTrue(hits[0]["ok"], hits[0])
+        self.assertEqual(rec["invariants"], [])
+
+    def test_dispatch_accounting_is_closed(self):
+        s = self.graph.reconcile["stats"]
+        self.assertEqual(s["dispatch_unassigned"], 0)
+        self.assertEqual(
+            s["dispatch_total"],
+            s["dispatch_in_nodes"] + s["dispatch_transparent_only"] + s["dispatch_both"],
+        )
+
     def test_rope_split_and_config_are_present(self):
         """cos/sin 是两张表、rope 只在 attention 里做、eps 与 config 不能缺。"""
         # 旋转发生在 attention 簇内部，所以 cos 与 sin 都是 attention 的两个输入。

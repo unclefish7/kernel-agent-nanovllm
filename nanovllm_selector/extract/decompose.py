@@ -120,27 +120,40 @@ class _UnionFind:
 
 @dataclass
 class _Cluster:
+    """一个节点在聚类阶段的样子：只存事实，不做取舍。
+
+    `consumed` / `produced` 是这个簇里**所有**算子（含透明算子）吃进和吐出的
+    张量全集。节点的输入不是"扫一遍觉得该留的"，而是这两个集合的差——
+    见 `build()` 里的 `_bucket`。
+    """
+
     cid: int
     path: str
     call_seq: int
-    ops: list = field(default_factory=list)
-    in_tensors: list = field(default_factory=list)  # 去重后的 tensor id
-    out_tensors: list = field(default_factory=list)
-    in_srcs: dict = field(default_factory=dict)  # tid -> src tuple
-    # tid -> {"path": "args[0]", "arg_name": "hidden_states"}：输入摆在参数的第几位
-    in_slots: dict = field(default_factory=dict)
-    internal: set = field(default_factory=set)  # 簇内产生又被簇内消费的中间张量
+    ops: list = field(default_factory=list)          # 非透明算子（用于判定 op）
+    op_seqs: list = field(default_factory=list)      # 归属本簇的算子序号（闭世界核对用）
+    consumed: dict = field(default_factory=dict)     # tid -> slot；所有算子的操作数
+    consumed_at: dict = field(default_factory=dict)  # tid -> 第一次被消费的 seq
+    produced: set = field(default_factory=set)       # 所有算子产出过的 tid（含视图）
+    produced_at: dict = field(default_factory=dict)  # tid -> 第一次被产出的 seq
+    out_tensors: list = field(default_factory=list)  # 非透明算子的产出（节点的输出）
     min_seq: int = 1 << 60
     max_seq: int = -1
     call: object = None  # 产生这个簇的模块调用（decompose 用）
 
     def merge(self, other: "_Cluster") -> None:
         self.ops.extend(other.ops)
-        self.in_tensors.extend(other.in_tensors)
+        self.op_seqs.extend(other.op_seqs)
+        for tid, slot in other.consumed.items():
+            self.consumed.setdefault(tid, slot)
+        for tid, seq in other.consumed_at.items():
+            if tid not in self.consumed_at or seq < self.consumed_at[tid]:
+                self.consumed_at[tid] = seq
+        self.produced |= other.produced
+        for tid, seq in other.produced_at.items():
+            if tid not in self.produced_at or seq < self.produced_at[tid]:
+                self.produced_at[tid] = seq
         self.out_tensors.extend(other.out_tensors)
-        self.in_srcs.update(other.in_srcs)
-        self.in_slots.update(other.in_slots)
-        self.internal |= other.internal
         self.min_seq = min(self.min_seq, other.min_seq)
         self.max_seq = max(self.max_seq, other.max_seq)
 
@@ -160,6 +173,8 @@ class GraphBuilder:
         self._id_counter = 0
         self.conflicts: list[dict] = []
         self.unresolved: dict[str, int] = {}
+        # storage -> ("node", cid)：按存储块找生产者，视图/别名也认。
+        self._storage_src: dict[str, tuple] = {}
 
     # ---- 张量登记 ---------------------------------------------------
     def tid(self, t: torch.Tensor) -> str:
@@ -214,6 +229,20 @@ class GraphBuilder:
                         self._src[id(t)] = ("ext", self.tid(t))
                     else:
                         self._src[id(t)] = src
+                # 簇内部自己的 view/transpose 也是这个节点的一部分：把它们的
+                # 产出记进 produced，否则"同一张量换个形状再吃一次"会被算成
+                # 第二次从外面拿进来的输入。
+                if current is not None and call is current_call and not broken:
+                    current.op_seqs.append(d.seq)
+                    for t in d.inputs:
+                        self._note_consumed(current, self.tid(t), None, d.seq)
+                    for t in d.outputs:
+                        tid = self.tid(t)
+                        current.produced.add(tid)
+                        current.produced_at.setdefault(tid, d.seq)
+                        self._storage_src[self._tensors[tid]["storage"]] = (
+                            "node", current.cid,
+                        )
                 continue
 
             if current is not None and call is current_call and not broken:
@@ -229,18 +258,10 @@ class GraphBuilder:
             cluster.min_seq = min(cluster.min_seq, d.seq)
             cluster.max_seq = max(cluster.max_seq, d.seq)
             cluster.ops.append(d.op)
+            cluster.op_seqs.append(d.seq)
+
             for t in d.inputs:
-                tid = self.tid(t)
-                if tid in cluster.in_tensors:
-                    continue
-                src = self._src.get(id(t), ("ext", tid))
-                if src == ("node", cluster.cid):
-                    # 这个中间张量是本簇自己刚算出来的：既不是节点的输入，
-                    # 也不该算节点的输出（它没有离开这个节点）。
-                    cluster.internal.add(tid)
-                    continue
-                cluster.in_tensors.append(tid)
-                cluster.in_srcs[tid] = src
+                # 每个操作数有它自己的参数位置，不能拿第一个对上的套给全组。
                 slot = None
                 if call is not None:
                     slot = call.input_slots.get(id(t))
@@ -250,11 +271,28 @@ class GraphBuilder:
                         slot = call.input_storage_slots.get(
                             hex(t.untyped_storage().data_ptr())
                         )
-                cluster.in_slots[tid] = slot or _aten_slot(d, t)
+                    if slot is not None:
+                        slot = dict(slot, source="module")
+                if slot is None:
+                    slot = _aten_slot(d, t)
+                    if slot is not None:
+                        slot = dict(slot, source="aten")
+                self._note_consumed(cluster, self.tid(t), slot, d.seq)
             for t in d.outputs:
                 tid = self.tid(t)
+                cluster.produced.add(tid)
+                cluster.produced_at.setdefault(tid, d.seq)
                 cluster.out_tensors.append(tid)
                 self._src[id(t)] = ("node", cluster.cid)
+                self._storage_src[self._tensors[tid]["storage"]] = ("node", cluster.cid)
+
+    def _note_consumed(self, cluster: "_Cluster", tid: str, slot, seq: int) -> None:
+        """记一次"被消费"。槽位信息只补不覆盖：先到的可能是 aten 参数名，
+        后到的才是真正的模块形参名，谁的更有用留谁。"""
+        if tid not in cluster.consumed or (slot and not cluster.consumed[tid]):
+            cluster.consumed[tid] = slot
+        if tid not in cluster.consumed_at or seq < cluster.consumed_at[tid]:
+            cluster.consumed_at[tid] = seq
 
     def _call_for(self, d):
         best = None
@@ -341,39 +379,96 @@ class GraphBuilder:
         for nid, cl in named:
             module = self._module(cl.path)
             op, confidence = classify_ops(cl.ops, module, self.config)
-            in_refs, outs = [], []
             state_storages = self._own_state_storages(module)
-            seen_in: set[tuple] = set()
-            for tid in cl.in_tensors:
-                # 权重/buffer 不是数据流输入，它们已经记在 node.state 里。
-                # 不排掉的话，图上会多出几百个"输入节点"，每个权重都冒充一次图输入。
-                src = resolve_src(cl.in_srcs.get(tid, ("ext", tid)))
-                if src[0] == "ext" and self._tensors[tid]["storage"] in state_storages:
-                    continue
-                # 同一个"生产者 + 同一块存储"的别名（view / transpose / slice）只算
-                # 一个输入：rotate_half(q) 会把 q 切两半，那不 q 又吃了两次。
-                # 但 cos 与 sin 虽然同一个生产者，存储不同，必须各算一个——
-                # 只按生产者去重会把 sin 整条边吞掉。
-                m_in = self._tensors[tid]
-                key = (src, m_in["storage"])
-                if key in seen_in:
-                    continue
-                seen_in.add(key)
-                in_refs.append((tid, src, "input"))
-            seen_out: set[tuple] = set()
-            for tid in dict.fromkeys(cl.out_tensors):
-                if tid in cl.internal:
-                    continue
-                m = self._tensors[tid]
-                key = (m["storage"], m["offset"], m["numel"])
-                if key in seen_out:
-                    continue
-                seen_out.add(key)
-                outs.append(tid)
+            in_refs, outs = self._node_io(cl, state_storages, resolve_src)
             nodes.append(
                 self._make_node(nid, cl, op, confidence, module, in_refs, outs, phase)
             )
         return nodes
+
+    # ---- 输入/输出：集合差，不是边扫边丢 -----------------------------
+    def _node_io(self, cl: "_Cluster", state_storages: set[str], resolve_src):
+        """节点的输入 = 簇内算子的 `consumed` − `produced` − `state`。
+
+        闭世界：每个被消费的张量必须恰好落进三个桶之一——
+          1. internal：本簇自己算出来的（按对象身份，或按存储块 + 生产早于消费）
+          2. state：模块自己的权重/buffer（按存储块）
+          3. input：剩下的
+        没有第四个桶。所以这里不存在"判断不要就 `continue`"的位置：
+        被丢掉的东西只可能是"明确归了类"，而不是"忘了留"。
+        """
+        # 同一存储块的最早生产时间：视图/别名的归属靠它判断先后。
+        produced_storage_seq: dict[str, int] = {}
+        for tid, seq in cl.produced_at.items():
+            st = self._tensors[tid]["storage"]
+            cur = produced_storage_seq.get(st)
+            produced_storage_seq[st] = seq if cur is None else min(cur, seq)
+
+        internal: set[str] = set()
+        state: set[str] = set()
+        external: dict[str, dict] = {}
+        for tid, slot in cl.consumed.items():
+            m = self._tensors[tid]
+            if tid in cl.produced:
+                internal.add(tid)
+                continue
+            if m["storage"] in state_storages:
+                state.add(tid)
+                continue
+            seq = produced_storage_seq.get(m["storage"])
+            if seq is not None and seq < cl.consumed_at.get(tid, 1 << 60):
+                # 同一块存储上更早时刻产出的东西：视图、切片、原地写。
+                internal.add(tid)
+                continue
+            external[tid] = slot or {}
+
+        # 同一块存储的多个别名只算一个输入（展示层合并，不影响上面的分类）。
+        groups: dict[str, list[str]] = {}
+        for tid in external:
+            groups.setdefault(self._tensors[tid]["storage"], []).append(tid)
+
+        in_refs = []
+        for storage, tids in groups.items():
+            # 有模块形参名的那一个当代表；否则用最早出现的。
+            rep = next(
+                (t for t in tids if (external[t] or {}).get("source") == "module"),
+                tids[0],
+            )
+            slot = external[rep] or {}
+            in_refs.append(
+                (rep, self._producer_src(rep, resolve_src), "input", slot)
+            )
+
+        # 闭世界核对：三类桶必须正好覆盖 `consumed`，不多不少。
+        covered = len(internal) + len(state) + len(external)
+        if covered != len(cl.consumed):
+            self.conflicts.append({
+                "kind": "input_classification",
+                "path": cl.path,
+                "detail": f"consumed={len(cl.consumed)} internal={len(internal)} "
+                          f"state={len(state)} external={len(external)}",
+            })
+
+        seen_out: set[tuple] = set()
+        outs: list[str] = []
+        for tid in dict.fromkeys(cl.out_tensors):
+            if tid in internal:
+                continue
+            m = self._tensors[tid]
+            key = (m["storage"], m["offset"], m["numel"])
+            if key in seen_out:
+                continue
+            seen_out.add(key)
+            outs.append(tid)
+        return in_refs, outs
+
+    def _producer_src(self, tid: str, resolve_src):
+        """这个张量是谁产的：先按对象身份，再按存储块（视图跨模块时用）。"""
+        obj = self._tensors[tid]["obj"]
+        src = self._src.get(id(obj))
+        if src is None:
+            src = self._storage_src.get(self._tensors[tid]["storage"], ("ext", tid))
+        return resolve_src(src)
 
     def tensor_meta(self) -> dict:
         return {tid: {k: v for k, v in m.items() if k != "obj"} for tid, m in self._tensors.items()}
@@ -417,8 +512,8 @@ class GraphBuilder:
                 evidence.append(Evidence("param", f"{name} shape={s.shape}", ref=nid))
 
         inputs = []
-        for i, (tid, _, _) in enumerate(in_refs):
-            slot = cl.in_slots.get(tid) or {}
+        for i, (tid, _, _, slot) in enumerate(in_refs):
+            slot = slot or {}
             inputs.append(
                 TensorRef(
                     tensor=tid,
@@ -452,7 +547,7 @@ class GraphBuilder:
             },
             evidence=evidence,
         )
-        node._in_srcs = {tid: s for tid, s, _ in in_refs}  # type: ignore[attr-defined]
+        node._in_srcs = {tid: s for tid, s, _, _ in in_refs}  # type: ignore[attr-defined]
         node._start_seq = cl.min_seq  # type: ignore[attr-defined]
         return node
 
@@ -523,7 +618,7 @@ def _shape_summary(tensors: dict, in_refs, outs) -> str:
             return "?"
         return "x".join(str(x) for x in meta["shape"]) + f" {meta['dtype']}"
 
-    ins = ", ".join(fmt(tid) for tid, _, _ in in_refs[:4])
+    ins = ", ".join(fmt(tid) for tid, _, _, _ in in_refs[:4])
     os_ = ", ".join(fmt(tid) for tid in outs[:4])
     return f"输入 [{ins}] → 输出 [{os_}]"
 
