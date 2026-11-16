@@ -231,6 +231,16 @@ class TestDecode(unittest.TestCase):
         self.assertEqual(rep["stats"]["failed"], 0)
         self.assertGreater(rep["stats"]["checked"], 800)
 
+    def test_reconcile_per_phase(self):
+        """模块树只对得上一次前向：两个阶段混在一起数会翻倍。"""
+        self.assertTrue(self.graph.reconcile["ok"])
+        names = {c["name"] for c in self.graph.reconcile["checks"]}
+        self.assertIn("matmul[prefill]", names)
+        self.assertIn("matmul[decode]", names)
+        for c in self.graph.reconcile["checks"]:
+            if c["name"].startswith(("matmul[", "rmsnorm[", "silu[")):
+                self.assertEqual(c["expected"], c["actual"], c["name"])
+
     def test_kv_cache_is_cross_step_state(self):
         """KV cache 不是普通输入：它是节点自己的、跨 step 活着的状态。"""
         n = self.graph.node("D.L0.self_attn")

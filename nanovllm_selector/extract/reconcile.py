@@ -46,6 +46,14 @@ def reconcile(
     for n in instance_nodes:
         counts[n.op] = counts.get(n.op, 0) + 1
 
+    # 每个阶段都是一次独立前向：模块树里的 Linear/RMSNorm 只对得上其中一次。
+    # 两个阶段混在一起数会正好翻倍，所以按阶段分开对账。
+    phases = sorted({n.phase for n in instance_nodes}) or ["prefill"]
+    by_phase: dict[str, dict[str, int]] = {p: {} for p in phases}
+    for n in instance_nodes:
+        c = by_phase[n.phase]
+        c[n.op] = c.get(n.op, 0) + 1
+
     checks: list[dict] = []
 
     def add(name, expected, actual, note=""):
@@ -66,14 +74,20 @@ def reconcile(
     rmsnorm = _count_class(model, lambda m: type(m).__name__.endswith("RMSNorm"))
     act = _count_class(model, lambda m: type(m).__name__ in ("SiLUActivation", "GELUActivation", "NewGELUActivation"))
 
-    add("matmul", linear, counts.get("matmul", 0) + counts.get("lm_head", 0), "模块树 Linear 数 vs 图上 matmul+lm_head")
-    add("embedding", embedding, counts.get("embedding", 0), "模块树 Embedding 数")
-    add("rmsnorm", rmsnorm, counts.get("rmsnorm", 0), "模块树 RMSNorm 数")
-    add("silu", act, counts.get("silu", 0) + counts.get("gelu", 0), "激活模块数")
+    multi = len(phases) > 1
+    for phase in phases:
+        c = by_phase[phase]
+        tag = f"[{phase}]" if multi else ""
+        add(f"matmul{tag}", linear, c.get("matmul", 0) + c.get("lm_head", 0),
+            "模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）")
+        add(f"embedding{tag}", embedding, c.get("embedding", 0), "模块树 Embedding 数")
+        add(f"rmsnorm{tag}", rmsnorm, c.get("rmsnorm", 0), "模块树 RMSNorm 数")
+        add(f"silu{tag}", act, c.get("silu", 0) + c.get("gelu", 0), "激活模块数")
 
     if is_qwen3:
+        pre = by_phase.get("prefill", counts)
         for op in ("matmul", "rmsnorm", "silu", "add", "embedding", "lm_head"):
-            add(f"{op}(plan)", PLAN_EXPECT_QWEN3[op], counts.get(op, 0), "计划 §8.1")
+            add(f"{op}(plan)", PLAN_EXPECT_QWEN3[op], pre.get(op, 0), "计划 §8.1")
 
     node_ids = {n.id for n in all_nodes}
     bad_edges = [e for e in edges if e.from_node not in node_ids or e.to_node not in node_ids]
@@ -93,7 +107,12 @@ def reconcile(
     )
 
     stats = {
-        "op_counts": dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+        # 人看的概览按第一个阶段（prefill）统计，别把 decode 的数量混进来。
+        "op_counts": dict(sorted(by_phase[phases[0]].items(), key=lambda kv: (-kv[1], kv[0]))),
+        "op_counts_by_phase": {
+            p: dict(sorted(c.items(), key=lambda kv: (-kv[1], kv[0])))
+            for p, c in by_phase.items()
+        },
         "nodes": len(instance_nodes),
         "edges": len(edges),
         "graph_inputs": [n.id for n in all_nodes if n.origin == "input"],

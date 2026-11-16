@@ -36,6 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mermaid", action="store_true", help="打印 Mermaid 源码")
     p.add_argument("--json", dest="print_json", action="store_true", help="把 JSON 打到 stdout")
     p.add_argument("--check", action="store_true", help="运行对账，未通过返回 1")
+    p.add_argument(
+        "--phases",
+        default="prefill",
+        help="要抽的阶段，逗号分隔；可选 prefill、decode，如 prefill,decode",
+    )
     return p
 
 
@@ -49,6 +54,7 @@ def main(argv=None) -> int:
             seq_len=args.seq_len,
             collapse_template=not args.no_collapse,
             weights=args.weights,
+            phases=tuple(x.strip() for x in args.phases.split(",") if x.strip()),
         )
     except NotImplementedError as exc:
         print(f"[不支持] {exc}", file=sys.stderr)
