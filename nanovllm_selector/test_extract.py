@@ -290,5 +290,52 @@ class TestRender(unittest.TestCase):
                 self.assertEqual(json.load(f)["schema_version"], SCHEMA_VERSION)
 
 
+
+LLAMA_FIXTURE = "nanovllm_selector/fixtures/llama-3.2-1b"
+
+
+class TestExtractLlama(unittest.TestCase):
+    """第二个架构：没有 q/k norm，RoPE 用 llama3 型缩放（频率表被改过）。
+
+    只放 config.json，不下载权重；`from_config` 随机初始化。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if not os.path.exists(os.path.join(LLAMA_FIXTURE, "config.json")):
+            raise unittest.SkipTest("缺少 llama 的 config.json")
+        cls.graph = extract_graph(LLAMA_FIXTURE, dtype="float32", device="cpu", seq_len=8)
+
+    def test_all_checks_pass(self):
+        self.assertTrue(self.graph.reconcile["ok"], self.graph.reconcile)
+        failed = [c for c in self.graph.reconcile["checks"] if not c["ok"]]
+        self.assertEqual(failed, [])
+
+    def test_shape_of_graph(self):
+        ids = {n.id for n in self.graph.nodes}
+        self.assertEqual(len(self.graph.nodes), 20)
+        # 16 层 × 14 个节点，加顶层 5 个（input_ids 不算实例节点）
+        self.assertEqual(self.graph.reconcile["stats"]["instance_nodes"], 229)
+        self.assertNotIn("L*.self_attn.q_norm", ids)
+        self.assertNotIn("L*.self_attn.k_norm", ids)
+        counts = self.graph.op_counts(expand=True)
+        self.assertEqual(counts.get("rmsnorm"), 33)
+        self.assertEqual(counts.get("matmul"), 112)
+        self.assertEqual(counts.get("lm_head"), 1)
+        self.assertEqual(counts.get("rope_table"), 1)
+
+    def test_rope_uses_recorded_frequency_table(self):
+        """llama3 缩放改了 inv_freq；只按 rope_theta 重算会对不上。"""
+        n = self.graph.node("rotary_emb")
+        kinds = {(s.name, s.kind) for s in n.state}
+        self.assertIn(("inv_freq", "buffer"), kinds)
+        self.assertEqual(len(n.outputs), 2)  # cos / sin，中间量不算输出
+
+    def test_eps_comes_from_module(self):
+        n = self.graph.node("L*.input_layernorm")
+        scalars = {s.name for s in n.state if s.kind == "scalar"}
+        self.assertIn("variance_epsilon", scalars)
+
+
 if __name__ == "__main__":
     unittest.main()

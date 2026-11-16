@@ -163,6 +163,10 @@ def render_text(graph: Graph, width: int = 110) -> str:
         for ref in n.inputs:
             src = producers.get((n.id, ref.tensor))
             name = ref.arg_name or "?"
+            if ref.arg_source == "aten":
+                # aten 的通用参数名（self/other/tensors/mat2），不是模型里
+                # 有人这样命名，标出来免得被当成真实形参。
+                name = f"aten:{name}"
             where = f"  [{ref.path}]" if ref.path else ""
             if src:
                 arrow = src

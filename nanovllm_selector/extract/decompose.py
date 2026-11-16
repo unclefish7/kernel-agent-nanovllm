@@ -267,6 +267,13 @@ class GraphBuilder:
                 if tid_in in cluster.produced:
                     # 本簇自己的产出又被本簇的下一个算子吃掉：它还是中间量。
                     cluster.internal_out.add(tid_in)
+                # 吃的是本簇产出的一个视图（同 storage、不同对象）时，原对象
+                # 也得记成中间量，否则它会以"没有任何消费者"的姿态挂进
+                # 节点 outputs（rope 的 freqs 就是这样冒出来的）。
+                st = self._tensors[tid_in]["storage"]
+                for p in cluster.produced:
+                    if self._tensors[p]["storage"] == st:
+                        cluster.internal_out.add(p)
                 # 每个操作数有它自己的参数位置，不能拿第一个对上的套给全组。
                 slot = None
                 if call is not None:
@@ -527,6 +534,7 @@ class GraphBuilder:
                     index=i,
                     path=slot.get("path"),
                     arg_name=slot.get("arg_name"),
+                    arg_source=slot.get("source"),
                 )
             )
         outputs = [TensorRef(tensor=tid, role="out", index=i) for i, tid in enumerate(outs)]

@@ -71,6 +71,10 @@ class TensorRef:
     index: int | None = None
     path: str | None = None
     arg_name: str | None = None
+    # 这个名字是从哪来的：`module`（模块 forward 的形参）还是 `aten`
+    # （簇内某个算子的参数名）。两者含义不同——`self` / `other` /
+    # `tensors` / `mat2` 是 aten 的通用参数名，不是模型里有人这样命名。
+    arg_source: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -79,6 +83,7 @@ class TensorRef:
             "index": self.index,
             "path": self.path,
             "arg_name": self.arg_name,
+            "arg_source": self.arg_source,
         }
 
 
