@@ -68,6 +68,16 @@ def build_feedback(report: dict) -> str:
                 f"{item.get('max_abs_diff'):.4f}，余弦 {item.get('cosine'):.6f}"
                 f"{'' if item.get('ok') else '  ← 未通过'}"
             )
+    elif report.get("comparison"):
+        item = report["comparison"]
+        lines += [
+            "",
+            "数值对比：",
+            f"- 引擎 top-1 = {item.get('argmax_actual')}，"
+            f"transformers top-1 = {item.get('argmax_expected')}",
+            f"- 最大绝对误差 = {item.get('max_abs_diff', float('nan')):.4f}",
+            f"- 余弦相似度 = {item.get('cosine', float('nan')):.6f}",
+        ]
     lines += ["", "请输出修正后的完整文件：只输出 Python 代码，不要解释、不要补丁。"]
     return "\n".join(lines)
 
