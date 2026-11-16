@@ -78,6 +78,22 @@ def build_feedback(report: dict) -> str:
             f"- 最大绝对误差 = {item.get('max_abs_diff', float('nan')):.4f}",
             f"- 余弦相似度 = {item.get('cosine', float('nan')):.6f}",
         ]
+
+    decode = report.get("decode") or {}
+    decode_items = decode.get("items") or []
+    if decode_items:
+        bad = [item for item in decode_items if not item.get("ok")]
+        lines += [
+            "",
+            f"逐 token 生成（真正走 KV cache 的 {decode.get('steps')} 步）："
+            f"{decode.get('matched')}/{decode.get('steps')} 步通过。",
+        ]
+        for item in bad[:4]:
+            lines.append(
+                f"- 第 {item.get('step')} 步: top-1 {item.get('argmax_actual')} vs "
+                f"{item.get('argmax_expected')}，最大绝对误差 "
+                f"{item.get('max_abs_diff'):.4f}，余弦 {item.get('cosine'):.6f}  ← 未通过"
+            )
     lines += ["", "请输出修正后的完整文件：只输出 Python 代码，不要解释、不要补丁。"]
     return "\n".join(lines)
 

@@ -95,6 +95,26 @@ class TestFeedback(unittest.TestCase):
         self.assertIn("最大绝对误差 = 3.5000", text)
         self.assertIn("余弦相似度 = 0.500000", text)
 
+    def test_includes_decode_steps(self):
+        text = build_feedback({
+            "stage": "compare",
+            "comparisons": [{"length": 128, "argmax_actual": 1, "argmax_expected": 1,
+                             "max_abs_diff": 0.1, "cosine": 0.9999, "ok": True}],
+            "decode": {
+                "steps": 2, "matched": 1, "ok": False,
+                "items": [
+                    {"step": 1, "argmax_actual": 5, "argmax_expected": 5,
+                     "max_abs_diff": 0.2, "cosine": 0.9999, "ok": True},
+                    {"step": 2, "argmax_actual": 7, "argmax_expected": 8,
+                     "max_abs_diff": 1.5, "cosine": 0.9, "ok": False},
+                ],
+            },
+        })
+        self.assertIn("逐 token 生成", text)
+        self.assertIn("1/2 步通过", text)
+        self.assertIn("第 2 步", text)
+        self.assertIn("余弦 0.900000", text)
+
 
 class TestDotenv(unittest.TestCase):
     def test_sets_missing_and_keeps_existing(self):

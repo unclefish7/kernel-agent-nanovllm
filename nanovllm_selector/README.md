@@ -214,9 +214,10 @@ python -B -m nanovllm_selector.port.iterate \
 每轮写 `attempt_N.py`，并在**子进程**里跑真实引擎：
 
 - 把候选类注入 `models.ARCH`，构造 `LLM(...)`；
-- 在 `compute_logits` 上抓 prefill 的第一份 logits（构造时的 warmup 要跳过）；
-- 与 transformers 在同一输入上比，三档长度 128 / 256 / 768；
-- 判据：`argmax` 相同、`max_abs_diff <= 2.0`、`cosine >= 0.999`。
+- 三档长度 128 / 256 / 768 各跑一次 prefill，抓那一份 logits（构造时的 warmup 要跳过）；
+- 再对最长的那条跑一次生成，抓 prefill 之后的 8 步 logits——这几步是真的在读 KV cache；
+- 与 transformers 在同一上下文上比：prefill 比末位，decode 第 j 步比第 `len+j-1` 位（输入的 token 与引擎实际生成的一致，所以比的是"同一上文下的下一步"）；
+- 判据：`argmax` 相同、`max_abs_diff <= 2.0`、`cosine >= 0.999`，prefill 和 decode 都要过。
 
 失败时把**真实报错**和每档数字回灌给模型，而不是用自然语言说"再检查一下"。
 `--max-iters` 用完就停，留下每一轮的文件和报告。
@@ -227,10 +228,14 @@ python -B -m nanovllm_selector.port.iterate \
 python -B -m nanovllm_selector.port.evaluate \
     --model tmp/models/llama-3.2-1B \
     --candidate nanovllm_selector/outputs/iter_llama2/attempt_3.py \
+    --decode-steps 8 \
     --report tmp/eval.json
 ```
 
 退出码 0 通过。失败阶段会写明是 `load`（装载）、`class`（找不到类）、`run`（引擎里跑挂）还是 `compare`（数值不符）。
+`--decode-steps` 控制逐 token 走 KV cache 的步数，设 0 就退回"只验 prefill"。
+
+报告里 `comparisons` 是 prefill（每个长度一条），`decode.items` 是逐步的 KV cache 验证，每条都带 `max_abs_diff` 和 `cosine`。
 
 ---
 
