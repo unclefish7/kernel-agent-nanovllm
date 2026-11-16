@@ -65,8 +65,13 @@ def _arange(inputs, state, attrs, ctx):
 def _rope_table(inputs, state, attrs, ctx):
     pos = inputs[0].float().reshape(1, -1)      # [1, 1, L] -> [1, L]
     dim = ctx["head_dim"]
-    theta = float(ctx.get("rope_theta", 10000.0))
-    inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+    # 频率表以节点声明的 inv_freq 为准：llama3 型缩放、动态 NTK 等都会改它，
+    # 从 rope_theta 硬推只对"无缩放"的模型成立。没有该 buffer 时才回退。
+    inv_freq = state.get("inv_freq")
+    if inv_freq is None:
+        theta = float(ctx.get("rope_theta", 10000.0))
+        inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+    inv_freq = inv_freq.float()
     freqs = pos[..., None] * inv_freq           # [1, 1, L, dim/2]
     emb = torch.cat([freqs, freqs], dim=-1)
     return [torch.cos(emb), torch.sin(emb)]
@@ -199,7 +204,8 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
         checked += 1
 
     return {
-        "ok": not failures,
+        # 跳过也是失败：未登记的 op 或拿不到输入的节点，不能算"通过"。
+        "ok": not failures and not skipped,
         "checked": checked,
         "skipped": sorted(set(skipped)),
         "failures": failures,

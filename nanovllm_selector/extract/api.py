@@ -113,10 +113,11 @@ def extract_graph(
         report["checks"].append({
             "name": "R1 逐节点重放",
             "expected": 0,
-            "actual": rep["stats"]["failed"],
+            "actual": rep["stats"]["failed"] + rep["stats"]["skipped"],
             "ok": rep["ok"],
             "note": f"{rep['stats']['checked']} 个实例节点按图重算，"
-                    f"{rep['stats']['skipped']} 个暂不重放",
+                    f"{rep['stats']['failed']} 个失败、{rep['stats']['skipped']} 个未覆盖"
+                    f"（未覆盖也计为不通过）",
         })
     if reconcile_graph:
         inv = check_invariants(builder, rec, instance_nodes, edges)
