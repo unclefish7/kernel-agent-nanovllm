@@ -172,15 +172,31 @@ contract 要做的是"把 must 按 when 条件挂到参考图的节点上"。但
 | --- | --- |
 | ① 参考图 | 完成。`nanovllm_selector/extract/`：Qwen3 prefill+decode 905 个节点、Llama-3.2-1B 457 个节点全部逐节点重放通过，31 项单测 |
 | ② 引擎规约 | 完成。`contracts/nanovllm/spec.yaml` + 引擎基底代码（§3），16 项单测 |
-| ③ agent 生成 | 未开始。`nanovllm_selector/port/` 已能组装 prompt（`--dry-run`） |
+| ③ agent 生成 | **跑通**。`nanovllm_selector/port/`：prompt 组装 + `evaluate.py`（在真实引擎里跑并对比 logits）+ `iterate.py`（生成 → 评测 → 回灌报错 → 重试） |
 
-**下一步**：把四样材料递给 agent，让它写第一版 `models/llama.py`。
+**迭代循环的判据**（硬约束，不写在 prompt 里）：
+
+候选文件写完后，`evaluate.py` 起一个独立子进程：把候选类注入注册表、走真实的 `LLM(...)` 构造与生成，在 prefill 的 `compute_logits` 上抓第一份 logits；再和 transformers 在同一输入上的 logits 对比。三个长度各跑一次（128 / 256 / 768），要求 `argmax` 相同、`max_abs_diff <= 2.0`、`cosine >= 0.999`；全过才算成功，否则把真实报错和每档数字回灌给模型，最多 `--max-iters` 轮。
+
+**实测（Llama-3.2-1B，2026-11-16）**：
+
+| 轮 | 结果 | 原因 |
+| --- | --- | --- |
+| 1 | 装载失败 | `lm_head.weight` 没被填充：用了 `lm_head.weight.data = embed.weight.data`（两个独立参数），改成共享同一个 `Parameter` 才对 |
+| 2 | 数值不过 | 直接用了引擎的 `get_rope`（只认 `rope_theta`），Llama-3.2 的 llama3 缩放没实现；长度 128 余弦 0.998878、768 0.997513 |
+| 3 | **通过** | 自己写了 `LlamaRotaryEmbedding` + `_llama3_inv_freq`（低频除 factor、中频平滑、高频不变），三档余弦 0.999846 / 0.999905 / 0.999895 |
+
+第 3 轮的 `attempt_3.py` 共 304 行（模板 216 行），新增的正是引擎里没有的那个旋转位置编码。
+
+**为什么长度要跑到 768**：只用 5 个 token 时第 2 轮也会"通过"——llama3 缩放在短序列上的数值差异低于噪声。长度拉长后误差单调增长（0.30 → 0.58 → 1.17），才和真正的实现错误区分开。
 
 Llama 与 Qwen3 的三处硬差异（图上看不出来，写代码时会撞上）：
 
 1. 没有 `q_norm` / `k_norm`——`qwen3.py:68` 用 `if not self.qkv_bias` 判断，照抄会凭空多出两个参数
 2. RoPE 是 llama3 型缩放（`factor` / `high_freq_factor` / `low_freq_factor`），`qwen3.py:54` 只读了 `rope_theta`
 3. `o_proj` / `down_proj` 用行并行，`gate_up_proj` 用列并行
+
+**下一步**：换更多模型（TinyLlama、Phi-3-mini、Gemma-2）跑同一个循环，看哪些差异是"引擎没有的组件"，再决定要不要补进引擎。
 
 ---
 
