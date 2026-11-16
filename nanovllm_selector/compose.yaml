@@ -18,7 +18,7 @@ services:
         soft: -1
         hard: -1
     environment:
-      HIP_VISIBLE_DEVICES: "0"
+      HIP_VISIBLE_DEVICES: "0,1,2,3"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
       PYTHONPATH: /workspace/nano-vllm

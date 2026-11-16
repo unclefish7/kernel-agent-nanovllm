@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 import time
 import traceback
@@ -105,7 +106,8 @@ def reference_logits_multi(model_dir: str, sequences: list[list[int]]) -> list[t
 
 
 def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
-               max_model_len: int = 1024, decode_steps: int = 0) -> dict:
+               max_model_len: int = 1024, decode_steps: int = 0,
+               tp: int = 1) -> dict:
     """把候选类挂进注册表，走真实引擎。
 
     - 每个长度跑一次 prefill，抓那一份 logits（`prefill`）；
@@ -132,7 +134,7 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
         llm = LLM(
             model_dir,
             enforce_eager=True,
-            tensor_parallel_size=1,
+            tensor_parallel_size=tp,
             max_model_len=max_model_len,
             max_num_seqs=1,
             gpu_memory_utilization=0.35,
@@ -182,14 +184,14 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
 
 
 def engine_logits(cls, model_dir: str, sequences: list[list[int]], arch: str,
-                  max_model_len: int = 1024) -> list[torch.Tensor]:
+                  max_model_len: int = 1024, tp: int = 1) -> list[torch.Tensor]:
     """只要 prefill 的 logits（demo 的逐位置比对仍然用它）。"""
-    return engine_run(cls, model_dir, sequences, arch, max_model_len)["prefill"]
+    return engine_run(cls, model_dir, sequences, arch, max_model_len, tp=tp)["prefill"]
 
 
 def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
              lengths: tuple[int, ...] = DEFAULT_LENGTHS, decode_steps: int = 8,
-             **kwargs: Any) -> dict:
+             tp: int = 1, **kwargs: Any) -> dict:
     """完整评测一个候选文件；任何阶段失败都折算成报告，不抛异常。"""
     started = time.time()
     report: dict[str, Any] = {
@@ -210,6 +212,10 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
         report["error"] = traceback.format_exc()[-4000:]
         return _finish(report, started)
 
+    # tp>1 时引擎用 spawn 起其他 rank，子进程会重新 import nanovllm.models；
+    # 它们读这个环境变量重放“候选登记”，否则只认 ARCH 里内置的 Qwen3。
+    os.environ["NANOVLLM_MODEL_FILE"] = str(candidate)
+
     report["stage"] = "run"
     try:
         from transformers import AutoTokenizer
@@ -225,6 +231,7 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
         eng = engine_run(
             cls, model_dir, sequences, arch or cls.__name__,
             max_model_len=longest + decode_steps + 64, decode_steps=decode_steps,
+            tp=tp,
         )
         decode_logits = eng["decode"]["logits"]
         actual_ids = eng["decode"]["ids"] or sequences[-1]
@@ -296,11 +303,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--decode-steps", type=int, default=8,
                         help="逐 token 走 KV cache 的步数，0 表示只验 prefill")
     parser.add_argument("--report", type=Path, default=None, help="把 JSON 报告写到这个文件")
+    parser.add_argument("--tp", type=int, default=1, help="tensor_parallel_size，默认 1")
     args = parser.parse_args(argv)
 
     lengths = tuple(int(x) for x in args.lengths.split(",") if x.strip())
     report = evaluate(args.model, args.candidate, args.arch, lengths,
-                      decode_steps=args.decode_steps)
+                      decode_steps=args.decode_steps, tp=args.tp)
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
