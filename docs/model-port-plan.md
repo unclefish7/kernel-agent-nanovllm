@@ -119,6 +119,19 @@ python -m nanovllm_selector.extract.cli --model <模型目录> --outdir <输出�
 
 另给 `access`（怎么取）和 `built_by`（谁写的，`model_runner.py:138` / `:181`）两行。不写怎么用——`qwen3.py` 已经演示过。
 
+### 引擎基底（代码）
+
+规约是给 agent 看的文档；引擎自己还得有对应的代码，否则 agent 写对了也跑不起来。这四处已补进子模块：
+
+| 能力 | 位置 | 做什么 |
+| --- | --- | --- |
+| 找到它 | `nanovllm/models/__init__.py` 的 `ARCH` + `resolve_model_class` | 按 `config.architectures` 查表拿到模型类；查不到时把"你要的"和"已有的"一起列出来 |
+| 验它 | 同文件 `check_model_contract` | 构造前检查 `forward(input_ids, positions)`、`compute_logits`、`packed_modules_mapping` |
+| 装它 | `nanovllm/utils/loader.py` | 按 `packed_modules_mapping` 装；checkpoint 多出的键报错；模型参数没被填也报错；`ignored_weight_keys` 声明跳过无用张量 |
+| 绑它 | `nanovllm/engine/model_runner.py` 的 `allocate_kv_cache` | 带 `k_cache`/`v_cache` 的模块数必须等于 `config.num_hidden_layers` |
+
+四种权重关系里，引擎现在能表达三种：同名一对一、打包多对一（`"q_proj": ("qkv_proj", "q")`）、显式丢弃（`ignored_weight_keys`）。**一对多（checkpoint 一个张量拆进模型多个参数）还不支持**——HF 的 checkpoint 都是拆开的，暂时撞不上。
+
 ### 为什么没有 contract
 
 contract 要做的是"把 must 按 when 条件挂到参考图的节点上"。但"哪条规则命中哪个节点"本身是语义判断，人工做不动、常规自动化也做不准；交给 agent 正是它该干的活。手工维护一张决定表，模型一多就废了。
@@ -149,7 +162,7 @@ contract 要做的是"把 must 按 when 条件挂到参考图的节点上"。但
 
 **不做的事**：不要求这一版写 Triton、不要求 TP 正确、不要求性能。这一版只要能在单卡上跑出与 HF 一致的 token。
 
-**落地时还要改一行引擎**：`engine/model_runner.py:10` 目前写死 `from nanovllm.models.qwen3 import Qwen3ForCausalLM`，`:40` 写死实例化。需要按 `config.model_type` 查表。这是引擎侧改动，在子模块里单独提交。
+**引擎侧已经就绪**：注册表、契约检查、权重装载与核对、KV cache 绑定核对都已补上（见 §3 引擎基底）。agent 写出的 `models/<model>.py` 只要在 `ARCH` 里登记一行，引擎就能认出来。
 
 ---
 
@@ -157,11 +170,11 @@ contract 要做的是"把 must 按 when 条件挂到参考图的节点上"。但
 
 | 环节 | 状态 |
 | --- | --- |
-| ① 参考图 | 完成。`nanovllm_selector/extract/`，19 项单测，Qwen3 对账 16/16 |
-| ② 引擎规约 | 完成。`contracts/nanovllm/spec.yaml` |
-| ③ agent 生成 | 未开始 |
+| ① 参考图 | 完成。`nanovllm_selector/extract/`：Qwen3 prefill+decode 905 个节点、Llama-3.2-1B 457 个节点全部逐节点重放通过，31 项单测 |
+| ② 引擎规约 | 完成。`contracts/nanovllm/spec.yaml` + 引擎基底代码（§3），16 项单测 |
+| ③ agent 生成 | 未开始。`nanovllm_selector/port/` 已能组装 prompt（`--dry-run`） |
 
-**下一步**：准备 Llama-3.2-1B 的参考图，把四样材料递给 agent，让它写第一版 `models/llama.py`。
+**下一步**：把四样材料递给 agent，让它写第一版 `models/llama.py`。
 
 Llama 与 Qwen3 的三处硬差异（图上看不出来，写代码时会撞上）：
 
