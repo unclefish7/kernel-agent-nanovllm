@@ -1,0 +1,264 @@
+# nano-vLLM 引擎规约
+#
+# 给"写 models/<model>.py 的 agent"的引擎侧材料。
+# 三段彼此独立，不互相索引：
+#   must     —— 必须成立的条件（否定会被运行时揭穿）
+#   toolbox  —— 引擎提供的 SDK，可以用来满足 must，也可以不用
+#   context  —— 一次前向里能读到的批信息，源码里看不出来的部分
+#
+# 这里只写引擎的事实。模型该算什么，看参考图；两者怎么拼，交给 agent。
+
+meta:
+  engine: nano-vLLM
+  source_root: nano-vllm/nanovllm
+  commit: 04ea53a899650326fd1a3f90350d9fc83b8130e5
+  scope: "models/<model>.py 与引擎之间的接口"
+  note: >
+    每一条都带源码位置。与源码冲突时以源码为准，并回来改本文件。
+
+# ---------------------------------------------------------------------------
+must:
+# ---------------------------------------------------------------------------
+
+  - id: M1
+    title: 入口与返回
+    statement: >
+      模型类必须能被这样调用：hidden = model(input_ids, positions)，
+      logits = model.compute_logits(hidden)。
+      forward 只有这两个张量参数——没有 attention_mask、没有 past_key_values、
+      没有 use_cache。返回的 hidden 是 [T, hidden]（T 是本轮所有请求的 token 总数），
+      不含 logits；logits 由 compute_logits 单独算。
+    evidence:
+      - engine/model_runner.py:207   # logits = self.model.compute_logits(self.model(input_ids, positions))
+      - engine/model_runner.py:221   # CUDA graph 路径同样是这两步
+      - models/qwen3.py:205
+      - models/qwen3.py:212
+
+  - id: M2
+    title: KV cache 的归属
+    statement: >
+      跨 step 的 K/V 只能存在于引擎分配的那块显存里，位置由 slot_mapping 给出，
+      读取时的物理块号由 block_tables 给出。模型不得自己缓存 K/V，
+      也不得假设 cache 是连续存放的。
+    evidence:
+      - engine/model_runner.py:112   # allocate_kv_cache：一次性分配 (2, layers, blocks, block_size, kv_heads, head_dim)
+      - engine/model_runner.py:126   # 按 hasattr(module, "k_cache") 把每层切片挂到模块上
+      - layers/attention.py:79       # Attention.forward 是唯一的读/写入口
+      - layers/attention.py:47       # store_kvcache：按 slot_mapping 写入
+
+  - id: M3
+    title: 一轮前向 = 一个拼起来的批
+    statement: >
+      一次 forward 处理的是整个 batch 拼起来的序列，请求边界只能从
+      cu_seqlens_q / cu_seqlens_k / context_lens 里得到。
+      不能假设批内各请求等长，不能假设有 padding，不能按 request 循环
+      （逐请求拆开的写法只允许作为兜底路径，如 Attention.forward_torch）。
+      prefill 与 decode 共用同一个 forward，用 is_prefill 分流。
+    evidence:
+      - engine/model_runner.py:138   # prepare_prefill：多个请求的 token 直接 extend 进一个 list
+      - engine/model_runner.py:181   # prepare_decode：每个请求恰好 1 个 token
+      - utils/context.py:6
+
+  - id: M4
+    title: 权重名与切分
+    statement: >
+      每个参数的名字必须能被 model.get_parameter(name) 找到，其中 name 来自
+      checkpoint 里的张量名。名字对不上时必须用 packed_modules_mapping 声明映射
+      （旧名 -> (新名, shard_id)）。需要按 tp 切分的参数必须自带 weight_loader，
+      否则只能整体拷贝。
+    evidence:
+      - utils/loader.py:12           # load_model 的两条路径：mapping 命中 / 否则默认拷贝
+      - utils/loader.py:22           # weight_loader = getattr(param, "weight_loader")
+      - models/qwen3.py:187          # packed_modules_mapping 的写法
+      - layers/linear.py:26          # 构造时把 weight_loader 挂到参数上
+
+  - id: M5
+    title: 除 KV cache 外不留跨 step 状态
+    statement: >
+      模型不能在两次 forward 之间保存随请求变化的东西——缓存的 mask、按请求的中间
+      结果、累计计数都不行。同一组模块会被连续调用，且 decode 阶段会被 CUDA graph
+      重放（捕获时只执行一次），任何 Python 侧的状态都会与真实步数脱节。
+    evidence:
+      - engine/model_runner.py:233   # capture_cudagraph：捕获一次，之后 replay
+      - engine/model_runner.py:206   # decode 且 batch 较小时走 graph 路径
+
+# ---------------------------------------------------------------------------
+toolbox:
+# kind: state=读运行时状态 / memory=操作 KV cache 显存 / shared=共享只读资源
+#       convention=带引擎约定的组件 / op=纯算子
+# ---------------------------------------------------------------------------
+
+  - name: get_context
+    kind: state
+    signature: "get_context() -> Context"
+    source: utils/context.py:18
+    gives: 本轮批信息，字段见 context 段
+    notes: 全局单例；prepare_prefill / prepare_decode 写入，一步结束后 reset_context
+
+  - name: store_kvcache
+    kind: memory
+    signature: "store_kvcache(key, value, k_cache, v_cache, slot_mapping)"
+    source: layers/attention.py:47
+    gives: 把本轮的 k/v 按 slot_mapping 写进分页 cache
+    notes: key/value 形状 [N, H_kv, D]；slot == -1 的 token 跳过；Triton 不可用时退化为索引赋值
+
+  - name: Attention
+    kind: memory
+    signature: "Attention(num_heads, head_dim, scale, num_kv_heads).forward(q, k, v) -> o"
+    source: layers/attention.py:63
+    gives: 写 cache + 读 cache + 算 attention，内部处理 prefill/decode 与 flash/兜底两条路径
+    notes: k_cache/v_cache 由引擎在 allocate_kv_cache 时挂上来；模块自己分配会被覆盖
+
+  - name: Attention.forward_torch
+    kind: memory
+    signature: "forward_torch(q, k, v)"
+    source: layers/attention.py:99
+    gives: 不走 flash 的逐请求实现（手动按 block_table 取 KV，数学后端算 SDPA）
+    notes: 慢，但 CPU / 老卡 / 调试可用
+
+  - name: get_rope
+    kind: shared
+    signature: "get_rope(head_size, rotary_dim, max_position, base) -> RotaryEmbedding"
+    source: layers/rotary_embedding.py:54
+    gives: 跨层共享的旋转表，@lru_cache(1)，28 层只会建一个实例
+    notes: 参数相同才命中；rotary_dim 必须等于 head_size（构造函数里有 assert）
+
+  - name: RotaryEmbedding.forward
+    kind: shared
+    signature: "forward(positions, query, key) -> (query, key)"
+    source: layers/rotary_embedding.py:40
+    gives: 按 positions 取 cos/sin，对 q 和 k 施加旋转
+    notes: cos_sin_cache 是 persistent=False 的 buffer（不进 state_dict，随模块迁移设备）
+
+  - name: apply_rotary_emb
+    kind: op
+    signature: "apply_rotary_emb(x, cos, sin) -> Tensor"
+    source: layers/rotary_embedding.py:8
+    gives: 对最后一维做前后两半的旋转（chunk(2, -1) 的写法，不是交错式）
+    notes: 内部转 float32 再转回 x.dtype
+
+  - name: RMSNorm
+    kind: convention
+    signature: "RMSNorm(hidden_size, eps).forward(x, residual=None)"
+    source: layers/layernorm.py:44
+    gives: residual 为 None 走单入单出；否则走 add_rms_forward 双入双出
+    notes: 残差是延迟相加的——调用方在下一层 norm 时才把 residual 加进去
+
+  - name: RMSNorm.add_rms_forward
+    kind: convention
+    signature: "add_rms_forward(x, residual) -> (normed, new_residual)"
+    source: layers/layernorm.py:31
+    gives: 先 x + residual，再归一化；同时把加完的结果作为新的 residual 返回
+    notes: 双输出；返回的 residual 是 bf16，归一化在 fp32 里算
+
+  - name: SiluAndMul
+    kind: convention
+    signature: "SiluAndMul().forward(x) -> Tensor"
+    source: layers/activation.py:8
+    gives: 吃打包输入 [.., 2*inter]，chunk(2, -1) 后算 silu(x1) * x2
+    notes: 前半必须是 gate，后半必须是 up；顺序反了不会报错，只会算错
+
+  - name: MergedColumnParallelLinear
+    kind: convention
+    signature: "MergedColumnParallelLinear(input_size, output_sizes, bias)"
+    source: layers/linear.py:76
+    gives: 把多个投影拼成一个权重 (sum(output_sizes)/tp, input_size)，按 shard_id 装载
+    notes: gate/up 打包用它；outputs 的先后决定 chunk 顺序
+
+  - name: QKVParallelLinear
+    kind: convention
+    signature: "QKVParallelLinear(hidden_size, head_size, total_heads, total_kv_heads, bias)"
+    source: layers/linear.py:96
+    gives: 把 q/k/v 拼成一个权重 ((H + 2*H_kv)*D / tp, hidden)，按 "q"/"k"/"v" 装载
+    notes: 输出必须按 [q | k | v] 的顺序切；q 与 k 的 head 数可以不同
+
+  - name: ColumnParallelLinear
+    kind: convention
+    signature: "ColumnParallelLinear(input_size, output_size, bias)"
+    source: layers/linear.py:54
+    gives: 权重按输出维切分 (output_size/tp, input_size)；forward 是纯 F.linear
+    notes: tp=1 时与 nn.Linear 等价，但没有 weight_loader
+
+  - name: RowParallelLinear
+    kind: convention
+    signature: "RowParallelLinear(input_size, output_size, bias)"
+    source: layers/linear.py:131
+    gives: 权重按输入维切分 (output_size, input_size/tp)；forward 后 all_reduce
+    notes: bias 只在 tp_rank 0 上加；o_proj / down_proj 用它
+
+  - name: ReplicatedLinear
+    kind: op
+    signature: "ReplicatedLinear(input_size, output_size, bias)"
+    source: layers/linear.py:37
+    gives: 不切分，每个 rank 一份完整权重
+    notes: 权重仍是 (output_size, input_size)，与 checkpoint 同形
+
+  - name: VocabParallelEmbedding
+    kind: convention
+    signature: "VocabParallelEmbedding(num_embeddings, embedding_dim)"
+    source: layers/embed_head.py:9
+    gives: 词表按 tp 切分，越界 id 置零后 all_reduce
+    notes: 要求 vocab_size 能被 tp 整除
+
+  - name: ParallelLMHead
+    kind: convention
+    signature: "ParallelLMHead(num_embeddings, embedding_dim)"
+    source: layers/embed_head.py:45
+    gives: 词表切分 + prefill 时只取每条序列最后一个 token 的 hidden 来算 logits
+    notes: 只取最后 token 的逻辑在这里，模型侧不要自己切
+
+  - name: Sampler
+    kind: op
+    signature: "Sampler().forward(logits, temperatures) -> token_ids"
+    source: layers/sampler.py:7
+    gives: 采样
+    notes: 在模型外，由 ModelRunner 调用，不参与模型文件
+
+# ---------------------------------------------------------------------------
+context:
+# ---------------------------------------------------------------------------
+
+  access: "from nanovllm.utils.context import get_context; ctx = get_context()"
+  built_by:
+    - engine/model_runner.py:138   # prepare_prefill
+    - engine/model_runner.py:181   # prepare_decode
+  fields:
+    - name: is_prefill
+      type: bool
+      when: 总是
+      meaning: 本轮是 prefill（True）还是 decode（False）
+
+    - name: cu_seqlens_q
+      type: "int32[N+1]"
+      when: 仅 prefill
+      meaning: 各请求的 query 在拼接序列里的起始偏移，第 i 个请求占 [cu[i], cu[i+1])
+
+    - name: cu_seqlens_k
+      type: "int32[N+1]"
+      when: 仅 prefill
+      meaning: 同上，针对 key；分块 prefill 时后一块的 k 比 q 长
+
+    - name: max_seqlen_q
+      type: int
+      when: 仅 prefill（decode 为 0）
+      meaning: 本轮 q 的最大长度，给 kernel 用的上界
+
+    - name: max_seqlen_k
+      type: int
+      when: 仅 prefill（decode 为 0）
+      meaning: 本轮 k 的最大长度
+
+    - name: slot_mapping
+      type: "int64[T]"
+      when: prefill / decode 都有
+      meaning: 第 i 个 token 写入 cache 的物理下标 = block_id * block_size + 块内偏移
+
+    - name: context_lens
+      type: "int32[N]"
+      when: 仅 decode
+      meaning: 每个请求当前的有效长度（含本步新 token）
+
+    - name: block_tables
+      type: "int32[N, 最大块数]"
+      when: decode 必有；prefill 只在分块或前缀命中时
+      meaning: 每个请求占用的物理块号列表
