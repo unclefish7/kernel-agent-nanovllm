@@ -9,6 +9,7 @@ from transformers import LlamaConfig, LlamaForCausalLM
 from nanovllm_selector.extract.api import _trace
 from nanovllm_selector.extract.replay import IMPL
 from nanovllm_selector.extract.schema import Graph
+from nanovllm_selector.extract.shapes import profile_shapes
 
 
 class TestGraphContracts(unittest.TestCase):
@@ -19,6 +20,7 @@ class TestGraphContracts(unittest.TestCase):
         cls.model = LlamaForCausalLM(cls.config).eval().requires_grad_(False)
         cls.model._extract_meta = {"config_json": cls.config.to_dict()}
         cls.graph = cls.trace(1, 5)
+        profile_shapes(cls.graph, 1, 5, cls.trace)
 
     @classmethod
     def trace(cls, batch, length):
@@ -83,6 +85,30 @@ class TestGraphContracts(unittest.TestCase):
                 else:
                     del graph.tensors[k.tensor]
                 self.assertTrue(graph.validate())
+
+    def test_history_axis_and_holdout(self):
+        graph = copy.deepcopy(self.graph)
+        node = graph.node("D2.L*.self_attn")
+        key = next(e for e in graph.edges if e.to_node == node.id and e.role == "key")
+        profile = node.attrs["shape_profile"]["inputs"][key.target_slot]
+        self.assertEqual(profile["axes"], ["B", "num_key_value_heads", "P", "head_dim"])
+        self.assertEqual(profile["samples"][-1], [2, 2, 12, 8])
+        profile["samples"][-1][2] = 11
+        self.assertTrue(any("轴 2 的 P 与实测不符" in p for p in graph.validate()))
+
+    def test_independent_sample_can_reject_fitted_rule(self):
+        graph = self.trace(1, 5)
+
+        def corrupt_holdout(batch, length):
+            sample = self.trace(batch, length)
+            if (batch, length) == (2, 11):
+                ref = sample.node("D2.L*.self_attn").outputs[0]
+                sample.tensors[ref.tensor].shape[2] += 1
+            return sample
+
+        profile_shapes(graph, 1, 5, corrupt_holdout)
+        self.assertFalse(graph.reconcile["ok"])
+        self.assertTrue(any("P+1" in problem for problem in graph.env["shape_probes"]["problems"]))
 
     def test_unimplemented_operation_does_not_count_as_passing(self):
         with patch.dict(IMPL):

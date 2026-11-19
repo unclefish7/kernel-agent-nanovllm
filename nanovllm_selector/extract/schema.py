@@ -330,6 +330,10 @@ class Graph:
             for t in list(n.inputs) + list(n.outputs):
                 if t.tensor not in self.tensors:
                     problems.append(f"节点 {n.id} 引用了未登记的张量 {t.tensor}")
+        if self.env.get("shape_probes"):
+            from .shapes import validate_profiles
+
+            problems.extend(validate_profiles(self))
         return problems
 
     # ---- 序列化 -----------------------------------------------------

@@ -28,6 +28,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seq-len", type=int, default=8)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--decode-steps", type=int, default=2, help="连续抽取几步 decode（默认 2）")
+    p.add_argument("--shape-probes", action=argparse.BooleanOptionalAction, default=True,
+                   help="改变输入规模并用独立样本检验各维度（默认开启）")
     p.add_argument("--weights", action="store_true", help="加载真实权重（默认按 config 随机初始化）")
     p.add_argument("--no-collapse", action="store_true", help="不做层模板折叠，输出 28 层全部实例")
     p.add_argument("--out", default=None, help="只写 JSON 到这个路径")
@@ -56,6 +58,7 @@ def main(argv=None) -> int:
             seq_len=args.seq_len,
             batch_size=args.batch_size,
             decode_steps=args.decode_steps,
+            shape_probes=args.shape_probes,
             collapse_template=not args.no_collapse,
             weights=args.weights,
             phases=tuple(x.strip() for x in args.phases.split(",") if x.strip()),

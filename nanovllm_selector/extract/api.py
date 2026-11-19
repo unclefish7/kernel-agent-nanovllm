@@ -38,6 +38,7 @@ def extract_graph(
     reconcile_graph: bool = True,
     replay_graph: bool = True,
     decode_steps: int = 1,
+    shape_probes: bool = False,
 ) -> Graph:
     """从一个 HuggingFace 模型目录重建计算图。
 
@@ -48,6 +49,7 @@ def extract_graph(
     device : cpu / cuda
     seq_len : 造多长的输入序列
     phases : prefill 或 prefill、decode。decode_steps 指定连续读取缓存的次数。
+    shape_probes : 改变输入长度和批大小，以独立样本检验维度关系。
     collapse_template : 是否把结构相同的层折成模板 + instances
     """
     phases = tuple(phases)
@@ -65,6 +67,12 @@ def extract_graph(
     options = dict(dtype=dtype, device=device, phases=phases, collapse_template=collapse_template,
                    reconcile_graph=reconcile_graph, replay_graph=replay_graph, decode_steps=decode_steps)
     graph = _trace(model, config, batch_size=batch_size, seq_len=seq_len, **options)
+    if shape_probes:
+        from .shapes import profile_shapes
+
+        profile_shapes(graph, batch_size, seq_len,
+                       lambda batch, length: _trace(model, config, batch_size=batch, seq_len=length,
+                                                    **options))
     return graph
 
 
