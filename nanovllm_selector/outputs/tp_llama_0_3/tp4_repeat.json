@@ -1,0 +1,46 @@
+{
+  "pci_devices": [
+    "0000:03:00.0",
+    "0000:27:00.0",
+    "0000:43:00.0",
+    "0000:63:00.0"
+  ],
+  "torch": "2.12.0+rocm10.0.0",
+  "model": "tmp/models/llama-3.2-1B",
+  "candidate": "nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+  "nccl_p2p_disable": "1",
+  "requested_runs": 2,
+  "requests": [
+    {
+      "prefill_ms": 1133.8994344696403,
+      "decode_ms": [
+        314.36701491475105,
+        33.45087729394436,
+        34.85908638685942
+      ],
+      "token_ids": [
+        82,
+        198,
+        322,
+        220
+      ]
+    },
+    {
+      "prefill_ms": 40.18123168498278,
+      "decode_ms": [
+        33.73276814818382,
+        34.09436717629433,
+        32.80956018716097
+      ],
+      "token_ids": [
+        291,
+        198,
+        200,
+        128001
+      ]
+    }
+  ],
+  "complete": true,
+  "init_s": 13.272072260268033,
+  "median_decode_ms": 33.913567662239075
+}

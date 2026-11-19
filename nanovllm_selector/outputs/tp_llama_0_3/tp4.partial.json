@@ -1,0 +1,53 @@
+{
+  "complete": false,
+  "time_limit_s": 220,
+  "exit_code": 124,
+  "source": "tp4.log",
+  "pci_devices": [
+    "0000:03:00.0",
+    "0000:27:00.0",
+    "0000:43:00.0",
+    "0000:63:00.0"
+  ],
+  "transport": "P2P/IPC",
+  "init_s": 13.747,
+  "steps_observed": [
+    {
+      "request": 1,
+      "step": 1,
+      "scheduled": 128,
+      "ms": 30925.92
+    },
+    {
+      "request": 1,
+      "step": 2,
+      "scheduled": -1,
+      "ms": 30778.39
+    },
+    {
+      "request": 1,
+      "step": 3,
+      "scheduled": -1,
+      "ms": 30524.69
+    },
+    {
+      "request": 1,
+      "step": 4,
+      "scheduled": -1,
+      "ms": 30718.8
+    },
+    {
+      "request": 2,
+      "step": 1,
+      "scheduled": 128,
+      "ms": 31493.69
+    },
+    {
+      "request": 2,
+      "step": 2,
+      "scheduled": -1,
+      "ms": 30658.08
+    }
+  ],
+  "median_decode_ms": 30688.440000000002
+}

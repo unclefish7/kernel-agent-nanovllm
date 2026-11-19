@@ -1,5 +1,7 @@
 # 多卡（TP>1）排查记录
 
+2026-11-19 在无桥接的物理 GPU 0–3 上用 Llama-3.2-1B 复测，双卡约 7.76 秒、四卡约 30.69 秒一个续写词元。同一进程配置增加 `NCCL_P2P_DISABLE=1` 后，通信改走主机共享内存，分别降至 36 毫秒和 34 毫秒。逐步计时和数值对照见 [Llama 双卡与四卡实测报告](../nanovllm_selector/outputs/tp_llama_0_3/README.md)。以下为 11 月 17 日的 Qwen3 实验记录。
+
 - 日期：2026-11-17
 - 环境：容器 `nanovllm-selector-rocm-dev`，8×MI100（容器内可见 GPU0–3），RCCL 2.30.4，PyTorch 2.12.0+rocm10.0.0
 - 结论一句话：**TP=2 数值正确，但每个 forward 稳定 13 秒；退化点在"跑一次真实模型前向"这件事本身，不在集合通信、不在 ModelPort 生成的代码。**
