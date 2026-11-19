@@ -136,8 +136,6 @@ class _Cluster:
     consumed_at: dict = field(default_factory=dict)  # tid -> 第一次被消费的 seq
     produced: set = field(default_factory=set)       # 所有算子产出过的 tid（含视图）
     produced_at: dict = field(default_factory=dict)  # tid -> 第一次被产出的 seq
-    out_tensors: list = field(default_factory=list)  # 非透明算子的产出（节点的输出）
-    internal_out: set = field(default_factory=set)   # 被本簇非透明算子继续消费的产出（不算节点输出）
     min_seq: int = 1 << 60
     max_seq: int = -1
     call: object = None  # 产生这个簇的模块调用（decompose 用）
@@ -154,18 +152,19 @@ class _Cluster:
         for tid, seq in other.produced_at.items():
             if tid not in self.produced_at or seq < self.produced_at[tid]:
                 self.produced_at[tid] = seq
-        self.out_tensors.extend(other.out_tensors)
-        self.internal_out |= other.internal_out
         self.min_seq = min(self.min_seq, other.min_seq)
         self.max_seq = max(self.max_seq, other.max_seq)
 
 
 class GraphBuilder:
-    def __init__(self, model: nn.Module, recorder, config, dtype: str = "float32"):
+    def __init__(self, model: nn.Module, recorder, config, dtype: str = "float32",
+                 tensor_prefix: str = "", node_prefix: str = ""):
         self.model = model
         self.rec = recorder
         self.config = config
         self.dtype = dtype
+        self.tensor_prefix = tensor_prefix
+        self.node_prefix = node_prefix
         self._tensor_ids: dict[int, str] = {}
         self._tensors: dict[str, dict] = {}
         self._uf = _UnionFind()
@@ -183,13 +182,14 @@ class GraphBuilder:
         key = id(t)
         if key not in self._tensor_ids:
             self._id_counter += 1
-            tid = f"t{self._id_counter:04d}"
+            tid = f"{self.tensor_prefix}t{self._id_counter:04d}"
             self._tensor_ids[key] = tid
             self._tensors[tid] = {
                 "shape": list(t.shape),
                 "dtype": _dtype_str(t),
                 "storage": hex(t.untyped_storage().data_ptr()),
                 "offset": int(t.storage_offset()),
+                "stride": list(t.stride()),
                 "numel": int(t.numel()),
                 "obj": t,
             }
@@ -264,16 +264,6 @@ class GraphBuilder:
 
             for t in d.inputs:
                 tid_in = self.tid(t)
-                if tid_in in cluster.produced:
-                    # 本簇自己的产出又被本簇的下一个算子吃掉：它还是中间量。
-                    cluster.internal_out.add(tid_in)
-                # 吃的是本簇产出的一个视图（同 storage、不同对象）时，原对象
-                # 也得记成中间量，否则它会以"没有任何消费者"的姿态挂进
-                # 节点 outputs（rope 的 freqs 就是这样冒出来的）。
-                st = self._tensors[tid_in]["storage"]
-                for p in cluster.produced:
-                    if self._tensors[p]["storage"] == st:
-                        cluster.internal_out.add(p)
                 # 每个操作数有它自己的参数位置，不能拿第一个对上的套给全组。
                 slot = None
                 if call is not None:
@@ -295,7 +285,6 @@ class GraphBuilder:
                 tid = self.tid(t)
                 cluster.produced.add(tid)
                 cluster.produced_at.setdefault(tid, d.seq)
-                cluster.out_tensors.append(tid)
                 self._src[id(t)] = ("node", cluster.cid)
                 self._storage_src[self._tensors[tid]["storage"]] = ("node", cluster.cid)
 
@@ -385,7 +374,8 @@ class GraphBuilder:
             return s
 
         cluster_list = list(merged.values())
-        named = self._assign_ids(cluster_list)
+        named = [(self.node_prefix + name, cluster)
+                 for name, cluster in self._assign_ids(cluster_list)]
         self.id_of_cid = {cl.cid: nid for nid, cl in named}
 
         nodes: list[Node] = []
@@ -393,14 +383,14 @@ class GraphBuilder:
             module = self._module(cl.path)
             op, confidence = classify_ops(cl.ops, module, self.config)
             state_storages = self._own_state_storages(module)
-            in_refs, outs = self._node_io(cl, state_storages, resolve_src)
+            in_refs = self._node_inputs(cl, state_storages, resolve_src)
             nodes.append(
-                self._make_node(nid, cl, op, confidence, module, in_refs, outs, phase)
+                self._make_node(nid, cl, op, confidence, module, in_refs, phase)
             )
         return nodes
 
     # ---- 输入/输出：集合差，不是边扫边丢 -----------------------------
-    def _node_io(self, cl: "_Cluster", state_storages: set[str], resolve_src):
+    def _node_inputs(self, cl: "_Cluster", state_storages: set[str], resolve_src):
         """节点的输入 = 簇内算子的 `consumed` − `produced` − `state`。
 
         闭世界：每个被消费的张量必须恰好落进三个桶之一——
@@ -435,13 +425,17 @@ class GraphBuilder:
                 continue
             external[tid] = slot or {}
 
-        # 同一块存储的多个别名只算一个输入（展示层合并，不影响上面的分类）。
-        groups: dict[str, list[str]] = {}
+        # 只合并指向完全相同视图的别名；同一块内存的不同切片可占不同参数位。
+        groups: dict[tuple, list[str]] = {}
         for tid in external:
-            groups.setdefault(self._tensors[tid]["storage"], []).append(tid)
+            m = self._tensors[tid]
+            slot = external[tid]
+            module_path = slot.get("path") if slot.get("source") == "module" else None
+            key = (m["storage"], m["offset"], tuple(m["shape"]), tuple(m["stride"]), m["dtype"], module_path)
+            groups.setdefault(key, []).append(tid)
 
         in_refs = []
-        for storage, tids in groups.items():
+        for tids in groups.values():
             # 有模块形参名的那一个当代表；否则用最早出现的。
             rep = next(
                 (t for t in tids if (external[t] or {}).get("source") == "module"),
@@ -462,18 +456,7 @@ class GraphBuilder:
                           f"state={len(state)} external={len(external)}",
             })
 
-        seen_out: set[tuple] = set()
-        outs: list[str] = []
-        for tid in dict.fromkeys(cl.out_tensors):
-            if tid in cl.internal_out:
-                continue
-            m = self._tensors[tid]
-            key = (m["storage"], m["offset"], m["numel"])
-            if key in seen_out:
-                continue
-            seen_out.add(key)
-            outs.append(tid)
-        return in_refs, outs
+        return in_refs
 
     def _producer_src(self, tid: str, resolve_src):
         """这个张量是谁产的：先按对象身份，再按存储块（视图跨模块时用）。"""
@@ -486,7 +469,7 @@ class GraphBuilder:
     def tensor_meta(self) -> dict:
         return {tid: {k: v for k, v in m.items() if k != "obj"} for tid, m in self._tensors.items()}
 
-    def _make_node(self, nid, cl, op, confidence, module, in_refs, outs, phase) -> Node:
+    def _make_node(self, nid, cl, op, confidence, module, in_refs, phase) -> Node:
         attrs = {
             "dispatch_ops": _op_histogram(cl.ops),
             "dispatch_count": len(cl.ops),
@@ -511,7 +494,6 @@ class GraphBuilder:
         evidence = [
             Evidence("dispatch", f"{len(cl.ops)} 个 aten 算子: " + ", ".join(sorted(set(cl.ops))[:6]),
                      ref="seq:%d-%d" % (cl.min_seq, cl.max_seq)),
-            Evidence("observed", _shape_summary(self._tensors, in_refs, outs)),
         ]
         if module is not None:
             src = source_ref(module)
@@ -537,8 +519,6 @@ class GraphBuilder:
                     arg_source=slot.get("source"),
                 )
             )
-        outputs = [TensorRef(tensor=tid, role="out", index=i) for i, tid in enumerate(outs)]
-
         node = Node(
             id=nid,
             op=op,
@@ -546,7 +526,6 @@ class GraphBuilder:
             origin="module",
             phase=phase,
             inputs=inputs,
-            outputs=outputs,
             state=state,
             attrs=attrs,
             impl={
@@ -562,7 +541,7 @@ class GraphBuilder:
             evidence=evidence,
         )
         node._in_srcs = {tid: s for tid, s, _, _ in in_refs}  # type: ignore[attr-defined]
-        node._start_seq = cl.min_seq  # type: ignore[attr-defined]
+        node.start_seq = cl.min_seq
         return node
 
 
@@ -625,16 +604,7 @@ def _op_histogram(ops: list[str]) -> dict:
     return dict(sorted(h.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
-def _shape_summary(tensors: dict, in_refs, outs) -> str:
-    def fmt(tid):
-        meta = tensors.get(tid)
-        if not meta:
-            return "?"
-        return "x".join(str(x) for x in meta["shape"]) + f" {meta['dtype']}"
 
-    ins = ", ".join(fmt(tid) for tid, _, _, _ in in_refs[:4])
-    os_ = ", ".join(fmt(tid) for tid in outs[:4])
-    return f"输入 [{ins}] → 输出 [{os_}]"
 
 
 def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str, str]:

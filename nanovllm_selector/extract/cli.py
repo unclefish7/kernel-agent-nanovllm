@@ -2,7 +2,7 @@
 
     python -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --check
     python -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --summary
-    python -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdir outputs
+    python -m nanovllm_selector.extract.cli --model tmp/models/Qwen3-0.6B --outdir nanovllm_selector/outputs/graph_qwen3
 
 退出码：0 通过 / 1 对账未通过 / 2 运行出错。
 """
@@ -20,12 +20,14 @@ from .render import render_markdown, render_mermaid, render_text, write_all
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m nanovllm_selector.extract.cli",
-        description="从 HuggingFace 模型目录重建计算图（M1：prefill / CPU / fp32）",
+        description="从 Hugging Face 的实际执行中提取输入、输出、跨步缓存和尺寸约束",
     )
     p.add_argument("--model", required=True, help="本地模型目录，例如 tmp/models/Qwen3-0.6B")
     p.add_argument("--dtype", default="float32", choices=["float32", "float16", "bfloat16"])
     p.add_argument("--device", default="cpu")
     p.add_argument("--seq-len", type=int, default=8)
+    p.add_argument("--batch-size", type=int, default=1)
+    p.add_argument("--decode-steps", type=int, default=2, help="连续抽取几步 decode（默认 2）")
     p.add_argument("--weights", action="store_true", help="加载真实权重（默认按 config 随机初始化）")
     p.add_argument("--no-collapse", action="store_true", help="不做层模板折叠，输出 28 层全部实例")
     p.add_argument("--out", default=None, help="只写 JSON 到这个路径")
@@ -38,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--check", action="store_true", help="运行对账，未通过返回 1")
     p.add_argument(
         "--phases",
-        default="prefill",
+        default="prefill,decode",
         help="要抽的阶段，逗号分隔；可选 prefill、decode，如 prefill,decode",
     )
     return p
@@ -52,6 +54,8 @@ def main(argv=None) -> int:
             dtype=args.dtype,
             device=args.device,
             seq_len=args.seq_len,
+            batch_size=args.batch_size,
+            decode_steps=args.decode_steps,
             collapse_template=not args.no_collapse,
             weights=args.weights,
             phases=tuple(x.strip() for x in args.phases.split(",") if x.strip()),
@@ -89,7 +93,7 @@ def main(argv=None) -> int:
             for pr in problems:
                 print(f"❌ 结构自检：{pr}")
         print("-" * 88)
-        print(f"结论：{'通过' if not failed and not problems else '未通过'}"
+        print(f"结论：{'通过' if graph.reconcile['ok'] else '未通过'}"
               f"（{len(checks) - len(failed)}/{len(checks)} 项对账通过，{len(problems)} 处结构问题）")
 
     if args.out:
@@ -103,7 +107,7 @@ def main(argv=None) -> int:
         for kind, path in paths.items():
             print(f"  {kind:<5} {path}")
 
-    if args.check and (failed or problems):
+    if args.check and not graph.reconcile["ok"]:
         return 1
     return 0
 

@@ -176,6 +176,8 @@ class Edge:
     tensor: str
     role: str | None = "input"
     kind: str = "data"  # data | state
+    source_slot: int | None = None
+    target_slot: int | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -184,6 +186,8 @@ class Edge:
             "tensor": self.tensor,
             "role": self.role,
             "kind": self.kind,
+            "source_slot": self.source_slot,
+            "target_slot": self.target_slot,
         }
 
     @classmethod
@@ -199,6 +203,7 @@ class TensorMeta:
     storage: str | None = None
     offset: int = 0
     numel: int = 0
+    stride: list[int] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -208,6 +213,7 @@ class TensorMeta:
             "storage": self.storage,
             "offset": self.offset,
             "numel": self.numel,
+            "stride": self.stride,
         }
 
     @classmethod
@@ -228,6 +234,7 @@ class Graph:
     conflicts: list[dict] = field(default_factory=list)
     reconcile: dict = field(default_factory=dict)
     schema_version: str = SCHEMA_VERSION
+    graph_outputs: dict[str, list[dict]] = field(default_factory=dict)
 
     # ---- 查询 -------------------------------------------------------
     def node(self, node_id: str) -> Node | None:
@@ -265,12 +272,59 @@ class Graph:
                 (dup if i in seen else seen).add(i)
             problems.append(f"节点 id 重复: {sorted(dup)[:5]}")
         id_set = set(ids)
+        by_id = {node.id: node for node in self.nodes}
+        for phase, outputs in self.graph_outputs.items():
+            for ref in outputs:
+                node = by_id.get(ref["node"])
+                if (not node or node.phase != phase or not 0 <= ref["slot"] < len(node.outputs)
+                        or ref["tensor"] not in self.tensors):
+                    problems.append(f"{phase} 模型返回的张量缺少来源 {ref}")
+        connections = set()
         for e in self.edges:
             if e.from_node not in id_set:
                 problems.append(f"边指向不存在的源节点: {e.from_node}")
             if e.to_node not in id_set:
                 problems.append(f"边指向不存在的目标节点: {e.to_node}")
+            if e.tensor not in self.tensors:
+                problems.append(f"边引用未登记张量 {e.tensor}")
+            if (e.to_node in by_id and "observed_inputs" in by_id[e.to_node].attrs
+                    and (e.source_slot is None or e.target_slot is None)):
+                problems.append(f"{e.from_node} → {e.to_node} 缺少实测槽位")
+            if e.source_slot is not None and e.from_node in by_id and e.to_node in by_id:
+                source, target = by_id[e.from_node], by_id[e.to_node]
+                if not 0 <= e.source_slot < len(source.outputs):
+                    problems.append(f"{source.id} 缺少 out[{e.source_slot}]")
+                if e.target_slot is None or not 0 <= e.target_slot < len(target.inputs):
+                    problems.append(f"{target.id} 输入槽位无效 {e.target_slot}")
+                elif e.kind != "layer" and "observed_inputs" in target.attrs:
+                    observed = target.attrs["observed_inputs"]
+                    if (e.target_slot >= len(observed)
+                            or observed[e.target_slot] != [source.id, e.source_slot, e.role]
+                            or target.inputs[e.target_slot].tensor != e.tensor):
+                        problems.append(f"{target.id} in[{e.target_slot}] 有未经实测的来源 {source.id}")
+                connections.add((target.id, e.target_slot, e.from_node, e.source_slot, e.role,
+                                 e.tensor, e.kind))
         for n in self.nodes:
+            if "observed_outputs" in n.attrs:
+                if ([ref.tensor for ref in n.outputs] != n.attrs["observed_outputs"]
+                        or [ref.role for ref in n.outputs] != n.attrs.get("observed_output_roles")
+                        or [ref.index for ref in n.outputs] != list(range(len(n.outputs)))):
+                    problems.append(f"{n.id} 输出槽位与实测数量、顺序或角色不符")
+            if "observed_inputs" in n.attrs:
+                observed = n.attrs["observed_inputs"]
+                if len(observed) != len(n.inputs):
+                    problems.append(f"{n.id} 输入数量与录制不符")
+                for index, (ref, witness) in enumerate(zip(n.inputs, observed)):
+                    if ref.index != index:
+                        problems.append(f"{n.id} in[{index}] 输入序号与录制不符")
+                    if witness is None:
+                        if ref.tensor not in self.tensors or self.tensors[ref.tensor].numel != 0:
+                            problems.append(f"{n.id} 非空输入被跳过: {ref.tensor}")
+                        continue
+                    source, slot, role = witness
+                    kind = "state" if role in ("key", "value") else "data"
+                    if (n.id, index, source, slot, role, ref.tensor, kind) not in connections:
+                        problems.append(f"{n.id} in[{index}] {role} 缺少实测来源 {source} out[{slot}]")
             if not n.evidence:
                 problems.append(f"节点 {n.id} 没有任何 evidence")
             for t in list(n.inputs) + list(n.outputs):
@@ -290,6 +344,7 @@ class Graph:
             "tensors": {k: v.to_dict() for k, v in self.tensors.items()},
             "params": self.params,
             "graph_inputs": self.graph_inputs,
+            "graph_outputs": self.graph_outputs,
             "conflicts": self.conflicts,
             "reconcile": self.reconcile,
         }
@@ -309,6 +364,7 @@ class Graph:
             tensors={k: TensorMeta.from_dict(v) for k, v in (d.get("tensors") or {}).items()},
             params=d.get("params") or [],
             graph_inputs=d.get("graph_inputs") or [],
+            graph_outputs=d.get("graph_outputs") or {},
             conflicts=d.get("conflicts") or [],
             reconcile=d.get("reconcile") or {},
         )

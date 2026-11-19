@@ -6,7 +6,14 @@
     print(g.op_counts())
 """
 
-from .api import extract_graph
 from .schema import SCHEMA_VERSION, Edge, Graph, Node
+
+
+def __getattr__(name):
+    if name == "extract_graph":
+        from .api import extract_graph
+
+        return extract_graph
+    raise AttributeError(name)
 
 __all__ = ["extract_graph", "Graph", "Node", "Edge", "SCHEMA_VERSION"]

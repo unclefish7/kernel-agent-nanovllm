@@ -33,7 +33,11 @@ def source_ref(module: nn.Module) -> dict:
     `file` 可能为 None（C 扩展、动态生成的类），这时调用方应补一条
     `{"kind": "rule", "detail": "builtin"}` 证据。
     """
-    cls = type(module)
+    return _class_source(type(module))
+
+
+@lru_cache(maxsize=512)
+def _class_source(cls: type) -> dict:
     try:
         path = inspect.getsourcefile(cls)
     except TypeError:

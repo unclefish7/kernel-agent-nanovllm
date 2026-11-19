@@ -12,15 +12,15 @@ import torch
 import transformers
 
 from .decompose import GraphBuilder
-from .edges import build_edges, to_tensor_meta
+from .edges import build_edges, tensor_view, to_tensor_meta
 from .loader import load_model
-from .schema import StateRef
+from .trace_io import cache_tensors, observe_ports
 from .recorder import record_forward
 from .checks import check_invariants
 from .replay import replay_nodes
 from .reconcile import reconcile
 from .schema import Graph
-from .template import fold
+from .template import fold, template_id_of
 
 __all__ = ["extract_graph"]
 
@@ -37,6 +37,7 @@ def extract_graph(
     batch_size: int = 1,
     reconcile_graph: bool = True,
     replay_graph: bool = True,
+    decode_steps: int = 1,
 ) -> Graph:
     """从一个 HuggingFace 模型目录重建计算图。
 
@@ -46,7 +47,7 @@ def extract_graph(
     dtype : float32 / float16 / bfloat16
     device : cpu / cuda
     seq_len : 造多长的输入序列
-    phases : M1 只支持 ("prefill",)
+    phases : prefill 或 prefill、decode。decode_steps 指定连续读取缓存的次数。
     collapse_template : 是否把结构相同的层折成模板 + instances
     """
     phases = tuple(phases)
@@ -61,159 +62,118 @@ def extract_graph(
         trust_remote_code=trust_remote_code,
     )
 
-    vocab = int(getattr(config, "vocab_size", 1000))
-    generator = torch.Generator().manual_seed(0)
-    input_ids = torch.randint(0, vocab, (batch_size, seq_len), generator=generator).to(device)
-
-    rec, out = record_forward(model, input_ids)
-
-    builder = GraphBuilder(model, rec, config, dtype=dtype)
-    instance_nodes = builder.build(phase="prefill")
-    edges, all_nodes, edge_info = build_edges(instance_nodes, builder)
-    tensors = to_tensor_meta(builder)
-
-    decode_tensors: dict = {}
-    if "decode" in phases:
-        past = getattr(out, "past_key_values", None)
-        if past is not None:
-            step = torch.tensor([input_ids.shape[-1]], device=input_ids.device)
-            rec2, _ = record_forward(
-                model, input_ids[:, -1:], past_key_values=past,
-                cache_position=step, seq_offset=rec._seq,
-            )
-            builder2 = GraphBuilder(model, rec2, config, dtype=dtype)
-            dec_nodes = _prefixed(builder2.build(phase="decode"))
-            dec_edges, _, _ = build_edges(dec_nodes, builder2, id_prefix="D.")
-            instance_nodes = instance_nodes + dec_nodes
-            edges = edges + dec_edges
-            all_nodes = all_nodes + dec_nodes
-            decode_tensors.update({f"d{k}": v for k, v in builder2._tensors.items()})
-            _mark_cross_step_state(dec_nodes, builder2, builder, model)
-            tensors.update({f"d{k}": v for k, v in to_tensor_meta(builder2).items()})
-
-    if collapse_template:
-        graph_nodes, graph_edges, fold_report = fold(all_nodes, edges)
-    else:
-        graph_nodes, graph_edges, fold_report = all_nodes, edges, {"templates": len(all_nodes)}
-
-    report = (
-        reconcile(instance_nodes, all_nodes, edges, model, config, rec)
-        if reconcile_graph
-        else {"ok": True, "checks": [], "stats": {}}
-    )
-    if replay_graph:
-        rep = replay_nodes(
-            instance_nodes, builder, config, input_ids,
-            tensors={**builder._tensors, **decode_tensors},
-        )
-        report["replay"] = rep
-        report["ok"] = report["ok"] and rep["ok"]
-        report["stats"]["replay_checked"] = rep["stats"]["checked"]
-        report["stats"]["replay_failed"] = rep["stats"]["failed"]
-        report["checks"].append({
-            "name": "R1 逐节点重放",
-            "expected": 0,
-            "actual": rep["stats"]["failed"] + rep["stats"]["skipped"],
-            "ok": rep["ok"],
-            "note": f"{rep['stats']['checked']} 个实例节点按图重算，"
-                    f"{rep['stats']['failed']} 个失败、{rep['stats']['skipped']} 个未覆盖"
-                    f"（未覆盖也计为不通过）",
-        })
-    if reconcile_graph:
-        inv = check_invariants(builder, rec, instance_nodes, edges)
-        report["checks"].extend(inv["checks"])
-        report["ok"] = report["ok"] and inv["ok"]
-        report["stats"].update(inv["stats"])
-        report["invariants"] = inv["problems"]
-    report["stats"]["instance_nodes"] = len(instance_nodes)
-    report["stats"]["templates"] = fold_report.get("templates")
-    report["stats"]["template_mismatches"] = fold_report.get("mismatches", [])
-    report["stats"]["edges_unresolved"] = edge_info["unresolved"]
-    report["stats"]["graph_inputs"] = edge_info["inputs"]
-
-    meta = getattr(model, "_extract_meta", {})
-    graph = Graph(
-        model={
-            "model_path": meta.get("model_path"),
-            "model_type": meta.get("model_type"),
-            "architectures": meta.get("architectures"),
-            "num_layers": meta.get("num_layers"),
-            "config_sha256": meta.get("config_sha256"),
-            "weights_sha256": meta.get("weights_sha256"),
-            "weights_loaded": meta.get("weights_loaded"),
-            # 完整 config 进图：eps、rope_theta、tie_word_embeddings 这些值
-            # 在写模型文件时要用，而它们不在任何一个节点的 state 里。
-            "config": meta.get("config_json"),
-        },
-        env={
-            "dtype": dtype,
-            "device": device,
-            "torch": torch.__version__,
-            "transformers": transformers.__version__,
-            "python": sys.version.split()[0],
-            "platform": platform.platform(),
-        },
-        phases=list(phases),
-        nodes=graph_nodes,
-        edges=graph_edges,
-        tensors=tensors,
-        params=_collect_params(model),
-        graph_inputs=[n.id for n in graph_nodes if n.origin == "input"],
-        conflicts=report["stats"].get("template_mismatches", []),
-        reconcile=report,
-    )
-    problems = graph.validate()
-    report["validate_problems"] = problems
-    report["ok"] = bool(report.get("ok")) and not problems
+    options = dict(dtype=dtype, device=device, phases=phases, collapse_template=collapse_template,
+                   reconcile_graph=reconcile_graph, replay_graph=replay_graph, decode_steps=decode_steps)
+    graph = _trace(model, config, batch_size=batch_size, seq_len=seq_len, **options)
     return graph
 
 
-def _mark_cross_step_state(nodes, builder2, builder_pre, model):
-    """decode 里"不是这一步造的、但在 prefill 里出现过"的张量 = 跨 step 状态。
+def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collapse_template,
+           reconcile_graph, replay_graph, decode_steps):
+    if min(batch_size, seq_len, decode_steps) < 1:
+        raise ValueError("batch_size、seq_len 和 decode_steps 都必须为正数")
+    generator = torch.Generator().manual_seed(0)
+    vocab = int(config.vocab_size)
+    counts = decode_steps + 1 if "decode" in phases else 1
+    tokens = torch.randint(vocab, (batch_size, seq_len + counts - 1), generator=generator).to(device)
+    instances, all_nodes, edges = [], [], []
+    tensors, history, graph_outputs = {}, {}, {}
+    phase_checks, phase_stats, problems, failures, skipped = [], {}, [], [], []
+    replay_checked = dispatch_count = module_calls = offset = 0
+    past = None
+    for step in range(counts):
+        phase = "prefill" if step == 0 else ("decode" if step == 1 else f"decode_{step}")
+        suffix = "" if step < 2 else str(step)
+        prefix = f"D{suffix}." if step else ""
+        position = seq_len + step - 1
+        cache_position = torch.tensor([position], device=device) if step else None
+        ids = tokens[:, position:position + 1].contiguous() if step else tokens[:, :seq_len].contiguous()
+        recording, output = record_forward(model, ids, past_key_values=past,
+                                           cache_position=cache_position, seq_offset=offset)
+        offset = recording._seq
+        builder = GraphBuilder(model, recording, config, dtype, prefix.lower().rstrip("."), prefix)
+        nodes = builder.build(phase)
+        past = getattr(output, "past_key_values", None)
+        if counts > 1 and past is None:
+            raise ValueError(f"{phase} 未返回 decode 所需的历史缓存")
+        cache = cache_tensors(past)
+        external = {"input_ids": ids}
+        if step:
+            external["cache_position"] = cache_position
+        observation = observe_ports(builder, nodes, recording.calls[0].outputs, cache, external)
+        local_edges, local_nodes = build_edges(nodes, builder, observation, history, external)
+        origins, _, slots, writes = observation
+        graph_outputs[phase] = []
+        for tensor in recording.calls[0].outputs:
+            origin = origins[id(tensor)]
+            producer = template_id_of(origin[0]) if collapse_template else origin[0]
+            graph_outputs[phase].append(dict(node=producer, slot=slots[origin], tensor=builder.tid(tensor)))
+        history = {tensor_view(cache[key]): (key, origin[0], slots[origin])
+                   for key, origin in writes.items()}
+        if len(history) != len(cache):
+            raise ValueError(f"{phase} 多个缓存槽共享相同张量，归属不唯一")
+        instances.extend(nodes)
+        all_nodes.extend(local_nodes)
+        edges.extend(local_edges)
+        tensors.update(to_tensor_meta(builder))
+        if replay_graph:
+            replay = replay_nodes(nodes, builder, config, ids)
+            replay_checked += replay["checked"]
+            failures.extend(replay["failures"])
+            skipped.extend(replay["skipped"])
+        if reconcile_graph:
+            invariant = check_invariants(builder, recording, nodes, local_edges)
+            if counts > 1:
+                for item in invariant["checks"]:
+                    item["name"] += f"[{phase}]"
+            phase_checks.extend(invariant["checks"])
+            phase_stats[phase] = invariant["stats"]
+            problems.extend(invariant["problems"])
+        problems.extend(builder.conflicts)
+        dispatch_count += len(recording.dispatches)
+        module_calls += len(recording.calls)
 
-    典型就是 KV cache：prefill 写入，decode 读出来拼到当前 k/v 前面。
-    这不是普通数据输入，它是节点自己的状态，要单独标出来。
-    """
-    pre_storages = {m["storage"] for m in builder_pre._tensors.values()}
-    param_storages = {hex(p.untyped_storage().data_ptr()) for p in model.parameters()}
-    for n in nodes:
-        if n.op != "attention":
-            continue
-        for t in n.inputs:
-            m = builder2._tensors.get(t.tensor.lstrip("d"))
-            if m is None or m["storage"] in param_storages:
-                continue
-            if m["storage"] in pre_storages and len(m["shape"]) == 4:
-                t.role = "state"
-                n.state.append(StateRef(
-                    name=f"kv_cache_{len(n.state)}",
-                    kind="runtime_tensor",
-                    role="read_write",
-                    shape=list(m["shape"]),
-                    dtype=m["dtype"],
-                ))
-
-
-def _prefixed(nodes):
-    """decode 的节点 id 与张量 id 都加前缀，避免和 prefill 撞名。
-
-    两个 builder 各自从 t0000 开始编号，不区分就会把 decode 的张量
-    元数据覆盖到 prefill 上。
-    """
-    for n in nodes:
-        n.id = "D." + n.id
-        if n.template_id:
-            n.template_id = "D." + n.template_id
-        for t in n.inputs:
-            t.tensor = "d" + t.tensor
-        for t in n.outputs:
-            t.tensor = "d" + t.tensor
-        if getattr(n, "_in_srcs", None):
-            n._in_srcs = {f"d{k}": v for k, v in n._in_srcs.items()}
-        empty = n.attrs.get("empty_inputs")
-        if empty:
-            n.attrs["empty_inputs"] = [f"d{tid}" for tid in empty]
-    return nodes
+    report = (reconcile(instances, all_nodes, edges, model, config) if reconcile_graph
+              else {"ok": True, "checks": [], "stats": {}})
+    if collapse_template:
+        graph_nodes, graph_edges, fold_report = fold(all_nodes, edges)
+    else:
+        graph_nodes, graph_edges, fold_report = all_nodes, edges, {}
+    report["checks"].extend(phase_checks)
+    report["invariants"] = problems
+    if replay_graph:
+        stats = dict(checked=replay_checked, skipped=len(skipped), failed=len(failures))
+        report["replay"] = dict(ok=not (failures or skipped), stats=stats, checked=replay_checked,
+                                skipped=skipped, failures=failures)
+        report["checks"].append(dict(name="R1 逐节点各输出重放", expected=0,
+                                     actual=len(failures) + len(skipped), ok=not (failures or skipped),
+                                     note=f"{replay_checked} 个节点通过"))
+    report["stats"].update({key: sum(item[key] for item in phase_stats.values())
+                            for key in next(iter(phase_stats.values()), {})})
+    mismatches = fold_report.get("mismatches", [])
+    report["stats"].update(instance_nodes=len(instances), templates=len(graph_nodes),
+                           replay_checked=replay_checked, replay_failed=len(failures),
+                           dispatch_count=dispatch_count, module_calls=module_calls,
+                           dispatch_by_phase=phase_stats, template_mismatches=mismatches,
+                           graph_inputs=sum(node.origin == "input" for node in all_nodes),
+                           edges_unresolved={})
+    meta = getattr(model, "_extract_meta", {})
+    graph = Graph(
+        model={key: meta.get(key) for key in ("model_path", "model_type", "architectures", "num_layers",
+                                               "config_sha256", "weights_sha256", "weights_loaded")},
+        env=dict(dtype=dtype, device=device, torch=torch.__version__, transformers=transformers.__version__,
+                 python=sys.version.split()[0], platform=platform.platform()),
+        phases=list(dict.fromkeys(node.phase for node in instances)), nodes=graph_nodes, edges=graph_edges,
+        tensors=tensors, params=_collect_params(model),
+        graph_inputs=[node.id for node in graph_nodes if node.origin == "input"],
+        graph_outputs=graph_outputs,
+        conflicts=mismatches + problems, reconcile=report,
+    )
+    graph.model["config"] = meta.get("config_json")
+    report["validate_problems"] = graph.validate()
+    report["ok"] = all(item["ok"] for item in report["checks"]) and not (
+        graph.conflicts or report["validate_problems"])
+    return graph
 
 
 def _collect_params(model) -> list[dict]:

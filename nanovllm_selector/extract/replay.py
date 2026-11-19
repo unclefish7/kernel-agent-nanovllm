@@ -59,7 +59,7 @@ def _embedding(inputs, state, attrs, ctx):
 
 def _arange(inputs, state, attrs, ctx):
     n = ctx["seq_len"]
-    return torch.arange(n, dtype=torch.float32, device=ctx["device"])
+    return torch.arange(n, device=ctx["device"])
 
 
 def _rope_table(inputs, state, attrs, ctx):
@@ -96,13 +96,15 @@ def _attention(inputs, state, attrs, ctx):
     if past_k is not None:
         k = torch.cat([past_k, k], dim=-2)
         v = torch.cat([past_v, v], dim=-2)
+    key_cache, value_cache = k, v
     n_rep = q.shape[1] // k.shape[1]
     if n_rep > 1:
         k = k.repeat_interleave(n_rep, dim=1)
         v = v.repeat_interleave(n_rep, dim=1)
     # 单 query 的 decode 没有下三角可言，直接看全部 k/v
     causal = q.shape[-2] > 1
-    return F.scaled_dot_product_attention(q, k, v, is_causal=causal)
+    return {"out": F.scaled_dot_product_attention(q, k, v, is_causal=causal),
+            "key": key_cache, "value": value_cache}
 
 
 IMPL = {
@@ -176,32 +178,28 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
         except Exception as exc:  # noqa: BLE001 - 重放失败要留证据，不能中断整张图
             failures.append({"node": node.id, "op": node.op, "why": f"{type(exc).__name__}: {exc}"})
             continue
-        got = got[0] if isinstance(got, list) else got
-
-        # 一个节点可能有多个产出（比如 attention 的 output 与中间量），
-        # 取第一个形状对得上的那个来比。
-        actual = None
-        for o in node.outputs:
-            m = tensors.get(o.tensor) or {}
-            obj = m.get("obj")
-            if obj is not None and tuple(obj.shape) == tuple(got.shape):
-                actual = obj
+        if isinstance(got, dict):
+            roles = [ref.role for ref in node.outputs]
+            if len(roles) != len(got) or set(roles) != set(got):
+                failures.append({"node": node.id, "op": node.op, "why": "输出角色与录制不符"})
+                continue
+            got = [got[role] for role in roles]
+        elif not isinstance(got, (list, tuple)):
+            got = [got]
+        expected_ids = node.attrs.get("observed_outputs")
+        if ([ref.tensor for ref in node.outputs] != expected_ids
+                or len(got) != len(node.outputs)):
+            failures.append({"node": node.id, "op": node.op, "why": "输出数量或顺序与录制不符"})
+            continue
+        for index, (ref, result) in enumerate(zip(node.outputs, got)):
+            actual = tensors[ref.tensor]["obj"]
+            if (result is None or actual.shape != result.shape or result.dtype != actual.dtype
+                    or not torch.allclose(result, actual, rtol=RTOL, atol=ATOL)):
+                failures.append({"node": node.id, "op": node.op, "slot": index,
+                                 "tensor": ref.tensor, "why": f"out[{index}] 形状、类型或数值不符"})
                 break
-        if actual is None:
-            actual = tensors[node.outputs[0].tensor].get("obj")
-
-        if actual is None or got.shape != actual.shape:
-            failures.append({
-                "node": node.id, "op": node.op,
-                "why": f"形状不同 {tuple(got.shape)} vs {tuple(actual.shape)}",
-            })
-            continue
-        diff = (got.float() - actual.float()).abs()
-        err = float(diff.max()) if diff.numel() else 0.0
-        if not torch.allclose(got.float(), actual.float(), rtol=RTOL, atol=ATOL):
-            failures.append({"node": node.id, "op": node.op, "why": "数值不符", "max_abs_err": err})
-            continue
-        checked += 1
+        else:
+            checked += 1
 
     return {
         # 跳过也是失败：未登记的 op 或拿不到输入的节点，不能算"通过"。

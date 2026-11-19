@@ -12,7 +12,7 @@ from dataclasses import replace
 
 from .schema import Edge, Node
 
-_LAYER = re.compile(r"^L(\d+)")
+_LAYER = re.compile(r"^(?:D\d*\.)?L(\d+)")
 
 
 def layer_index(node_id: str) -> int | None:
@@ -21,7 +21,7 @@ def layer_index(node_id: str) -> int | None:
 
 
 def template_id_of(node_id: str) -> str:
-    return re.sub(r"^L\d+", "L*", node_id)
+    return re.sub(r"^((?:D\d*\.)?L)\d+", r"\1*", node_id)
 
 
 def _signature(n: Node) -> tuple:
@@ -51,7 +51,13 @@ def fold(nodes: list[Node], edges: list[Edge]) -> tuple[list[Node], list[Edge], 
             if _signature(m) != sig:
                 mismatches.append({"template": tid, "node": m.id, "reason": "结构不同构"})
         instances = [layer_index(m.id) for m in members]
-        new = replace(base, id=tid, template_id=tid)
+        attrs = dict(base.attrs)
+        if "observed_inputs" in attrs:
+            attrs["observed_inputs"] = [
+                [template_id_of(item[0]), *item[1:]] if item else None
+                for item in attrs["observed_inputs"]
+            ]
+        new = replace(base, id=tid, template_id=tid, attrs=attrs)
         new.instances = [i for i in instances if i is not None]
         out_nodes.append(new)
         for m in members:
@@ -86,7 +92,7 @@ def fold(nodes: list[Node], edges: list[Edge]) -> tuple[list[Node], list[Edge], 
         a = id_map.get(e.from_node, e.from_node)
         b = id_map.get(e.to_node, e.to_node)
         slot = slot_of.get((e.to_node, e.tensor), -1)
-        key = (a, b, e.kind, slot)
+        key = (a, b, e.kind, slot, e.source_slot, e.role)
         if key in collapsed:
             continue
         f = flags.get((a, b, e.kind), {})

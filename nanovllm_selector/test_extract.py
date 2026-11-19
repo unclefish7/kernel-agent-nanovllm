@@ -222,7 +222,7 @@ class TestDecode(unittest.TestCase):
     def test_decode_nodes_exist(self):
         self.assertEqual(self.graph.phases, ["prefill", "decode"])
         dec = [n for n in self.graph.nodes if n.phase == "decode"]
-        self.assertGreater(len(dec), 100)
+        self.assertGreater(sum(len(n.instances) or 1 for n in dec), 100)
         self.assertTrue(any(n.id.startswith("D.") for n in dec))
 
     def test_decode_replays(self):
@@ -243,7 +243,8 @@ class TestDecode(unittest.TestCase):
 
     def test_kv_cache_is_cross_step_state(self):
         """KV cache 不是普通输入：它是节点自己的、跨 step 活着的状态。"""
-        n = self.graph.node("D.L0.self_attn")
+        n = self.graph.node("D.L*.self_attn")
+        self.assertEqual(n.instances, list(range(28)))
         kinds = [s.kind for s in n.state]
         self.assertIn("runtime_tensor", kinds)
         self.assertEqual(sum(1 for t in n.inputs if t.role == "state"), 2)
