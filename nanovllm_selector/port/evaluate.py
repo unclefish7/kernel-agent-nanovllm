@@ -15,6 +15,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import torch
@@ -61,11 +62,11 @@ def pick_model_class(module, arch: str | None = None) -> type:
 
 
 def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
-                   max_abs_tol: float = 2.0, min_cosine: float = 0.9990) -> dict:
+                   max_abs_tol: float = 2.0, min_cosine: float = 0.9990, *, exact: bool = False) -> dict:
     """两个 [vocab] 的 next-token logits 对比。"""
-    a = actual.detach().float().flatten()
-    b = expected.detach().float().flatten()
-    if a.shape != b.shape:
+    a = actual.detach().float()
+    b = expected.detach().float()
+    if a.shape != b.shape or a.ndim != 1 or a.numel() == 0:
         return {"ok": False, "reason": f"形状不一致：{tuple(a.shape)} vs {tuple(b.shape)}"}
     cosine = torch.nn.functional.cosine_similarity(a, b, dim=0).item()
     max_abs = (a - b).abs().max().item()
@@ -76,10 +77,15 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
         "argmax_match": argmax_match,
         "max_abs_diff": max_abs,
         "cosine": cosine,
-        "top5_actual": a.topk(5).indices.tolist(),
-        "top5_expected": b.topk(5).indices.tolist(),
+        "vocab_size": a.numel(),
+        "exact": torch.equal(a, b),
+        "top5_actual": a.topk(min(5, a.numel())).indices.tolist(),
+        "top5_expected": b.topk(min(5, b.numel())).indices.tolist(),
     }
-    report["ok"] = bool(argmax_match and max_abs <= max_abs_tol and cosine >= min_cosine)
+    if exact:
+        report["ok"] = report["exact"] and bool(torch.isfinite(a).all())
+    else:
+        report["ok"] = bool(argmax_match and max_abs <= max_abs_tol and cosine >= min_cosine)
     return report
 
 
@@ -105,6 +111,42 @@ def reference_logits_multi(model_dir: str, sequences: list[list[int]]) -> list[t
     return reference_logits(model_dir, longest, [len(s) - 1 for s in sequences])
 
 
+@torch.inference_mode()
+def reference_steps(model_dir, sequences, prefix_lengths, generated, decode_steps):
+    """HF 按引擎实际复用的前缀长度独立计算缓存，不读取引擎的缓存数值。"""
+    import copy
+    import inspect
+    from transformers import AutoModelForCausalLM
+
+    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16).cuda().eval()
+    output_options = {"logits_to_keep": 1} if "logits_to_keep" in inspect.signature(model.forward).parameters else {}
+    prompts = [*sequences, max(sequences, key=len)] if decode_steps else sequences
+    saved = []
+    prefill, decode = [], []
+    if len(prefix_lengths) != len(prompts):
+        raise ValueError("前缀长度记录与实际请求数不符")
+    for seq, prefix in zip(prompts, prefix_lengths):
+        if not 0 <= prefix < len(seq):
+            raise ValueError(f"非法前缀长度 {prefix}，本次提示长度 {len(seq)}")
+        past = None
+        if prefix:
+            prior = next((cache for tokens, cache in reversed(saved)
+                          if len(tokens) >= prefix and tokens[:prefix] == seq[:prefix]), None)
+            if prior is None:
+                raise ValueError(f"HF 没有该请求前 {prefix} 个词元的独立缓存")
+            past = copy.deepcopy(prior)
+            past.crop(prefix)
+        out = model(input_ids=torch.tensor([seq[prefix:]], device="cuda"),
+                    past_key_values=past, use_cache=True, **output_options)
+        prefill.append(out.logits[0, -1].float().cpu())
+        saved.append((seq, out.past_key_values))
+    for token in generated[:decode_steps]:
+        out = model(input_ids=torch.tensor([[token]], device="cuda"),
+                    past_key_values=out.past_key_values, use_cache=True, **output_options)
+        decode.append(out.logits[0, -1].float().cpu())
+    return prefill, decode
+
+
 def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
                max_model_len: int = 1024, decode_steps: int = 0,
                tp: int = 1) -> dict:
@@ -119,13 +161,20 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
     import nanovllm.models as models
     from nanovllm import LLM
     from nanovllm.sampling_params import SamplingParams
+    from nanovllm.utils.context import get_context
 
     models.ARCH[arch] = cls
     captured: list[torch.Tensor] = []
+    prefix_lengths = []
     original = cls.compute_logits
 
     def patched(self, hidden_states):
         out = original(self, hidden_states)
+        if out.ndim != 2 or out.size(0) != 1:
+            raise ValueError(f"单条请求应返回 [1, 词表大小] 的分数，实际为 {tuple(out.shape)}")
+        ctx = get_context()
+        if ctx.is_prefill:
+            prefix_lengths.append(ctx.cu_seqlens_k_list[-1] - ctx.cu_seqlens_q_list[-1])
         captured.append(out.detach().float().cpu().clone())
         return out
 
@@ -141,6 +190,7 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
         )
         try:
             prefill: list[torch.Tensor] = []
+            prefix_lengths.clear()
             for ids in sequences:
                 # 构造时的 warmup、上一条请求都会调 compute_logits，先清空；
                 # 清空后取到的第一份，就是这条输入 prefill 阶段的输出。
@@ -150,32 +200,35 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
                     SamplingParams(temperature=GREEDY_TEMPERATURE, max_tokens=1),
                     use_tqdm=False,
                 )
-                if not captured:
-                    raise RuntimeError(f"长度 {len(ids)} 的 prefill 没有捕获到 logits")
+                if len(captured) != 1:
+                    raise RuntimeError(f"长度 {len(ids)} 的 prefill 捕获了 {len(captured)} 份 logits")
                 prefill.append(captured[0][0])
 
             decode: dict[str, Any] = {"logits": [], "ids": []}
             if decode_steps > 0:
-                seq = sequences[-1]
+                seq = max(sequences, key=len)
                 captured.clear()
                 out = llm.generate(
                     [seq],
                     # 生成 N 个 token 需要 N 份分布：1 份来自 prefill，N-1 份来自 decode
                     SamplingParams(
-                        temperature=GREEDY_TEMPERATURE, max_tokens=decode_steps + 1
+                        temperature=GREEDY_TEMPERATURE, max_tokens=decode_steps + 1, ignore_eos=True
                     ),
                     use_tqdm=False,
                 )
-                if len(captured) < decode_steps + 1:
+                if len(captured) != decode_steps + 1:
                     raise RuntimeError(
                         f"期望抓 {decode_steps + 1} 份 logits，实际 {len(captured)} 份"
                     )
                 generated = list(out[0]["token_ids"])
+                if len(generated) != len(captured):
+                    raise RuntimeError("生成的词元数量与捕获的分数数量不同")
+                decode["prefill"] = captured[0][0]
                 # generate() 返回的 token_ids 只有补全部分，补回前缀才是完整序列
                 decode["ids"] = list(seq) + generated
                 decode["generated"] = generated
                 decode["logits"] = [item[0] for item in captured[1:decode_steps + 1]]
-            return {"prefill": prefill, "decode": decode}
+            return {"prefill": prefill, "decode": decode, "prefix_lengths": prefix_lengths}
         finally:
             atexit.unregister(llm.exit)
             llm.exit()
@@ -191,12 +244,13 @@ def engine_logits(cls, model_dir: str, sequences: list[list[int]], arch: str,
 
 def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
              lengths: tuple[int, ...] = DEFAULT_LENGTHS, decode_steps: int = 8,
-             tp: int = 1, **kwargs: Any) -> dict:
+             tp: int = 1, exact: bool = True, logits_out: Path | None = None, **kwargs: Any) -> dict:
     """完整评测一个候选文件；任何阶段失败都折算成报告，不抛异常。"""
     started = time.time()
     report: dict[str, Any] = {
         "ok": False, "stage": "load", "candidate": str(candidate),
-        "lengths": list(lengths),
+        "lengths": list(lengths), "tensor_parallel_size": tp,
+        "criterion": "exact" if exact else "argmax + max_abs <= 2.0 + cosine >= 0.999",
     }
 
     try:
@@ -223,25 +277,33 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
         tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
         base = tokenizer(FILLER_TEXT, return_tensors="pt").input_ids[0].tolist()
         longest = max(lengths)
+        if min(lengths) < 1 or decode_steps < 0:
+            raise ValueError("输入长度必须为正，decode_steps 必须非负")
         need = longest + decode_steps + 1
         if len(base) < need:
             raise RuntimeError(f"填充文本只有 {len(base)} 个 token，不够 {need}")
         sequences = [base[:length] for length in lengths]
         # 先跑引擎（要占显存），再加载 HF 取参照：两份模型不同时驻留
-        eng = engine_run(
-            cls, model_dir, sequences, arch or cls.__name__,
-            max_model_len=longest + decode_steps + 64, decode_steps=decode_steps,
-            tp=tp,
-        )
+        previous_mode = torch.get_deterministic_debug_mode()
+        try:
+            if exact:
+                torch.use_deterministic_algorithms(True)
+            report["deterministic_algorithms"] = torch.are_deterministic_algorithms_enabled()
+            eng = engine_run(cls, model_dir, sequences, arch or cls.__name__,
+                             max_model_len=longest + decode_steps + 64, decode_steps=decode_steps, tp=tp)
+            expected_prefill, expected_decode = reference_steps(
+                model_dir, sequences, eng["prefix_lengths"], eng["decode"].get("generated", []), decode_steps
+            )
+        finally:
+            torch.set_deterministic_debug_mode(previous_mode)
         decode_logits = eng["decode"]["logits"]
-        actual_ids = eng["decode"]["ids"] or sequences[-1]
-        # 引擎第 j 步的 logits 对应"到第 start-1+j 个 token 为止"的上下文
-        start = len(sequences[-1])
-        positions = [length - 1 for length in lengths]
-        positions += [start - 1 + step for step in range(1, len(decode_logits) + 1)]
-        expected = reference_logits(model_dir, actual_ids, positions)
-        expected_prefill = expected[:len(lengths)]
-        expected_decode = expected[len(lengths):]
+        actual_ids = eng["decode"]["ids"] or max(sequences, key=len)
+        start = longest
+        report["cached_prefix_tokens"] = eng["prefix_lengths"]
+        generation_reference = expected_prefill.pop() if decode_steps else None
+        if (len(eng["prefill"]) != len(lengths) or len(expected_prefill) != len(lengths)
+                or len(decode_logits) != decode_steps or len(expected_decode) != decode_steps):
+            raise ValueError("捕获或参照的分数数量与请求的步数不同")
     except Exception:
         report["error"] = traceback.format_exc()[-6000:]
         return _finish(report, started)
@@ -249,27 +311,58 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
     report["stage"] = "compare"
     comparisons = []
     for length, got, want in zip(lengths, eng["prefill"], expected_prefill):
-        item = compare_logits(got, want)
+        item = compare_logits(got, want, exact=exact)
         item["length"] = length
         comparisons.append(item)
     report["comparisons"] = comparisons
+    if decode_steps:
+        report["generation_prefill"] = compare_logits(
+            eng["decode"]["prefill"], generation_reference, exact=exact
+        )
 
     decode_items = []
     for step, (got, want) in enumerate(zip(decode_logits, expected_decode), start=1):
-        item = compare_logits(got, want)
+        item = compare_logits(got, want, exact=exact)
         item["step"] = step
+        item["position"] = start + step - 1
+        item["input_token"] = actual_ids[start + step - 1]
         decode_items.append(item)
     report["decode"] = {
         "steps": len(decode_items),
         "matched": sum(1 for item in decode_items if item.get("ok")),
         "items": decode_items,
-        "ok": bool(decode_items) and all(item.get("ok") for item in decode_items),
+        "expected_steps": decode_steps,
+        "ok": all(item.get("ok") for item in decode_items),
     }
 
     failed = [item for item in comparisons if not item.get("ok")]
     failed_decode = [item for item in decode_items if not item.get("ok")]
-    report["ok"] = not failed and report["decode"]["ok"]
+    report["ok"] = not failed and report["decode"]["ok"] and report.get("generation_prefill", {}).get("ok", True)
     report["comparison"] = failed[0] if failed else comparisons[0]
+    if logits_out is not None:
+        pairs = [{"phase": "prefill", "length": length, "engine": got, "hf": want}
+                 for length, got, want in zip(lengths, eng["prefill"], expected_prefill)]
+        if decode_steps:
+            pairs.append({"phase": "generation_prefill", "length": longest,
+                          "engine": eng["decode"]["prefill"], "hf": generation_reference})
+        for i, (got, want) in enumerate(zip(decode_logits, expected_decode), start=1):
+            pairs.append({"phase": "decode", "step": i, "input_token": actual_ids[start+i-1],
+                          "engine": got, "hf": want})
+        path = Path(logits_out)
+        pending = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+                pending = Path(stream.name)
+                torch.save(pairs, stream)
+            pending.replace(path)
+            report["logits_file"] = str(path)
+        except (OSError, RuntimeError) as exc:
+            report.update(ok=False, stage="save_logits", error=str(exc))
+            return _finish(report, started)
+        finally:
+            if pending is not None:
+                pending.unlink(missing_ok=True)
     if failed:
         report["error"] = "；".join(
             f"长度 {item['length']}：argmax 相同={item.get('argmax_match')}，"
@@ -277,6 +370,8 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
             f"余弦相似度={item.get('cosine', float('nan')):.6f}"
             for item in failed
         )
+    elif not report.get("generation_prefill", {}).get("ok", True):
+        report["error"] = "连续生成的首步分数与参照不符"
     elif failed_decode:
         report["error"] = "decode 第 " + "、".join(
             str(item["step"]) for item in failed_decode[:3]
@@ -302,17 +397,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lengths", default="128,256,768", help="要对比多少个 token 位置，逗号分隔")
     parser.add_argument("--decode-steps", type=int, default=8,
                         help="逐 token 走 KV cache 的步数，0 表示只验 prefill")
-    parser.add_argument("--report", type=Path, default=None, help="把 JSON 报告写到这个文件")
+    parser.add_argument("--report", type=Path, help="报告路径，默认在项目 outputs 下以候选文件名保存")
+    parser.add_argument("--logits-out", type=Path, help="额外保存每一步引擎和 HF 的完整词表分数（.pt）")
     parser.add_argument("--tp", type=int, default=1, help="tensor_parallel_size，默认 1")
+    parser.add_argument("--exact", action=argparse.BooleanOptionalAction, default=True,
+                        help="默认要求每一步整个词表逐项相等，--no-exact 使用原有容差")
     args = parser.parse_args(argv)
 
     lengths = tuple(int(x) for x in args.lengths.split(",") if x.strip())
     report = evaluate(args.model, args.candidate, args.arch, lengths,
-                      decode_steps=args.decode_steps, tp=args.tp)
+                      decode_steps=args.decode_steps, tp=args.tp, exact=args.exact, logits_out=args.logits_out)
     text = json.dumps(report, ensure_ascii=False, indent=2)
-    if args.report:
-        args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(text, encoding="utf-8")
+    report_path = args.report
+    if report_path is None:
+        candidate = args.candidate.resolve()
+        outputs = Path(__file__).resolve().parents[1] / "outputs"
+        directory = candidate.parent if candidate.is_relative_to(outputs) else outputs
+        report_path = directory / (candidate.stem + ".eval.json")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(text, encoding="utf-8")
     print(text)
     return 0 if report.get("ok") else 1
 

@@ -131,6 +131,15 @@ class TestDotenv(unittest.TestCase):
 
 
 class TestEvaluateHelpers(unittest.TestCase):
+    def test_exact_detects_one_changed_score_with_unchanged_top_token(self):
+        scores = torch.tensor([1.0, 2.0, 3.0, 4.0])
+        changed = scores.clone()
+        changed[0] = torch.nextafter(scores[0], scores[1])
+        self.assertTrue(compare_logits(scores, changed)["ok"])
+        self.assertFalse(compare_logits(scores, changed, exact=True)["ok"])
+        self.assertTrue(compare_logits(scores, scores, exact=True)["ok"])
+        self.assertFalse(compare_logits(scores[None, :], scores, exact=True)["ok"])
+
     def test_compare_passes_on_identical(self):
         x = torch.randn(100)
         report = compare_logits(x, x.clone())
