@@ -1,7 +1,7 @@
 """命令行入口：组装 prompt 或调用模型生成 `nanovllm/models/<model>.py`。
 
     python -m nanovllm_selector.port.cli \
-        --graph nanovllm_selector/outputs/graph_qwen3/graph.json [--dry-run] [--out tmp/generated.py]
+        --graph nanovllm_selector/outputs/graph_qwen3/graph.json [--dry-run]
 
 `--dry-run` 只拼 prompt、打印统计，不发网络请求，也不需要任何 key。
 真正调用时从环境变量取 `DEEPSEEK_API_KEY`，没有配置时打印提示并以退出码 2 结束。
@@ -24,11 +24,12 @@ from .generate import (
 from .prompt import build_sections, prompt_stats
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_GRAPH = REPO_ROOT / "nanovllm_selector" / "outputs" / "graph_qwen3" / "graph.json"
+OUTPUTS = REPO_ROOT / "nanovllm_selector" / "outputs"
+DEFAULT_GRAPH = OUTPUTS / "graph_qwen3" / "graph.json"
 DEFAULT_SPEC = REPO_ROOT / "contracts" / "nanovllm" / "spec.yaml"
 DEFAULT_KERNELS = REPO_ROOT / "kernels" / "index.md"
 DEFAULT_TEMPLATE = REPO_ROOT / "nano-vllm" / "nanovllm" / "models" / "qwen3.py"
-DEFAULT_OUT = REPO_ROOT / "tmp" / "generated.py"
+DEFAULT_OUT = OUTPUTS / "generated.py"
 DEFAULT_ENGINE_ROOT = REPO_ROOT / "nano-vllm"
 
 
