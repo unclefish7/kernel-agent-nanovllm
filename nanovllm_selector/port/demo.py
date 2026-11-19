@@ -5,7 +5,7 @@
 
     python -m nanovllm_selector.port.demo \
         --model /workspace/tmp/models/llama-3.2-1B \
-        --candidate nanovllm_selector/outputs/iter_llama2/attempt_3.py \
+        --candidate nanovllm_selector/outputs/iter_llama4/attempt_4.py \
         --prompt "The capital of France is"
 """
 
