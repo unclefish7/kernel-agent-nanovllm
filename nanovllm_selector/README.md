@@ -22,7 +22,7 @@ nano-vLLM 源码 ──② 引擎规约──> spec.yaml ┤──③ 交给 age
 | --- | --- | --- | --- |
 | ① | 跑一遍 HF 模型，记录它实际做了哪些计算、谁吃谁、每个输入摆在第几个参数位 | `graph.json`（+ 五种人读视图） | 完成 |
 | ② | 读引擎源码，写成"引擎对模型的要求"（must / toolbox / context） | `contracts/nanovllm/spec.yaml` | 完成 |
-| ③ | 把图、规约、算子库、模板喂给 agent，生成模型文件，并在真实引擎里反复验证到数值对齐 | `nanovllm/models/<model>.py` | 完成（Llama 三轮通过） |
+| ③ | 把图、规约、算子库、模板喂给 agent，生成模型文件，并在真实引擎里反复验证到数值对齐 | `outputs/iter_llama4/attempt_4.py` | Llama 单卡通过逐项相等验收 |
 
 引擎侧不需要再改：注册表、契约检查、权重装载核对、KV cache 绑定核对都已补进 `nano-vllm/`（见第 7 节）。
 
@@ -40,7 +40,7 @@ nanovllm_selector/
 │   ├── evaluate.py      在真实引擎里跑候选，抓 prefill logits 与 HF 比（子进程）
 │   ├── iterate.py       生成 → 评测 → 回灌真实报错 → 重试，轮数封顶
 │   └── demo.py          用生成的模型真生成一段文字，并与 HF 对照
-├── outputs/           产物（已忽略）
+├── outputs/           模型、计算图和验收结果
 ├── fixtures/          测试夹具（Llama-3.2-1B 的 config.json）
 └── test_*.py          单测
 
@@ -59,18 +59,19 @@ docs/model-port-plan.md        设计文档
 # 0. 进容器（工作目录 /workspace）
 docker exec -it -w /workspace nanovllm-selector-rocm-dev zsh
 
-# 1. 抽一张参考图，产物在 nanovllm_selector/outputs/graph_qwen3/
+# 1. 重建 Llama 参考图和五种视图
 python -B -m nanovllm_selector.extract.cli \
-    --model tmp/models/Qwen3-0.6B \
-    --outdir nanovllm_selector/outputs/graph_qwen3 --check
+    --model nanovllm_selector/fixtures/llama-3.2-1b --seq-len 5 \
+    --outdir nanovllm_selector/outputs/graph_llama32_1b --check
 
 # 2. 只拼 prompt 不发请求，确认材料齐了
-python -B -m nanovllm_selector.port.cli --dry-run
+python -B -m nanovllm_selector.port.cli --dry-run \
+    --graph nanovllm_selector/outputs/graph_llama32_1b/graph.json
 
 # 3. 用已有的生成结果真跑一段文字（最直观）
 python -B -m nanovllm_selector.port.demo \
     --model tmp/models/llama-3.2-1B \
-    --candidate nanovllm_selector/outputs/iter_llama2/attempt_3.py \
+    --candidate nanovllm_selector/outputs/iter_llama4/attempt_4.py \
     --prompt "The capital of France is"
 ```
 
@@ -99,7 +100,7 @@ python -B -m nanovllm_selector.port.demo \
 | `--teacher-forced` | `24` | 逐位置比对的位置数，`0` 表示关闭 |
 | `--no-hf` | 关 | 跳过 HF 参照，只让引擎生成 |
 
-### 实际输出
+### 早期候选的实际输出（`iter_llama2/attempt_3.py`）
 
 ```
 [HF  ] ' Paris. It is the most visited city in the world. It is also the most
@@ -132,12 +133,12 @@ demo 一个进程里先后构造 HF 和引擎**两份**模型。PyTorch 的缓�
 
 ## 5. 第一步：抽参考图（`extract/`）
 
-给一个模型目录，**不读类名、不解析源码**，只跑一次真实前向，把计算图还原出来。
+给一个模型目录，在 Hugging Face 模型实际运行时记录运算顺序、每个节点用到的数据和模型保存的缓存。
 
 ```bash
 python -B -m nanovllm_selector.extract.cli \
     --model tmp/models/Qwen3-0.6B \
-    --phases prefill,decode \
+    --phases prefill,decode --decode-steps 2 --shape-probes \
     --outdir nanovllm_selector/outputs/graph_qwen3 --check
 ```
 
@@ -145,9 +146,12 @@ python -B -m nanovllm_selector.extract.cli \
 | --- | --- |
 | `--model` | 本地模型目录；有 `config.json` 就能抽（默认随机初始化，不读权重） |
 | `--weights` | 加载真实权重（默认关闭） |
-| `--phases` | `prefill` 或 `prefill,decode` |
+| `--phases` | 默认 `prefill,decode`，只看初始提示可传 `prefill` |
 | `--dtype` / `--device` | 默认 `float32` / `cpu` |
 | `--seq-len` | 默认 8 个 token |
+| `--batch-size` | 主样本并行输入的序列数，默认 1 |
+| `--decode-steps` | 连续录制的生成步数，命令行默认 2，可看到“读已有缓存、更新、下一步再读”的全过程 |
+| `--shape-probes` | 命令行默认开启。用批大小和提示长度 (1,5)、(1,17)、(2,5) 推断各轴，再用独立输入 (2,11) 检验。快速单样本检查可用 `--no-shape-probes` |
 | `--no-collapse` | 不做层模板折叠，输出 28 层全部实例 |
 | `--text` / `--summary` / `--mermaid` / `--json` | 打到 stdout 的人读视图 |
 | `--out` / `--outdir` | 只写 JSON / 一次写六种视图 |
@@ -169,10 +173,10 @@ python -B -m nanovllm_selector.extract.cli \
 | --- | --- | --- |
 | ① 集合差 + 断言 | 输入不再靠人工判断 | 覆盖等式不成立就进 `conflicts` |
 | ② 三条机械不变量 | aten 全覆盖 / 张量有主 / 入参有槽 | Qwen3：`2412 = 1359 进节点 + 628 只透明 + 425 两者都算` |
-| ③ 逐节点重放 | 每个 op 一份独立实现，用节点自己的输入复算 | Qwen3 905 个实例节点全过 |
-| ④ decode 与状态 | 跑第二次前向，跨步 KV cache 标成 `runtime_tensor` 状态 | 每层 2 条 |
+| ③ 逐节点重放 | 用录制的输入独立复算，每个对外输出都比较尺寸、类型和数值 | 跳过节点、丢输出、交换同形输出都会使检查失败 |
+| ④ decode 与状态 | 记录本层实际保存的键和值，标出下一步读的是前一步哪个输出 | 每次读写都保留两端的槽位，找不到张量编号就报错 |
 
-`--check` 现在 **20 项**：16 项对账 + I1/I2/I3 + R1 逐节点重放（`failed + skipped == 0`）。
+各阶段单独对账。`--shape-probes` 另外验证各维度的关系，图和 Agent 的输入里都保留每个槽位的实测尺寸。B 表示序列数，S 表示当前输入长度，P 表示已有缓存的位置数。与配置及缓存读写身份能对应上的轴会标明字段名；固定数字只表示几次实测取值相同，未确定的关系记为 `?`。
 
 ---
 
@@ -184,18 +188,17 @@ python -B -m nanovllm_selector.extract.cli \
 python -B -m nanovllm_selector.port.cli --dry-run
 ```
 
-打印五节材料的字符数（任务 / 参考图 / 引擎规约 / 算子索引 / 同构模板）。
-Qwen3 约 29.8K 字符，Llama 约 28.0K。
+打印任务、参考图、引擎规约、算子索引和模型模板的字符数。抽取的阶段、尺寸样本和引擎数值示例都会影响总长度。逐项相等模式会附上 `port/exact_reference.md` 中单卡实测过的运算顺序、数据布局和舍入位置。
 
 ### 6.2 单次生成
 
 ```bash
 python -B -m nanovllm_selector.port.cli \
     --graph nanovllm_selector/outputs/graph_llama32_1b/graph.json \
-    --out tmp/llama_gen.py
+    --out nanovllm_selector/outputs/llama_gen.py
 ```
 
-从环境变量取 `DEEPSEEK_API_KEY` / `DEEPSEEK_API_BASE` / `DEEPSEEK_MODEL`；
+省略 `--out` 时写入 `nanovllm_selector/outputs/generated.py`。从环境变量取 `DEEPSEEK_API_KEY` / `DEEPSEEK_API_BASE` / `DEEPSEEK_MODEL`；
 `.env` 里的值需要先 `export`，`make_llm()` 不读 `.env`。
 
 ### 6.3 迭代生成（推荐）
@@ -207,29 +210,34 @@ python -B -m nanovllm_selector.port.iterate \
     --spec contracts/nanovllm/spec.yaml \
     --kernels kernels/index.md \
     --template nano-vllm/nanovllm/models/qwen3.py \
-    --out-dir nanovllm_selector/outputs/iter_llama3 \
+    --out-dir nanovllm_selector/outputs/iter_llama5 \
     --max-iters 3
 ```
+
+上例使用宿主仓库的引擎规约和算子索引。在现有容器内，两份输入材料分别位于 `tmp/port-deps/contracts/nanovllm/spec.yaml` 和 `tmp/port-deps/kernels/index.md`。本次已验收的四个候选按生成顺序保存在 `outputs/iter_llama4/`，其中第四个根据第三个的评测反馈续跑生成。
 
 每轮写 `attempt_N.py`，并在**子进程**里跑真实引擎：
 
 - 把候选类注入 `models.ARCH`，构造 `LLM(...)`；
 - 三档长度 128 / 256 / 768 各跑一次 prefill，抓那一份 logits（构造时的 warmup 要跳过）；
 - 再对最长的那条跑一次生成，抓 prefill 之后的 8 步 logits——这几步是真的在读 KV cache；
-- 与 transformers 在同一上下文上比：prefill 比末位，decode 第 j 步比第 `len+j-1` 位（输入的 token 与引擎实际生成的一致，所以比的是"同一上文下的下一步"）；
-- 判据：`argmax` 相同、`max_abs_diff <= 2.0`、`cosine >= 0.999`，prefill 和 decode 都要过。
+- Hugging Face 从原始提示独立建立缓存，随后逐个输入引擎实际生成的词元。引擎命中历史提示前缀时，报告的 `cached_prefix_tokens` 记录复用长度，HF 从自己先前计算的缓存中取相同前缀，以相同的输入长度执行。每步比较整个词表，包括连续生成的第一份分数。
+- 单卡的默认判据要求所有分数均为有限数且逐项相等，报告记录 `exact`、最大绝对差、余弦相似度及首选词。两种精度模式都要求抓全指定步数。`evaluate` 和 `iterate` 均可用 `--no-exact` 复现既有的近似验收标准（首选词相同、最大绝对差 ≤ 2、余弦相似度 ≥ 0.999）。下文历史实验的“通过”按当时的近似标准统计。
+- 严格验收在两端同时开启 PyTorch 确定性算法，结束后恢复调用前的设置。这样相同硬件、相同输入的参考计算可重复；报告里可核对 `deterministic_algorithms`。在本机，255 个词元后第一次生成时，未开启此选项的 HF 自身重复运行也出现过 0.125 的最大差。
 
 失败时把**真实报错**和每档数字回灌给模型，而不是用自然语言说"再检查一下"。
+
 `--max-iters` 用完就停，留下每一轮的文件和报告。
 
 ### 6.4 单独评测一个文件
 
 ```bash
-python -B -m nanovllm_selector.port.evaluate \
+HIP_VISIBLE_DEVICES=0 python -B -m nanovllm_selector.port.evaluate \
     --model tmp/models/llama-3.2-1B \
-    --candidate nanovllm_selector/outputs/iter_llama2/attempt_3.py \
-    --decode-steps 8 \
-    --report tmp/eval.json
+    --candidate nanovllm_selector/outputs/iter_llama4/attempt_4.py \
+    --tp 1 --lengths 128,256,768 --decode-steps 8 --exact \
+    --report nanovllm_selector/outputs/iter_llama4/verified.json \
+    --logits-out nanovllm_selector/outputs/iter_llama4/logits.pt
 ```
 
 退出码 0 通过。失败阶段会写明是 `load`（装载）、`class`（找不到类）、`run`（引擎里跑挂）还是 `compare`（数值不符）。
@@ -256,7 +264,11 @@ python -B -m nanovllm_selector.port.evaluate \
 
 ## 8. 实测结果
 
-### 参考图
+### Llama 单卡严格验收
+
+当前 Llama 图含 60 个节点模板、85 条边和 685 次实际计算，覆盖提示阶段与两次连续生成。长度 128、256、768 的三个提示、连续生成首步及后续八步，共比较 12 对完整词表分数，每对 128,256 项，最大绝对差为 0。长度 255 的独立提示跨缓存块生成八步也全部逐项相等。各步数据及产物路径见第 12 节。
+
+### 早期参考图
 
 | 模型 | 模板节点 | 边 | 实例节点（prefill / +decode） | 对账 |
 | --- | --- | --- | --- | --- |
@@ -294,6 +306,7 @@ Llama 每层 14 个节点（没有 q/k norm），16 × 14 + 5 = 229；重放全�
 ```bash
 # 容器内，工作目录 /workspace
 python -B -m unittest nanovllm_selector.test_extract          # 31 项，约 80 秒
+python -B -m unittest -v nanovllm_selector.test_graph_contracts
 python -B -m unittest nanovllm_selector.port.test_port        # 29 项
 python -B -m unittest nanovllm_selector.test_port_iterate     # 13 项
 python -B -m unittest discover -s nano-vllm/tests -v          # 引擎 16 项
@@ -316,13 +329,19 @@ python -B -m unittest discover -s nano-vllm/tests -v          # 引擎 16 项
 
 ## 12. 产物与清理
 
+生成的模型 Python 文件、计算图、需要保留的测试日志、逐步评测报告和完整分数统一放在 `nanovllm_selector/outputs/`。独立评测省略 `--report` 时，会将 `<候选名>.eval.json` 写在候选所在的 `outputs/` 子目录；对于项目输出目录之外的候选，默认报告放在 `outputs/` 根目录。
+
 | 路径 | 内容 |
 | --- | --- |
 | `nanovllm_selector/outputs/graph_qwen3/` | Qwen3 的六种图产物 |
 | `nanovllm_selector/outputs/graph_llama32_1b/` | Llama 的六种图产物 |
+| `nanovllm_selector/outputs/iter_llama4/` | 当前 Llama 单卡结果。`attempt_4.py` 为最终模型，`trace.json` 记录四次尝试，各轮另有 `attempt_N.report.json` |
+| 同目录的 `verified.json`、`logits.pt`、`cold_255.json` | 单卡逐步报告、双方完整词表分数和跨缓存块报告 |
+| 同目录的 `faults.json`、`without_history.py`、`without_history.json`、`regression.log` | 计算图破坏检查、故意跳过历史的反例及其报告、回归测试记录 |
+| `nanovllm_selector/outputs/iter_llama4/experiments/` | 前期试验的原始文件与当时的记录，需要清理中间产物时可单独移除此目录 |
 | `nanovllm_selector/outputs/iter_llama2/` | 三轮生成的 `attempt_N.py` + `trace.json` |
 | `nanovllm_selector/outputs/iter_qwen3/` | Qwen3 冒烟 |
 | `tmp/models/llama-3.2-1B/` | 下载的权重，2.48GB |
 
-`outputs/`、`cache/`、`.env`、`tmp/` 都在忽略规则里，不会提交。
+仓库收录了 `outputs/iter_llama4/` 中通过单卡验收的 `attempt_4.py`、`verified.json` 和 `cold_255.json`。运行生成的其他候选、日志、完整分数及本机缓存默认由 Git 忽略。完整分数文件可用第 6 节的命令重新生成。
 清理示例：`rm -rf nanovllm_selector/outputs/iter_llama2`、`rm -rf tmp/models/llama-3.2-1B`（删了要重新下载）。
