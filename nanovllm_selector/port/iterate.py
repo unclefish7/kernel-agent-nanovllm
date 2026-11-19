@@ -51,21 +51,31 @@ def load_dotenv(path: Path = DOTENV) -> list[str]:
     return loaded
 
 
-def build_feedback(report: dict) -> str:
+def build_feedback(report: dict, code: str = "") -> str:
     """把一份评测报告改写成给模型看的"哪里错了"。"""
     stage = report.get("stage", "?")
     lines = [f"上一次生成的文件没有通过，失败在「{STAGE_NAMES.get(stage, stage)}」。"]
     error = str(report.get("error") or "").strip()
     if error:
         lines += ["", "真实报错：", "```", error[-3000:], "```"]
+    if report.get("criterion") == "exact" and stage == "compare":
+        called = [name for name in ("self.qkv_proj", "self.gate_up_proj", "SiluAndMul")
+                  if name + "(" in code]
+        if called:
+            lines.append("上一版仍调用了 " + "、".join(called) +
+                         "。按单卡实现依据的投影与激活代码修正；继续复用打包参数本身，"
+                         "将每个投影单独执行，并在模型类型下依次做激活和乘法。")
     rows = report.get("comparisons") or []
     if rows:
         lines += ["", "数值对比（不同长度各跑一次 prefill，与 transformers 对齐）："]
         for item in rows:
+            if item.get("reason"):
+                lines.append(f"- 长度 {item.get('length')}：{item['reason']}")
+                continue
             lines.append(
                 f"- 长度 {item.get('length')}: top-1 {item.get('argmax_actual')} vs "
                 f"{item.get('argmax_expected')}，最大绝对误差 "
-                f"{item.get('max_abs_diff'):.4f}，余弦 {item.get('cosine'):.6f}"
+                f"{item.get('max_abs_diff'):.6g}，余弦 {item.get('cosine'):.6f}"
                 f"{'' if item.get('ok') else '  ← 未通过'}"
             )
     elif report.get("comparison"):
@@ -89,10 +99,13 @@ def build_feedback(report: dict) -> str:
             f"{decode.get('matched')}/{decode.get('steps')} 步通过。",
         ]
         for item in bad[:4]:
+            if item.get("reason"):
+                lines.append(f"- 第 {item.get('step')} 步：{item['reason']}")
+                continue
             lines.append(
                 f"- 第 {item.get('step')} 步: top-1 {item.get('argmax_actual')} vs "
                 f"{item.get('argmax_expected')}，最大绝对误差 "
-                f"{item.get('max_abs_diff'):.4f}，余弦 {item.get('cosine'):.6f}  ← 未通过"
+                f"{item.get('max_abs_diff'):.6g}，余弦 {item.get('cosine'):.6f}  ← 未通过"
             )
     lines += ["", "请输出修正后的完整文件：只输出 Python 代码，不要解释、不要补丁。"]
     return "\n".join(lines)
@@ -145,7 +158,7 @@ def run_loop(
             }
         prompt = prompt + [
             {"role": "assistant", "content": text},
-            {"role": "user", "content": build_feedback(report)},
+            {"role": "user", "content": build_feedback(report, code)},
         ]
 
     return {
@@ -163,6 +176,7 @@ def subprocess_evaluate(
     arch: str | None,
     work_dir: Path = REPO_ROOT,
     timeout: float = 1200.0,
+    exact: bool = True,
 ) -> Callable[[Path], dict]:
     """返回一个评测函数：每个候选文件起一个子进程，读它写出的 JSON 报告。"""
 
@@ -178,6 +192,7 @@ def subprocess_evaluate(
         ]
         if arch:
             cmd += ["--arch", arch]
+        cmd.append("--exact" if exact else "--no-exact")
         try:
             proc = subprocess.run(
                 cmd, cwd=str(work_dir), capture_output=True, text=True, timeout=timeout
@@ -186,7 +201,6 @@ def subprocess_evaluate(
             return {"ok": False, "stage": "run", "error": f"评测超时（{timeout:.0f} 秒）"}
         if report_path.exists():
             report = json.loads(report_path.read_text(encoding="utf-8"))
-            report_path.unlink()
             return report
         tail = ((proc.stderr or "") + "\n" + (proc.stdout or ""))[-4000:]
         return {"ok": False, "stage": "run", "error": f"子进程退出码 {proc.returncode}\n{tail}"}
@@ -203,6 +217,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template", type=Path, required=True, help="同构模板 qwen3.py")
     parser.add_argument("--out-dir", type=Path, required=True, help="每轮生成的文件放这里")
     parser.add_argument("--max-iters", type=int, default=3)
+    parser.add_argument("--exact", action=argparse.BooleanOptionalAction, default=True,
+                        help="默认要求各步整个词表逐项相等，--no-exact 使用原有容差")
     parser.add_argument("--arch", default=None, help="架构名，默认取图的 architectures[0]")
     parser.add_argument("--no-toolbox", action="store_true", help="prompt 里省略 toolbox 表")
     parser.add_argument("--api-key-env", default="DEEPSEEK_API_KEY")
@@ -219,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
     arch = args.arch or (graph.get("model", {}).get("architectures") or [None])[0]
     messages = build_messages(
         args.graph, args.spec, args.kernels, args.template,
-        include_toolbox=not args.no_toolbox,
+        include_toolbox=not args.no_toolbox, exact=args.exact,
     )
     call_llm = make_llm(
         api_key_env=args.api_key_env,
@@ -227,7 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         model=args.llm_model,
         timeout=args.timeout,
     )
-    evaluate = subprocess_evaluate(model_dir=args.model, arch=arch)
+    evaluate = subprocess_evaluate(model_dir=args.model, arch=arch, exact=args.exact)
 
     result = run_loop(
         messages=messages,

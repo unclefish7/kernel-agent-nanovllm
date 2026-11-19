@@ -120,7 +120,7 @@ def _fmt_dtype(dtype: Any) -> str:
     return str(dtype or "?").replace("torch.", "")
 
 
-def _fmt_tensor(ref: dict, tensors: dict, *, output: bool = False) -> str:
+def _fmt_tensor(ref: dict, tensors: dict, *, output: bool = False, profile=None) -> str:
     meta = tensors.get(ref.get("tensor")) or {}
     index = ref.get("index")
     slot = "out" if output else "in"
@@ -134,6 +134,15 @@ def _fmt_tensor(ref: dict, tensors: dict, *, output: bool = False) -> str:
         pieces.append(f"path=`{path}`")
     pieces.append(_fmt_shape(meta.get("shape")))
     pieces.append(_fmt_dtype(meta.get("dtype")))
+    if meta.get("stride") is not None:
+        pieces.append("步长=" + _fmt_shape(meta["stride"]))
+    if meta.get("offset"):
+        pieces.append(f"偏移={meta['offset']}")
+    if ref.get("role") in ("key", "value"):
+        pieces.append(ref["role"])
+    if profile:
+        pieces.append("轴=" + _fmt_shape(profile["axes"]))
+        pieces.append("样本=" + "/".join(_fmt_shape(shape) for shape in profile["samples"]))
     return " ".join(pieces)
 
 
@@ -174,7 +183,7 @@ def _render_task(graph: dict) -> str:
 6. 权重名按第 2.3 节和模板的 `packed_modules_mapping` 映射；需要按 tp 切分的参数使用模板里的并行层。
 7. 除 KV cache 外不要保存跨 step 状态；KV cache 只通过 `Attention` 读写。
 
-模型类型是 `{model_type}`。参考图里的形状来自一次真实前向，`×N` 只表示该模板重复 N 次，不要把它当成 N 个不同的模块去展开。
+模型类型是 `{model_type}`。形状来自实测；有多个样本时按样本解释各轴。`×N` 表示对应计算在 N 个层实例中重复。
 """
 
 
@@ -198,7 +207,7 @@ def _render_graph(graph: dict) -> str:
     op_counts = stats.get("op_counts") or {}
     lines = ["# 二、参考图", ""]
     lines.append(
-        "> 这张图来自一次真实前向后折叠成模板；`×N` 表示该模板在模型里重复 N 次。"
+        "> 这张图从模型实际执行中抽取；`×N` 表示该模板在模型里重复 N 次。"
         "图只描述本模型算什么，不规定在 nano-vLLM 里怎么实现。"
     )
     lines.append(
@@ -225,6 +234,15 @@ def _render_graph(graph: dict) -> str:
     inputs = graph.get("graph_inputs") or []
     if inputs:
         lines.append("- 图输入：" + "、".join(f"`{x}`" for x in inputs))
+    for phase, results in (graph.get("graph_outputs") or {}).items():
+        for i, ref in enumerate(results):
+            shape = _fmt_shape(tensors[ref["tensor"]]["shape"])
+            lines.append(f"- {phase} 模型返回[{i}]：{ref['node']}.out[{ref['slot']}]，返回形状 {shape}")
+    probes = env.get("shape_probes")
+    if probes:
+        lines.append(f"- 尺寸样本按（批大小，提示长度）排列：{probes['fit']} 用于推断，"
+                     f"{probes['holdout']} 独立检验。B=批大小，S=本次输入长度，"
+                     "P=本步开始前已保存的位置数。数字表示样本中固定，? 表示含义未确定。")
 
     config = model.get("config")
     if config:
@@ -267,15 +285,17 @@ def _render_graph(graph: dict) -> str:
         node_inputs = node.get("inputs") or []
         if node_inputs:
             lines.append("- 输入：")
-            for ref in node_inputs:
-                lines.append("  - " + _fmt_tensor(ref, tensors))
+            profiles = node.get("attrs", {}).get("shape_profile", {}).get("inputs")
+            for i, ref in enumerate(node_inputs):
+                lines.append("  - " + _fmt_tensor(ref, tensors, profile=profiles[i] if profiles else None))
         else:
             lines.append("- 输入：无")
         node_outputs = node.get("outputs") or []
         if node_outputs:
             lines.append("- 输出：")
-            for ref in node_outputs:
-                lines.append("  - " + _fmt_tensor(ref, tensors, output=True))
+            profiles = node.get("attrs", {}).get("shape_profile", {}).get("outputs")
+            for i, ref in enumerate(node_outputs):
+                lines.append("  - " + _fmt_tensor(ref, tensors, output=True, profile=profiles[i] if profiles else None))
         else:
             lines.append("- 输出：无")
         state = node.get("state") or []
@@ -311,6 +331,11 @@ def _render_graph(graph: dict) -> str:
                 break
         kind = edge.get("kind") or "data"
         note = "（层间回边，不参与拓扑排序）" if kind == "layer" else ""
+        if edge.get("source_slot") is not None:
+            source += f".out[{edge['source_slot']}]"
+            slot = f".in[{edge['target_slot']}]"
+        if kind == "state":
+            note = f"（跨步读取上一步本层写入的 {edge.get('role')}）"
         lines.append(f"- `{source}` → `{target}`{slot}{note}")
 
     order, cyclic = _topological_order(graph)
@@ -496,18 +521,33 @@ def build_sections(
     template_path: Any,
     *,
     include_toolbox: bool = True,
+    exact: bool = True,
 ) -> dict[str, str]:
     """生成五个小节，键与 `SECTION_ORDER` 一致。"""
     graph_data = load_graph(graph)
+    if graph_data.get("reconcile", {}).get("ok") is False:
+        raise ValueError("参考图未通过抽图检查")
+    if any("observed_outputs" in node.get("attrs", {}) for node in graph_data.get("nodes", [])):
+        from nanovllm_selector.extract.schema import Graph
+
+        problems = Graph.from_dict(graph_data).validate()
+        if problems:
+            raise ValueError("参考图与实测记录不符：" + "；".join(problems[:5]))
     spec_data = load_spec(spec_path)
     kernels_text = _read_text(kernels_index, "算子库索引")
     template_text = _read_text(template_path, "模型模板")
+    engine_context = _render_spec(spec_data, include_toolbox=include_toolbox)
+    template = _render_template(template_text)
+    if exact:
+        engine_context += "\n\n" + Path(__file__).with_name("exact_reference.md").read_text(encoding="utf-8")
+        template += ("\n\n本次使用逐项相等验收。第 3 节的单卡实现依据给出了经过验证的回退代码。"
+                     "遇到相应运算时，请把这些计算写进候选文件；模板的类划分和权重装载接口继续沿用。")
     return {
         "task": _render_task(graph_data),
         "graph": _render_graph(graph_data),
-        "spec": _render_spec(spec_data, include_toolbox=include_toolbox),
+        "spec": engine_context,
         "kernels": _render_kernels(kernels_text),
-        "template": _render_template(template_text),
+        "template": template,
     }
 
 
@@ -518,6 +558,7 @@ def build_prompt(
     template_path: Any,
     *,
     include_toolbox: bool = True,
+    exact: bool = True,
 ) -> str:
     """把四样材料拼成一个完整 prompt 字符串。"""
     sections = build_sections(
@@ -525,7 +566,7 @@ def build_prompt(
         spec_path,
         kernels_index,
         template_path,
-        include_toolbox=include_toolbox,
+        include_toolbox=include_toolbox, exact=exact,
     )
     return "\n\n".join(sections[name] for name in SECTION_ORDER)
 
@@ -537,6 +578,7 @@ def build_messages(
     template_path: Any,
     *,
     include_toolbox: bool = True,
+    exact: bool = True,
 ) -> list[dict]:
     """转成 chat 接口的 messages；system 只放输出约束。"""
     return [
@@ -548,7 +590,7 @@ def build_messages(
                 spec_path,
                 kernels_index,
                 template_path,
-                include_toolbox=include_toolbox,
+                include_toolbox=include_toolbox, exact=exact,
             ),
         },
     ]

@@ -10,6 +10,7 @@ from nanovllm_selector.extract.api import _trace
 from nanovllm_selector.extract.replay import IMPL
 from nanovllm_selector.extract.schema import Graph
 from nanovllm_selector.extract.shapes import profile_shapes
+from nanovllm_selector.port.prompt import build_sections
 
 
 class TestGraphContracts(unittest.TestCase):
@@ -71,6 +72,8 @@ class TestGraphContracts(unittest.TestCase):
                 else:
                     node.outputs.reverse()
                 self.assertTrue(any("输出槽位" in p for p in graph.validate()))
+                with self.assertRaisesRegex(ValueError, "参考图与实测记录不符"):
+                    build_sections(graph, {}, "", "")
 
     def test_missing_or_swapped_cache_edges_fail(self):
         for change in ("drop", "swap", "missing_metadata"):
