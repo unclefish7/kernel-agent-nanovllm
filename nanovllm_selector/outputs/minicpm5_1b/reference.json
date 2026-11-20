@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "release": "4.57.3",
+  "architecture": "LlamaForCausalLM",
+  "physical_gpu": 0,
+  "pci_bus": "0000:03:00.0",
+  "prompt_ids": [
+    0,
+    28898,
+    5217,
+    4759
+  ],
+  "generated_ids": [
+    26323,
+    9691,
+    1253,
+    54,
+    35,
+    242,
+    31061,
+    408
+  ],
+  "text": "哪些城市？A. 南京 B",
+  "eos": [
+    1,
+    130073
+  ]
+}

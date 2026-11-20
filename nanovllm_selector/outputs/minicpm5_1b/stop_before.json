@@ -1,0 +1,54 @@
+{
+  "ok": false,
+  "candidate": "/workspace/nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+  "sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+  "cases": [
+    {
+      "name": "结束词一",
+      "actual": [
+        1
+      ],
+      "expected": [
+        1
+      ],
+      "ok": true
+    },
+    {
+      "name": "结束词二",
+      "actual": [
+        130073,
+        42
+      ],
+      "expected": [
+        130073
+      ],
+      "ok": false
+    },
+    {
+      "name": "普通词后结束",
+      "actual": [
+        42,
+        1
+      ],
+      "expected": [
+        42,
+        1
+      ],
+      "ok": true
+    },
+    {
+      "name": "忽略结束词并达到长度上限",
+      "actual": [
+        130073,
+        1,
+        42
+      ],
+      "expected": [
+        130073,
+        1,
+        42
+      ],
+      "ok": true
+    }
+  ]
+}

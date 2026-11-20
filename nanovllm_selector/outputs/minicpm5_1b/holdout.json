@@ -1,0 +1,320 @@
+{
+  "ok": true,
+  "stage": "compare",
+  "candidate": "nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+  "lengths": [
+    255
+  ],
+  "tensor_parallel_size": 1,
+  "criterion": "exact",
+  "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+  "prompt_file": "nanovllm_selector/outputs/minicpm5_1b/holdout.txt",
+  "prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+  "deterministic_algorithms": true,
+  "cached_prefix_tokens": [
+    0,
+    0
+  ],
+  "comparisons": [
+    {
+      "argmax_actual": 3587,
+      "argmax_expected": 3587,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 0.999992311000824,
+      "vocab_size": 130560,
+      "exact": true,
+      "top5_actual": [
+        3587,
+        1568,
+        1871,
+        32686,
+        8348
+      ],
+      "top5_expected": [
+        3587,
+        1568,
+        1871,
+        32686,
+        8348
+      ],
+      "ok": true,
+      "length": 255
+    }
+  ],
+  "generation_prefill": {
+    "argmax_actual": 3587,
+    "argmax_expected": 3587,
+    "argmax_match": true,
+    "max_abs_diff": 0.0,
+    "cosine": 0.999992311000824,
+    "vocab_size": 130560,
+    "exact": true,
+    "top5_actual": [
+      3587,
+      1568,
+      1871,
+      32686,
+      8348
+    ],
+    "top5_expected": [
+      3587,
+      1568,
+      1871,
+      32686,
+      8348
+    ],
+    "ok": true
+  },
+  "decode": {
+    "steps": 8,
+    "matched": 8,
+    "items": [
+      {
+        "argmax_actual": 32686,
+        "argmax_expected": 32686,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999978542327881,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          32686,
+          106001,
+          2281,
+          6547,
+          8709
+        ],
+        "top5_expected": [
+          32686,
+          106001,
+          2281,
+          6547,
+          8709
+        ],
+        "ok": true,
+        "step": 1,
+        "position": 255,
+        "input_token": 3587
+      },
+      {
+        "argmax_actual": 7397,
+        "argmax_expected": 7397,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999943375587463,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          7397,
+          541,
+          396,
+          8709,
+          4653
+        ],
+        "top5_expected": [
+          7397,
+          541,
+          396,
+          8709,
+          4653
+        ],
+        "ok": true,
+        "step": 2,
+        "position": 256,
+        "input_token": 32686
+      },
+      {
+        "argmax_actual": 541,
+        "argmax_expected": 541,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999918341636658,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          541,
+          396,
+          4653,
+          337,
+          28203
+        ],
+        "top5_expected": [
+          541,
+          396,
+          4653,
+          337,
+          28203
+        ],
+        "ok": true,
+        "step": 3,
+        "position": 257,
+        "input_token": 7397
+      },
+      {
+        "argmax_actual": 1,
+        "argmax_expected": 1,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999868273735046,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          1,
+          6905,
+          608,
+          38872,
+          36280
+        ],
+        "top5_expected": [
+          1,
+          6905,
+          608,
+          38872,
+          36280
+        ],
+        "ok": true,
+        "step": 4,
+        "position": 258,
+        "input_token": 541
+      },
+      {
+        "argmax_actual": 1,
+        "argmax_expected": 1,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999909996986389,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          1,
+          242,
+          608,
+          220,
+          30473
+        ],
+        "top5_expected": [
+          1,
+          242,
+          608,
+          220,
+          30473
+        ],
+        "ok": true,
+        "step": 5,
+        "position": 259,
+        "input_token": 1
+      },
+      {
+        "argmax_actual": 1,
+        "argmax_expected": 1,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999926090240479,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          1,
+          220,
+          242,
+          30,
+          396
+        ],
+        "top5_expected": [
+          1,
+          220,
+          242,
+          30,
+          396
+        ],
+        "ok": true,
+        "step": 6,
+        "position": 260,
+        "input_token": 1
+      },
+      {
+        "argmax_actual": 1,
+        "argmax_expected": 1,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999908804893494,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          1,
+          220,
+          30,
+          3195,
+          242
+        ],
+        "top5_expected": [
+          1,
+          220,
+          30,
+          3195,
+          242
+        ],
+        "ok": true,
+        "step": 7,
+        "position": 261,
+        "input_token": 1
+      },
+      {
+        "argmax_actual": 1,
+        "argmax_expected": 1,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999933242797852,
+        "vocab_size": 130560,
+        "exact": true,
+        "top5_actual": [
+          1,
+          220,
+          30,
+          3195,
+          242
+        ],
+        "top5_expected": [
+          1,
+          220,
+          30,
+          3195,
+          242
+        ],
+        "ok": true,
+        "step": 8,
+        "position": 262,
+        "input_token": 1
+      }
+    ],
+    "expected_steps": 8,
+    "ok": true
+  },
+  "comparison": {
+    "argmax_actual": 3587,
+    "argmax_expected": 3587,
+    "argmax_match": true,
+    "max_abs_diff": 0.0,
+    "cosine": 0.999992311000824,
+    "vocab_size": 130560,
+    "exact": true,
+    "top5_actual": [
+      3587,
+      1568,
+      1871,
+      32686,
+      8348
+    ],
+    "top5_expected": [
+      3587,
+      1568,
+      1871,
+      32686,
+      8348
+    ],
+    "ok": true,
+    "length": 255
+  },
+  "logits_file": "nanovllm_selector/outputs/minicpm5_1b/holdout_logits.pt",
+  "elapsed": 12.71
+}

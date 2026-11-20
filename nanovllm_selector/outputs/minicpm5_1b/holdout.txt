@@ -1,0 +1,7 @@
+十一月的值班记录写在一本蓝色笔记本上。早班先到河边读水尺，再核对桥头的电子传感器。昨天夜里下了一场小雨，河水从石阶第二级涨到了第三级。
+At 06:45 the observer recorded a water level of 1.82 metres. The logger showed 1.79 metres. Both clocks agreed within two seconds. A loose cable explained the missing samples between midnight and sunrise.
+午班的同事带回一张老地图。上面有两条已经改名的支流，还有一座如今只能步行通过的木桥。大家用铅笔把新的地名写在旧名字旁边，保留了原来的比例尺和日期。
+The afternoon checklist included three tasks: photograph the upstream gauge, replace the notebook cover, and send the corrected coordinates to the survey team. None required changing the calibration settings.
+傍晚的水面很平。收工前，两人分别抄下最后一次读数，再交换笔记核对小数点的位置。第二天早班需要回答的问题是，水位的变化来自降雨，还是来自上游水库的放水记录？
+次日清晨，上游发来一封短信，说夜间闸门一直关闭。值班员于是取出附近两个雨量站的整点记录，把三处观测时间换算成同一时区，再在方格纸上画出降雨与水位的变化。
+A missing timestamp was left blank. Before filing the report, the observer noted which measurements came from the sensor and which came from a person reading the gauge.
