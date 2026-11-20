@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -189,6 +190,8 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
             gpu_memory_utilization=0.35,
         )
         try:
+            if type(llm.model_runner.model) is not cls:
+                raise RuntimeError("引擎实际装载的模型类与指定的候选不同")
             prefill: list[torch.Tensor] = []
             prefix_lengths.clear()
             for ids in sequences:
@@ -244,7 +247,8 @@ def engine_logits(cls, model_dir: str, sequences: list[list[int]], arch: str,
 
 def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
              lengths: tuple[int, ...] = DEFAULT_LENGTHS, decode_steps: int = 8,
-             tp: int = 1, exact: bool = True, logits_out: Path | None = None, **kwargs: Any) -> dict:
+             tp: int = 1, exact: bool = True, logits_out: Path | None = None,
+             prompt_file: Path | None = None, **kwargs: Any) -> dict:
     """完整评测一个候选文件；任何阶段失败都折算成报告，不抛异常。"""
     started = time.time()
     report: dict[str, Any] = {
@@ -254,6 +258,7 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
     }
 
     try:
+        report["candidate_sha256"] = hashlib.sha256(candidate.read_bytes()).hexdigest()
         module = load_candidate(candidate)
     except Exception:
         report["error"] = traceback.format_exc()[-4000:]
@@ -275,13 +280,15 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
         from transformers import AutoTokenizer
 
         tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
-        base = tokenizer(FILLER_TEXT, return_tensors="pt").input_ids[0].tolist()
+        text = prompt_file.read_text(encoding="utf-8") if prompt_file is not None else FILLER_TEXT
+        report["prompt_file"] = str(prompt_file) if prompt_file is not None else None
+        report["prompt_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        base = tokenizer(text, return_tensors="pt").input_ids[0].tolist()
         longest = max(lengths)
         if min(lengths) < 1 or decode_steps < 0:
             raise ValueError("输入长度必须为正，decode_steps 必须非负")
-        need = longest + decode_steps + 1
-        if len(base) < need:
-            raise RuntimeError(f"填充文本只有 {len(base)} 个 token，不够 {need}")
+        if len(base) < longest:
+            raise ValueError(f"输入文本只有 {len(base)} 个词元，最少需要 {longest} 个")
         sequences = [base[:length] for length in lengths]
         # 先跑引擎（要占显存），再加载 HF 取参照：两份模型不同时驻留
         previous_mode = torch.get_deterministic_debug_mode()
@@ -399,6 +406,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="逐 token 走 KV cache 的步数，0 表示只验 prefill")
     parser.add_argument("--report", type=Path, help="报告路径，默认在项目 outputs 下以候选文件名保存")
     parser.add_argument("--logits-out", type=Path, help="额外保存每一步引擎和 HF 的完整词表分数（.pt）")
+    parser.add_argument("--prompt-file", type=Path, help="从指定 UTF-8 文本取输入，用于独立复验")
     parser.add_argument("--tp", type=int, default=1, help="tensor_parallel_size，默认 1")
     parser.add_argument("--exact", action=argparse.BooleanOptionalAction, default=True,
                         help="默认要求每一步整个词表逐项相等，--no-exact 使用原有容差")
@@ -406,7 +414,8 @@ def main(argv: list[str] | None = None) -> int:
 
     lengths = tuple(int(x) for x in args.lengths.split(",") if x.strip())
     report = evaluate(args.model, args.candidate, args.arch, lengths,
-                      decode_steps=args.decode_steps, tp=args.tp, exact=args.exact, logits_out=args.logits_out)
+                      decode_steps=args.decode_steps, tp=args.tp, exact=args.exact, logits_out=args.logits_out,
+                      prompt_file=args.prompt_file)
     text = json.dumps(report, ensure_ascii=False, indent=2)
     report_path = args.report
     if report_path is None:
