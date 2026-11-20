@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>计算图 · llama</title>
+<style>
+ body{margin:0;padding:24px 32px;background:#f9fafb;color:#111827;
+      font:14px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif}
+ h1{font-size:19px;margin:0 0 4px} h2{font-size:15px;margin:28px 0 10px}
+ .sub{color:#6b7280;font-size:12px;margin-bottom:16px}
+ .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;overflow:auto}
+ table{border-collapse:collapse;font-size:12.5px;width:100%}
+ th,td{border-bottom:1px solid #e5e7eb;padding:5px 8px;text-align:left;vertical-align:top}
+ th{background:#f3f4f6;position:sticky;top:0}
+ code{background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:12px}
+ ul{columns:4;margin:0;padding-left:18px;font-size:12.5px}
+</style></head><body>
+<h1>计算图 · llama</h1>
+<div class="sub">[&#x27;LlamaForCausalLM&#x27;] · float32/cpu
+ · torch 2.12.0+rocm10.0.0 · transformers 4.57.3</div>
+<div class="card"><svg xmlns="http://www.w3.org/2000/svg" width="2220" height="1756" viewBox="0 0 2220 1756" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/></marker>
+<marker id="arrow-state" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c2410c"/></marker>
+</defs>
+<rect width="2220" height="1756" fill="#ffffff"/>
+<text x="36" y="28" font-size="15" font-weight="600" fill="#111827">计算图 · llama · 24 层 · float32/cpu</text>
+<text x="36" y="46" font-size="11" fill="#6b7280">节点 60 · 边 85 · 对账 通过 · 实线=数据  虚线=状态/跨层</text>
+<path d="M 1473.0 166 L 1473.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1715.0 166 L 1715.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1473.0 262 C 1473.0 279.0, 1352.0 279.0, 1352.0 296" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 358 C 1352.0 375.0, 1836.0 375.0, 1836.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 358 C 1352.0 375.0, 1594.0 375.0, 1594.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 358 C 1352.0 375.0, 2078.0 375.0, 2078.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1836.0 454 C 1836.0 471.0, 1110.0 471.0, 1110.0 488" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1715.0 262 C 1715.0 375.0, 1110.0 375.0, 1110.0 488" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1715.0 262 C 1715.0 375.0, 1110.0 375.0, 1110.0 488" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1594.0 454 C 1594.0 471.0, 1110.0 471.0, 1110.0 488" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 2078.0 454 C 2078.0 471.0, 1110.0 471.0, 1110.0 488" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 550 C 1110.0 567.0, 1231.0 567.0, 1231.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1473.0 262 C 1473.0 471.0, 1110.0 471.0, 1110.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 646 C 1231.0 663.0, 1110.0 663.0, 1110.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 742 L 1110.0 1256" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 1222 C 1352.0 1239.0, 1110.0 1239.0, 1110.0 1256" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 742 C 1110.0 759.0, 1352.0 759.0, 1352.0 776" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 838 C 1352.0 855.0, 1231.0 855.0, 1231.0 872" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 934 C 1231.0 951.0, 1473.0 951.0, 1473.0 968" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 838 C 1352.0 855.0, 1473.0 855.0, 1473.0 872" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1473.0 1030 C 1473.0 1047.0, 747.0 1047.0, 747.0 1064" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1473.0 934 C 1473.0 999.0, 747.0 999.0, 747.0 1064" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 1126 C 747.0 1143.0, 1352.0 1143.0, 1352.0 1160" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 1318 C 1110.0 1335.0, 1352.0 1335.0, 1352.0 1352" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 1414 L 1352.0 1448" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 166 C 747.0 183.0, 505.0 183.0, 505.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 505.0 166 C 505.0 183.0, 747.0 183.0, 747.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 505.0 262 C 505.0 279.0, 868.0 279.0, 868.0 296" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 358 C 868.0 375.0, 384.0 375.0, 384.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 358 C 868.0 375.0, 142.0 375.0, 142.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 358 C 868.0 375.0, 626.0 375.0, 626.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 384.0 454 C 384.0 519.0, 989.0 519.0, 989.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 262 C 747.0 423.0, 989.0 423.0, 989.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 262 C 747.0 423.0, 989.0 423.0, 989.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 142.0 454 C 142.0 519.0, 989.0 519.0, 989.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 550 C 1110.0 567.0, 989.0 567.0, 989.0 584" fill="none" stroke="#c2410c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-state)"/>
+<path d="M 1110.0 550 C 1110.0 567.0, 989.0 567.0, 989.0 584" fill="none" stroke="#c2410c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-state)"/>
+<path d="M 626.0 454 C 626.0 519.0, 989.0 519.0, 989.0 584" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 646 C 989.0 663.0, 1352.0 663.0, 1352.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 505.0 262 C 505.0 519.0, 868.0 519.0, 868.0 776" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 742 C 1352.0 759.0, 868.0 759.0, 868.0 776" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 838 L 868.0 1352" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1352.0 1318 C 1352.0 1335.0, 868.0 1335.0, 868.0 1352" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 838 C 868.0 855.0, 989.0 855.0, 989.0 872" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 934 C 989.0 951.0, 747.0 951.0, 747.0 968" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 1030 C 747.0 1047.0, 989.0 1047.0, 989.0 1064" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 934 L 989.0 968" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 1126 C 989.0 1143.0, 868.0 1143.0, 868.0 1160" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 1030 C 989.0 1095.0, 868.0 1095.0, 868.0 1160" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 1222 C 868.0 1239.0, 1352.0 1239.0, 1352.0 1256" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 1414 C 868.0 1431.0, 1110.0 1431.0, 1110.0 1448" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 1510 C 1110.0 1527.0, 989.0 1527.0, 989.0 1544" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 166 C 1231.0 183.0, 989.0 183.0, 989.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 166 C 989.0 183.0, 1231.0 183.0, 1231.0 200" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 262 C 989.0 279.0, 1110.0 279.0, 1110.0 296" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 358 L 1110.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 358 C 1110.0 375.0, 868.0 375.0, 868.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 358 C 1110.0 375.0, 1352.0 375.0, 1352.0 392" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 454 C 1110.0 567.0, 868.0 567.0, 868.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 262 C 1231.0 471.0, 868.0 471.0, 868.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 262 C 1231.0 471.0, 868.0 471.0, 868.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 454 L 868.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 646 C 989.0 663.0, 868.0 663.0, 868.0 680" fill="none" stroke="#c2410c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-state)"/>
+<path d="M 989.0 646 C 989.0 663.0, 868.0 663.0, 868.0 680" fill="none" stroke="#c2410c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-state)"/>
+<path d="M 1352.0 454 C 1352.0 567.0, 868.0 567.0, 868.0 680" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 742 C 868.0 759.0, 1110.0 759.0, 1110.0 776" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 989.0 262 C 989.0 567.0, 747.0 567.0, 747.0 872" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 838 C 1110.0 855.0, 747.0 855.0, 747.0 872" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 934 C 747.0 1191.0, 868.0 1191.0, 868.0 1448" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 1414 C 1110.0 1431.0, 868.0 1431.0, 868.0 1448" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 747.0 934 C 747.0 951.0, 1231.0 951.0, 1231.0 968" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 1030 L 1231.0 1064" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 1126 C 1231.0 1143.0, 1110.0 1143.0, 1110.0 1160" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 1030 C 1231.0 1047.0, 1473.0 1047.0, 1473.0 1064" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1110.0 1222 C 1110.0 1239.0, 868.0 1239.0, 868.0 1256" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1473.0 1126 C 1473.0 1191.0, 868.0 1191.0, 868.0 1256" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 1318 C 868.0 1335.0, 1110.0 1335.0, 1110.0 1352" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 868.0 1510 C 868.0 1527.0, 1231.0 1527.0, 1231.0 1544" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M 1231.0 1606 C 1231.0 1623.0, 1110.0 1623.0, 1110.0 1640" fill="none" stroke="#9ca3af" stroke-width="1.4" marker-end="url(#arrow)"/>
+<g><title>embed_tokens | op=embedding | in=1×5 | out=1×5×1536 | evidence=4</title>
+<rect x="1367.0" y="200" width="212" height="62" rx="9" ry="9" fill="#dbeafe" stroke="#1e40af" stroke-width="1.2"/>
+<text x="1377.0" y="221" font-size="11" font-weight="600" fill="#111827">embed_tokens</text>
+<text x="1377.0" y="238" font-size="11" fill="#1e40af">词嵌入 · embedding</text>
+<text x="1377.0" y="253" font-size="9.5" fill="#4b5563">1×5 → 1×5×1536</text>
+</g>
+<g><title>model.arange | op=arange | in=— | out=5 | evidence=3</title>
+<rect x="1609.0" y="104" width="212" height="62" rx="9" ry="9" fill="#e5e7eb" stroke="#374151" stroke-width="1.2"/>
+<text x="1619.0" y="125" font-size="11" font-weight="600" fill="#111827">model.arange</text>
+<text x="1619.0" y="142" font-size="11" fill="#374151">生成位置索引 · arange</text>
+<text x="1619.0" y="157" font-size="9.5" fill="#4b5563">— → 5</text>
+</g>
+<g><title>rotary_emb | op=rope_table | in=1×1×5 | out=1×5×128 等2个 | evidence=3</title>
+<rect x="1609.0" y="200" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="1619.0" y="221" font-size="11" font-weight="600" fill="#111827">rotary_emb</text>
+<text x="1619.0" y="238" font-size="11" fill="#991b1b">RoPE 频率表 · rope_table</text>
+<text x="1619.0" y="253" font-size="9.5" fill="#4b5563">1×1×5 → 1×5×128 等2个</text>
+</g>
+<g><title>L*.input_layernorm | op=rmsnorm | in=1×5×1536 | out=1×5×1536 | evidence=4</title>
+<rect x="1246.0" y="296" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1256.0" y="317" font-size="11" font-weight="600" fill="#111827">L*.input_layernorm ×24</text>
+<text x="1256.0" y="334" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1256.0" y="349" font-size="9.5" fill="#4b5563">1×5×1536 → 1×5×1536</text>
+</g>
+<g><title>L*.self_attn.q_proj | op=matmul | in=5×1536 | out=5×2048 | evidence=4</title>
+<rect x="1730.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1740.0" y="413" font-size="11" font-weight="600" fill="#111827">L*.self_attn.q_proj ×24</text>
+<text x="1740.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1740.0" y="445" font-size="9.5" fill="#4b5563">5×1536 → 5×2048</text>
+</g>
+<g><title>L*.self_attn.k_proj | op=matmul | in=5×1536 | out=5×256 | evidence=4</title>
+<rect x="1488.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1498.0" y="413" font-size="11" font-weight="600" fill="#111827">L*.self_attn.k_proj ×24</text>
+<text x="1498.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1498.0" y="445" font-size="9.5" fill="#4b5563">5×1536 → 5×256</text>
+</g>
+<g><title>L*.self_attn.v_proj | op=matmul | in=5×1536 | out=5×256 | evidence=4</title>
+<rect x="1972.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1982.0" y="413" font-size="11" font-weight="600" fill="#111827">L*.self_attn.v_proj ×24</text>
+<text x="1982.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1982.0" y="445" font-size="9.5" fill="#4b5563">5×1536 → 5×256</text>
+</g>
+<g><title>L*.self_attn | op=attention | in=1×16×5×128 | out=1×2×5×128 等3个 | evidence=3</title>
+<rect x="1004.0" y="488" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="1014.0" y="509" font-size="11" font-weight="600" fill="#111827">L*.self_attn ×24</text>
+<text x="1014.0" y="526" font-size="11" fill="#991b1b">注意力 · attention</text>
+<text x="1014.0" y="541" font-size="9.5" fill="#4b5563">1×16×5×128 → 1×2×5×128 等3个</text>
+</g>
+<g><title>L*.self_attn.o_proj | op=matmul | in=5×2048 | out=5×1536 | evidence=4</title>
+<rect x="1125.0" y="584" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1135.0" y="605" font-size="11" font-weight="600" fill="#111827">L*.self_attn.o_proj ×24</text>
+<text x="1135.0" y="622" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1135.0" y="637" font-size="9.5" fill="#4b5563">5×2048 → 5×1536</text>
+</g>
+<g><title>L*.residual_add@0 | op=add | in=1×5×1536 | out=1×5×1536 | evidence=3</title>
+<rect x="1004.0" y="680" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="1014.0" y="701" font-size="11" font-weight="600" fill="#111827">L*.residual_add@0 ×24</text>
+<text x="1014.0" y="718" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="1014.0" y="733" font-size="9.5" fill="#4b5563">1×5×1536 → 1×5×1536</text>
+</g>
+<g><title>L*.residual_add@1 | op=add | in=1×5×1536 | out=1×5×1536 | evidence=3</title>
+<rect x="1004.0" y="1256" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="1014.0" y="1277" font-size="11" font-weight="600" fill="#111827">L*.residual_add@1 ×24</text>
+<text x="1014.0" y="1294" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="1014.0" y="1309" font-size="9.5" fill="#4b5563">1×5×1536 → 1×5×1536</text>
+</g>
+<g><title>L*.post_attention_layernorm | op=rmsnorm | in=1×5×1536 | out=1×5×1536 | evidence=4</title>
+<rect x="1246.0" y="776" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1256.0" y="797" font-size="11" font-weight="600" fill="#111827">L*.post_attention_layernorm ×…</text>
+<text x="1256.0" y="814" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1256.0" y="829" font-size="9.5" fill="#4b5563">1×5×1536 → 1×5×1536</text>
+</g>
+<g><title>L*.mlp.gate_proj | op=matmul | in=5×1536 | out=5×4608 | evidence=4</title>
+<rect x="1125.0" y="872" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1135.0" y="893" font-size="11" font-weight="600" fill="#111827">L*.mlp.gate_proj ×24</text>
+<text x="1135.0" y="910" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1135.0" y="925" font-size="9.5" fill="#4b5563">5×1536 → 5×4608</text>
+</g>
+<g><title>L*.mlp.act_fn | op=silu | in=1×5×4608 | out=1×5×4608 | evidence=3</title>
+<rect x="1367.0" y="968" width="212" height="62" rx="9" ry="9" fill="#fce7f3" stroke="#9d174d" stroke-width="1.2"/>
+<text x="1377.0" y="989" font-size="11" font-weight="600" fill="#111827">L*.mlp.act_fn ×24</text>
+<text x="1377.0" y="1006" font-size="11" fill="#9d174d">SiLU · silu</text>
+<text x="1377.0" y="1021" font-size="9.5" fill="#4b5563">1×5×4608 → 1×5×4608</text>
+</g>
+<g><title>L*.mlp.up_proj | op=matmul | in=5×1536 | out=5×4608 | evidence=4</title>
+<rect x="1367.0" y="872" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1377.0" y="893" font-size="11" font-weight="600" fill="#111827">L*.mlp.up_proj ×24</text>
+<text x="1377.0" y="910" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1377.0" y="925" font-size="9.5" fill="#4b5563">5×1536 → 5×4608</text>
+</g>
+<g><title>L*.mlp.mul | op=mul | in=1×5×4608 | out=1×5×4608 | evidence=3</title>
+<rect x="641.0" y="1064" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="651.0" y="1085" font-size="11" font-weight="600" fill="#111827">L*.mlp.mul ×24</text>
+<text x="651.0" y="1102" font-size="11" fill="#5b21b6">逐元素乘 · mul</text>
+<text x="651.0" y="1117" font-size="9.5" fill="#4b5563">1×5×4608 → 1×5×4608</text>
+</g>
+<g><title>L*.mlp.down_proj | op=matmul | in=5×4608 | out=5×1536 | evidence=4</title>
+<rect x="1246.0" y="1160" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1256.0" y="1181" font-size="11" font-weight="600" fill="#111827">L*.mlp.down_proj ×24</text>
+<text x="1256.0" y="1198" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1256.0" y="1213" font-size="9.5" fill="#4b5563">5×4608 → 5×1536</text>
+</g>
+<g><title>norm | op=rmsnorm | in=1×5×1536 | out=1×5×1536 | evidence=4</title>
+<rect x="1246.0" y="1352" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1256.0" y="1373" font-size="11" font-weight="600" fill="#111827">norm</text>
+<text x="1256.0" y="1390" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1256.0" y="1405" font-size="9.5" fill="#4b5563">1×5×1536 → 1×5×1536</text>
+</g>
+<g><title>lm_head | op=lm_head | in=5×1536 | out=5×130560 | evidence=4</title>
+<rect x="1246.0" y="1448" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1256.0" y="1469" font-size="11" font-weight="600" fill="#111827">lm_head</text>
+<text x="1256.0" y="1486" font-size="11" fill="#166534">输出投影 · lm_head</text>
+<text x="1256.0" y="1501" font-size="9.5" fill="#4b5563">5×1536 → 5×130560</text>
+</g>
+<g><title>input.input_ids | op=input | in=— | out=1×5 | evidence=2</title>
+<rect x="1367.0" y="104" width="212" height="62" rx="9" ry="9" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="1377.0" y="125" font-size="11" font-weight="600" fill="#111827">input.input_ids</text>
+<text x="1377.0" y="142" font-size="11" fill="#7f1d1d">输入 · input</text>
+<text x="1377.0" y="157" font-size="9.5" fill="#4b5563">— → 1×5</text>
+</g>
+<g><title>D.embed_tokens | op=embedding | in=1×1 | out=1×1×1536 | evidence=4</title>
+<rect x="399.0" y="200" width="212" height="62" rx="9" ry="9" fill="#dbeafe" stroke="#1e40af" stroke-width="1.2"/>
+<text x="409.0" y="221" font-size="11" font-weight="600" fill="#111827">D.embed_tokens</text>
+<text x="409.0" y="238" font-size="11" fill="#1e40af">词嵌入 · embedding</text>
+<text x="409.0" y="253" font-size="9.5" fill="#4b5563">1×1 → 1×1×1536</text>
+</g>
+<g><title>D.rotary_emb | op=rope_table | in=1×1×1 | out=1×1×128 等2个 | evidence=3</title>
+<rect x="641.0" y="200" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="651.0" y="221" font-size="11" font-weight="600" fill="#111827">D.rotary_emb</text>
+<text x="651.0" y="238" font-size="11" fill="#991b1b">RoPE 频率表 · rope_table</text>
+<text x="651.0" y="253" font-size="9.5" fill="#4b5563">1×1×1 → 1×1×128 等2个</text>
+</g>
+<g><title>D.L*.input_layernorm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="762.0" y="296" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="772.0" y="317" font-size="11" font-weight="600" fill="#111827">D.L*.input_layernorm ×24</text>
+<text x="772.0" y="334" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="772.0" y="349" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D.L*.self_attn.q_proj | op=matmul | in=1×1536 | out=1×2048 | evidence=4</title>
+<rect x="278.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="288.0" y="413" font-size="11" font-weight="600" fill="#111827">D.L*.self_attn.q_proj ×24</text>
+<text x="288.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="288.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×2048</text>
+</g>
+<g><title>D.L*.self_attn.k_proj | op=matmul | in=1×1536 | out=1×256 | evidence=4</title>
+<rect x="36.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="46.0" y="413" font-size="11" font-weight="600" fill="#111827">D.L*.self_attn.k_proj ×24</text>
+<text x="46.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="46.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×256</text>
+</g>
+<g><title>D.L*.self_attn.v_proj | op=matmul | in=1×1536 | out=1×256 | evidence=4</title>
+<rect x="520.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="530.0" y="413" font-size="11" font-weight="600" fill="#111827">D.L*.self_attn.v_proj ×24</text>
+<text x="530.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="530.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×256</text>
+</g>
+<g><title>D.L*.self_attn | op=attention | in=1×16×1×128 | out=1×2×6×128 等3个 | evidence=3</title>
+<rect x="883.0" y="584" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="893.0" y="605" font-size="11" font-weight="600" fill="#111827">D.L*.self_attn ×24</text>
+<text x="893.0" y="622" font-size="11" fill="#991b1b">注意力 · attention</text>
+<text x="893.0" y="637" font-size="9.5" fill="#4b5563">1×16×1×128 → 1×2×6×128 等3个</text>
+</g>
+<g><title>D.L*.self_attn.o_proj | op=matmul | in=1×2048 | out=1×1536 | evidence=4</title>
+<rect x="1246.0" y="680" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1256.0" y="701" font-size="11" font-weight="600" fill="#111827">D.L*.self_attn.o_proj ×24</text>
+<text x="1256.0" y="718" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1256.0" y="733" font-size="9.5" fill="#4b5563">1×2048 → 1×1536</text>
+</g>
+<g><title>D.L*.residual_add@0 | op=add | in=1×1×1536 | out=1×1×1536 | evidence=3</title>
+<rect x="762.0" y="776" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="772.0" y="797" font-size="11" font-weight="600" fill="#111827">D.L*.residual_add@0 ×24</text>
+<text x="772.0" y="814" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="772.0" y="829" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D.L*.residual_add@1 | op=add | in=1×1×1536 | out=1×1×1536 | evidence=3</title>
+<rect x="762.0" y="1352" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="772.0" y="1373" font-size="11" font-weight="600" fill="#111827">D.L*.residual_add@1 ×24</text>
+<text x="772.0" y="1390" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="772.0" y="1405" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D.L*.post_attention_layernorm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="883.0" y="872" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="893.0" y="893" font-size="11" font-weight="600" fill="#111827">D.L*.post_attention_layernorm…</text>
+<text x="893.0" y="910" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="893.0" y="925" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D.L*.mlp.gate_proj | op=matmul | in=1×1536 | out=1×4608 | evidence=4</title>
+<rect x="641.0" y="968" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="651.0" y="989" font-size="11" font-weight="600" fill="#111827">D.L*.mlp.gate_proj ×24</text>
+<text x="651.0" y="1006" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="651.0" y="1021" font-size="9.5" fill="#4b5563">1×1536 → 1×4608</text>
+</g>
+<g><title>D.L*.mlp.act_fn | op=silu | in=1×1×4608 | out=1×1×4608 | evidence=3</title>
+<rect x="883.0" y="1064" width="212" height="62" rx="9" ry="9" fill="#fce7f3" stroke="#9d174d" stroke-width="1.2"/>
+<text x="893.0" y="1085" font-size="11" font-weight="600" fill="#111827">D.L*.mlp.act_fn ×24</text>
+<text x="893.0" y="1102" font-size="11" fill="#9d174d">SiLU · silu</text>
+<text x="893.0" y="1117" font-size="9.5" fill="#4b5563">1×1×4608 → 1×1×4608</text>
+</g>
+<g><title>D.L*.mlp.up_proj | op=matmul | in=1×1536 | out=1×4608 | evidence=4</title>
+<rect x="883.0" y="968" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="893.0" y="989" font-size="11" font-weight="600" fill="#111827">D.L*.mlp.up_proj ×24</text>
+<text x="893.0" y="1006" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="893.0" y="1021" font-size="9.5" fill="#4b5563">1×1536 → 1×4608</text>
+</g>
+<g><title>D.L*.mlp.mul | op=mul | in=1×1×4608 | out=1×1×4608 | evidence=3</title>
+<rect x="762.0" y="1160" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="772.0" y="1181" font-size="11" font-weight="600" fill="#111827">D.L*.mlp.mul ×24</text>
+<text x="772.0" y="1198" font-size="11" fill="#5b21b6">逐元素乘 · mul</text>
+<text x="772.0" y="1213" font-size="9.5" fill="#4b5563">1×1×4608 → 1×1×4608</text>
+</g>
+<g><title>D.L*.mlp.down_proj | op=matmul | in=1×4608 | out=1×1536 | evidence=4</title>
+<rect x="1246.0" y="1256" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1256.0" y="1277" font-size="11" font-weight="600" fill="#111827">D.L*.mlp.down_proj ×24</text>
+<text x="1256.0" y="1294" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1256.0" y="1309" font-size="9.5" fill="#4b5563">1×4608 → 1×1536</text>
+</g>
+<g><title>D.norm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="1004.0" y="1448" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1014.0" y="1469" font-size="11" font-weight="600" fill="#111827">D.norm</text>
+<text x="1014.0" y="1486" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1014.0" y="1501" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D.lm_head | op=lm_head | in=1×1536 | out=1×130560 | evidence=4</title>
+<rect x="883.0" y="1544" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="893.0" y="1565" font-size="11" font-weight="600" fill="#111827">D.lm_head</text>
+<text x="893.0" y="1582" font-size="11" fill="#166534">输出投影 · lm_head</text>
+<text x="893.0" y="1597" font-size="9.5" fill="#4b5563">1×1536 → 1×130560</text>
+</g>
+<g><title>D.input.input_ids | op=input | in=— | out=1×1 | evidence=2</title>
+<rect x="641.0" y="104" width="212" height="62" rx="9" ry="9" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="651.0" y="125" font-size="11" font-weight="600" fill="#111827">D.input.input_ids</text>
+<text x="651.0" y="142" font-size="11" fill="#7f1d1d">输入 · input</text>
+<text x="651.0" y="157" font-size="9.5" fill="#4b5563">— → 1×1</text>
+</g>
+<g><title>D.input.cache_position | op=input | in=— | out=1 | evidence=2</title>
+<rect x="399.0" y="104" width="212" height="62" rx="9" ry="9" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="409.0" y="125" font-size="11" font-weight="600" fill="#111827">D.input.cache_position</text>
+<text x="409.0" y="142" font-size="11" fill="#7f1d1d">输入 · input</text>
+<text x="409.0" y="157" font-size="9.5" fill="#4b5563">— → 1</text>
+</g>
+<g><title>D2.embed_tokens | op=embedding | in=1×1 | out=1×1×1536 | evidence=4</title>
+<rect x="883.0" y="200" width="212" height="62" rx="9" ry="9" fill="#dbeafe" stroke="#1e40af" stroke-width="1.2"/>
+<text x="893.0" y="221" font-size="11" font-weight="600" fill="#111827">D2.embed_tokens</text>
+<text x="893.0" y="238" font-size="11" fill="#1e40af">词嵌入 · embedding</text>
+<text x="893.0" y="253" font-size="9.5" fill="#4b5563">1×1 → 1×1×1536</text>
+</g>
+<g><title>D2.rotary_emb | op=rope_table | in=1×1×1 | out=1×1×128 等2个 | evidence=3</title>
+<rect x="1125.0" y="200" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="1135.0" y="221" font-size="11" font-weight="600" fill="#111827">D2.rotary_emb</text>
+<text x="1135.0" y="238" font-size="11" fill="#991b1b">RoPE 频率表 · rope_table</text>
+<text x="1135.0" y="253" font-size="9.5" fill="#4b5563">1×1×1 → 1×1×128 等2个</text>
+</g>
+<g><title>D2.L*.input_layernorm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="1004.0" y="296" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1014.0" y="317" font-size="11" font-weight="600" fill="#111827">D2.L*.input_layernorm ×24</text>
+<text x="1014.0" y="334" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1014.0" y="349" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D2.L*.self_attn.q_proj | op=matmul | in=1×1536 | out=1×2048 | evidence=4</title>
+<rect x="1004.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1014.0" y="413" font-size="11" font-weight="600" fill="#111827">D2.L*.self_attn.q_proj ×24</text>
+<text x="1014.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1014.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×2048</text>
+</g>
+<g><title>D2.L*.self_attn.k_proj | op=matmul | in=1×1536 | out=1×256 | evidence=4</title>
+<rect x="762.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="772.0" y="413" font-size="11" font-weight="600" fill="#111827">D2.L*.self_attn.k_proj ×24</text>
+<text x="772.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="772.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×256</text>
+</g>
+<g><title>D2.L*.self_attn.v_proj | op=matmul | in=1×1536 | out=1×256 | evidence=4</title>
+<rect x="1246.0" y="392" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1256.0" y="413" font-size="11" font-weight="600" fill="#111827">D2.L*.self_attn.v_proj ×24</text>
+<text x="1256.0" y="430" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1256.0" y="445" font-size="9.5" fill="#4b5563">1×1536 → 1×256</text>
+</g>
+<g><title>D2.L*.self_attn | op=attention | in=1×16×1×128 | out=1×2×7×128 等3个 | evidence=3</title>
+<rect x="762.0" y="680" width="212" height="62" rx="9" ry="9" fill="#fee2e2" stroke="#991b1b" stroke-width="1.2"/>
+<text x="772.0" y="701" font-size="11" font-weight="600" fill="#111827">D2.L*.self_attn ×24</text>
+<text x="772.0" y="718" font-size="11" fill="#991b1b">注意力 · attention</text>
+<text x="772.0" y="733" font-size="9.5" fill="#4b5563">1×16×1×128 → 1×2×7×128 等3个</text>
+</g>
+<g><title>D2.L*.self_attn.o_proj | op=matmul | in=1×2048 | out=1×1536 | evidence=4</title>
+<rect x="1004.0" y="776" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1014.0" y="797" font-size="11" font-weight="600" fill="#111827">D2.L*.self_attn.o_proj ×24</text>
+<text x="1014.0" y="814" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1014.0" y="829" font-size="9.5" fill="#4b5563">1×2048 → 1×1536</text>
+</g>
+<g><title>D2.L*.residual_add@0 | op=add | in=1×1×1536 | out=1×1×1536 | evidence=3</title>
+<rect x="641.0" y="872" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="651.0" y="893" font-size="11" font-weight="600" fill="#111827">D2.L*.residual_add@0 ×24</text>
+<text x="651.0" y="910" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="651.0" y="925" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D2.L*.residual_add@1 | op=add | in=1×1×1536 | out=1×1×1536 | evidence=3</title>
+<rect x="762.0" y="1448" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="772.0" y="1469" font-size="11" font-weight="600" fill="#111827">D2.L*.residual_add@1 ×24</text>
+<text x="772.0" y="1486" font-size="11" fill="#5b21b6">残差加 · add</text>
+<text x="772.0" y="1501" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D2.L*.post_attention_layernorm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="1125.0" y="968" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1135.0" y="989" font-size="11" font-weight="600" fill="#111827">D2.L*.post_attention_layernor…</text>
+<text x="1135.0" y="1006" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1135.0" y="1021" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D2.L*.mlp.gate_proj | op=matmul | in=1×1536 | out=1×4608 | evidence=4</title>
+<rect x="1125.0" y="1064" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1135.0" y="1085" font-size="11" font-weight="600" fill="#111827">D2.L*.mlp.gate_proj ×24</text>
+<text x="1135.0" y="1102" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1135.0" y="1117" font-size="9.5" fill="#4b5563">1×1536 → 1×4608</text>
+</g>
+<g><title>D2.L*.mlp.act_fn | op=silu | in=1×1×4608 | out=1×1×4608 | evidence=3</title>
+<rect x="1004.0" y="1160" width="212" height="62" rx="9" ry="9" fill="#fce7f3" stroke="#9d174d" stroke-width="1.2"/>
+<text x="1014.0" y="1181" font-size="11" font-weight="600" fill="#111827">D2.L*.mlp.act_fn ×24</text>
+<text x="1014.0" y="1198" font-size="11" fill="#9d174d">SiLU · silu</text>
+<text x="1014.0" y="1213" font-size="9.5" fill="#4b5563">1×1×4608 → 1×1×4608</text>
+</g>
+<g><title>D2.L*.mlp.up_proj | op=matmul | in=1×1536 | out=1×4608 | evidence=4</title>
+<rect x="1367.0" y="1064" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1377.0" y="1085" font-size="11" font-weight="600" fill="#111827">D2.L*.mlp.up_proj ×24</text>
+<text x="1377.0" y="1102" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1377.0" y="1117" font-size="9.5" fill="#4b5563">1×1536 → 1×4608</text>
+</g>
+<g><title>D2.L*.mlp.mul | op=mul | in=1×1×4608 | out=1×1×4608 | evidence=3</title>
+<rect x="762.0" y="1256" width="212" height="62" rx="9" ry="9" fill="#ede9fe" stroke="#5b21b6" stroke-width="1.2"/>
+<text x="772.0" y="1277" font-size="11" font-weight="600" fill="#111827">D2.L*.mlp.mul ×24</text>
+<text x="772.0" y="1294" font-size="11" fill="#5b21b6">逐元素乘 · mul</text>
+<text x="772.0" y="1309" font-size="9.5" fill="#4b5563">1×1×4608 → 1×1×4608</text>
+</g>
+<g><title>D2.L*.mlp.down_proj | op=matmul | in=1×4608 | out=1×1536 | evidence=4</title>
+<rect x="1004.0" y="1352" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1014.0" y="1373" font-size="11" font-weight="600" fill="#111827">D2.L*.mlp.down_proj ×24</text>
+<text x="1014.0" y="1390" font-size="11" fill="#166534">矩阵乘 · matmul</text>
+<text x="1014.0" y="1405" font-size="9.5" fill="#4b5563">1×4608 → 1×1536</text>
+</g>
+<g><title>D2.norm | op=rmsnorm | in=1×1×1536 | out=1×1×1536 | evidence=4</title>
+<rect x="1125.0" y="1544" width="212" height="62" rx="9" ry="9" fill="#fef3c7" stroke="#92400e" stroke-width="1.2"/>
+<text x="1135.0" y="1565" font-size="11" font-weight="600" fill="#111827">D2.norm</text>
+<text x="1135.0" y="1582" font-size="11" fill="#92400e">RMSNorm · rmsnorm</text>
+<text x="1135.0" y="1597" font-size="9.5" fill="#4b5563">1×1×1536 → 1×1×1536</text>
+</g>
+<g><title>D2.lm_head | op=lm_head | in=1×1536 | out=1×130560 | evidence=4</title>
+<rect x="1004.0" y="1640" width="212" height="62" rx="9" ry="9" fill="#dcfce7" stroke="#166534" stroke-width="1.2"/>
+<text x="1014.0" y="1661" font-size="11" font-weight="600" fill="#111827">D2.lm_head</text>
+<text x="1014.0" y="1678" font-size="11" fill="#166534">输出投影 · lm_head</text>
+<text x="1014.0" y="1693" font-size="9.5" fill="#4b5563">1×1536 → 1×130560</text>
+</g>
+<g><title>D2.input.input_ids | op=input | in=— | out=1×1 | evidence=2</title>
+<rect x="1125.0" y="104" width="212" height="62" rx="9" ry="9" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="1135.0" y="125" font-size="11" font-weight="600" fill="#111827">D2.input.input_ids</text>
+<text x="1135.0" y="142" font-size="11" fill="#7f1d1d">输入 · input</text>
+<text x="1135.0" y="157" font-size="9.5" fill="#4b5563">— → 1×1</text>
+</g>
+<g><title>D2.input.cache_position | op=input | in=— | out=1 | evidence=2</title>
+<rect x="883.0" y="104" width="212" height="62" rx="9" ry="9" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="893.0" y="125" font-size="11" font-weight="600" fill="#111827">D2.input.cache_position</text>
+<text x="893.0" y="142" font-size="11" fill="#7f1d1d">输入 · input</text>
+<text x="893.0" y="157" font-size="9.5" fill="#4b5563">— → 1</text>
+</g>
+<rect x="36" y="1704" width="11" height="11" rx="2" fill="#dbeafe" stroke="#1e40af"/>
+<text x="52" y="1714" font-size="10.5" fill="#374151">访存</text>
+<rect x="92" y="1704" width="11" height="11" rx="2" fill="#dcfce7" stroke="#166534"/>
+<text x="108" y="1714" font-size="10.5" fill="#374151">矩阵计算</text>
+<rect x="170" y="1704" width="11" height="11" rx="2" fill="#fef3c7" stroke="#92400e"/>
+<text x="186" y="1714" font-size="10.5" fill="#374151">归一化</text>
+<rect x="237" y="1704" width="11" height="11" rx="2" fill="#fce7f3" stroke="#9d174d"/>
+<text x="253" y="1714" font-size="10.5" fill="#374151">激活</text>
+<rect x="293" y="1704" width="11" height="11" rx="2" fill="#ede9fe" stroke="#5b21b6"/>
+<text x="309" y="1714" font-size="10.5" fill="#374151">逐元素</text>
+<rect x="360" y="1704" width="11" height="11" rx="2" fill="#fee2e2" stroke="#991b1b"/>
+<text x="376" y="1714" font-size="10.5" fill="#374151">注意力</text>
+<rect x="427" y="1704" width="11" height="11" rx="2" fill="#e5e7eb" stroke="#374151"/>
+<text x="443" y="1714" font-size="10.5" fill="#374151">形状/索引</text>
+</svg></div>
+<h2>映射覆盖（每个算子出现多少次）</h2>
+<div class="card"><ul><li><code>matmul</code> × 168</li><li><code>rmsnorm</code> × 49</li><li><code>add</code> × 48</li><li><code>attention</code> × 24</li><li><code>mul</code> × 24</li><li><code>silu</code> × 24</li><li><code>embedding</code> × 1</li><li><code>lm_head</code> × 1</li><li><code>rope_table</code> × 1</li></ul></div>
+<h2>对账</h2>
+<div class="card"><table><tr><th></th><th>检查项</th><th>期望</th><th>实际</th><th>说明</th></tr><tr><td>✅</td><td>modules</td><td>319</td><td>319</td><td>模块树规模（自洽检查）</td></tr><tr><td>✅</td><td>matmul[decode]</td><td>169</td><td>169</td><td>模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）</td></tr><tr><td>✅</td><td>embedding[decode]</td><td>1</td><td>1</td><td>模块树 Embedding 数</td></tr><tr><td>✅</td><td>rmsnorm[decode]</td><td>49</td><td>49</td><td>模块树 RMSNorm 数</td></tr><tr><td>✅</td><td>silu[decode]</td><td>24</td><td>24</td><td>激活模块数</td></tr><tr><td>✅</td><td>matmul[decode_2]</td><td>169</td><td>169</td><td>模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）</td></tr><tr><td>✅</td><td>embedding[decode_2]</td><td>1</td><td>1</td><td>模块树 Embedding 数</td></tr><tr><td>✅</td><td>rmsnorm[decode_2]</td><td>49</td><td>49</td><td>模块树 RMSNorm 数</td></tr><tr><td>✅</td><td>silu[decode_2]</td><td>24</td><td>24</td><td>激活模块数</td></tr><tr><td>✅</td><td>matmul[prefill]</td><td>169</td><td>169</td><td>模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）</td></tr><tr><td>✅</td><td>embedding[prefill]</td><td>1</td><td>1</td><td>模块树 Embedding 数</td></tr><tr><td>✅</td><td>rmsnorm[prefill]</td><td>49</td><td>49</td><td>模块树 RMSNorm 数</td></tr><tr><td>✅</td><td>silu[prefill]</td><td>24</td><td>24</td><td>激活模块数</td></tr><tr><td>✅</td><td>edges_endpoints</td><td>0</td><td>0</td><td>每条边两端都必须存在</td></tr><tr><td>✅</td><td>evidence_coverage</td><td>0</td><td>0</td><td>每个节点至少 1 条证据</td></tr><tr><td>✅</td><td>unknown_ops</td><td>0</td><td>0</td><td></td></tr><tr><td>✅</td><td>I1 dispatch 全覆盖[prefill]</td><td>0</td><td>0</td><td>1784 个 aten 算子：879 个进节点，540 个只属透明算子，365 个两者都算；三部分相加 = 1784</td></tr><tr><td>✅</td><td>I2 张量有主[prefill]</td><td>0</td><td>0</td><td>每个输入都有边连到它的来源</td></tr><tr><td>✅</td><td>I3 入参有槽[prefill]</td><td>0</td><td>0</td><td>每个输入都记着参数位置</td></tr><tr><td>✅</td><td>I1 dispatch 全覆盖[decode]</td><td>0</td><td>0</td><td>1734 个 aten 算子：878 个进节点，541 个只属透明算子，315 个两者都算；三部分相加 = 1734</td></tr><tr><td>✅</td><td>I2 张量有主[decode]</td><td>0</td><td>0</td><td>每个输入都有边连到它的来源</td></tr><tr><td>✅</td><td>I3 入参有槽[decode]</td><td>0</td><td>0</td><td>每个输入都记着参数位置</td></tr><tr><td>✅</td><td>I1 dispatch 全覆盖[decode_2]</td><td>0</td><td>0</td><td>1734 个 aten 算子：878 个进节点，541 个只属透明算子，315 个两者都算；三部分相加 = 1734</td></tr><tr><td>✅</td><td>I2 张量有主[decode_2]</td><td>0</td><td>0</td><td>每个输入都有边连到它的来源</td></tr><tr><td>✅</td><td>I3 入参有槽[decode_2]</td><td>0</td><td>0</td><td>每个输入都记着参数位置</td></tr><tr><td>✅</td><td>R1 逐节点各输出重放</td><td>0</td><td>0</td><td>1021 个节点通过</td></tr><tr><td>✅</td><td>S1 独立样本验证维度关系</td><td>0</td><td>0</td><td>保留 0 个未确定的轴</td></tr></table></div>
+<h2>逐节点明细</h2>
+<div class="card"><table>
+<tr><th>#</th><th>节点</th><th>算子</th><th>输入</th><th>输出</th><th>状态</th><th>证据</th><th>实例</th></tr>
+<tr><td>0</td><td><code>embed_tokens</code></td><td>embedding</td><td><code>1×5</code></td><td><code>1×5×1536</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>1</td><td><code>model.arange</code></td><td>arange</td><td><code>—</code></td><td><code>5</code></td><td>—</td><td>3</td><td>—</td></tr><tr><td>2</td><td><code>rotary_emb</code></td><td>rope_table</td><td><code>1×1×5</code></td><td><code>1×5×128 等2个</code></td><td>—</td><td>3</td><td>—</td></tr><tr><td>3</td><td><code>L*.input_layernorm</code></td><td>rmsnorm</td><td><code>1×5×1536</code></td><td><code>1×5×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>4</td><td><code>L*.self_attn.q_proj</code></td><td>matmul</td><td><code>5×1536</code></td><td><code>5×2048</code></td><td>w2048×1536</td><td>4</td><td>24</td></tr><tr><td>5</td><td><code>L*.self_attn.k_proj</code></td><td>matmul</td><td><code>5×1536</code></td><td><code>5×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>6</td><td><code>L*.self_attn.v_proj</code></td><td>matmul</td><td><code>5×1536</code></td><td><code>5×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>7</td><td><code>L*.self_attn</code></td><td>attention</td><td><code>1×16×5×128</code></td><td><code>1×2×5×128 等3个</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>8</td><td><code>L*.self_attn.o_proj</code></td><td>matmul</td><td><code>5×2048</code></td><td><code>5×1536</code></td><td>w1536×2048</td><td>4</td><td>24</td></tr><tr><td>9</td><td><code>L*.residual_add@0</code></td><td>add</td><td><code>1×5×1536</code></td><td><code>1×5×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>10</td><td><code>L*.residual_add@1</code></td><td>add</td><td><code>1×5×1536</code></td><td><code>1×5×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>11</td><td><code>L*.post_attention_layernorm</code></td><td>rmsnorm</td><td><code>1×5×1536</code></td><td><code>1×5×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>12</td><td><code>L*.mlp.gate_proj</code></td><td>matmul</td><td><code>5×1536</code></td><td><code>5×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>13</td><td><code>L*.mlp.act_fn</code></td><td>silu</td><td><code>1×5×4608</code></td><td><code>1×5×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>14</td><td><code>L*.mlp.up_proj</code></td><td>matmul</td><td><code>5×1536</code></td><td><code>5×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>15</td><td><code>L*.mlp.mul</code></td><td>mul</td><td><code>1×5×4608</code></td><td><code>1×5×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>16</td><td><code>L*.mlp.down_proj</code></td><td>matmul</td><td><code>5×4608</code></td><td><code>5×1536</code></td><td>w1536×4608</td><td>4</td><td>24</td></tr><tr><td>17</td><td><code>norm</code></td><td>rmsnorm</td><td><code>1×5×1536</code></td><td><code>1×5×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>—</td></tr><tr><td>18</td><td><code>lm_head</code></td><td>lm_head</td><td><code>5×1536</code></td><td><code>5×130560</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>19</td><td><code>input.input_ids</code></td><td>input</td><td><code>—</code></td><td><code>1×5</code></td><td>—</td><td>2</td><td>—</td></tr><tr><td>20</td><td><code>D.embed_tokens</code></td><td>embedding</td><td><code>1×1</code></td><td><code>1×1×1536</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>21</td><td><code>D.rotary_emb</code></td><td>rope_table</td><td><code>1×1×1</code></td><td><code>1×1×128 等2个</code></td><td>—</td><td>3</td><td>—</td></tr><tr><td>22</td><td><code>D.L*.input_layernorm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>23</td><td><code>D.L*.self_attn.q_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×2048</code></td><td>w2048×1536</td><td>4</td><td>24</td></tr><tr><td>24</td><td><code>D.L*.self_attn.k_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>25</td><td><code>D.L*.self_attn.v_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>26</td><td><code>D.L*.self_attn</code></td><td>attention</td><td><code>1×16×1×128</code></td><td><code>1×2×6×128 等3个</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>27</td><td><code>D.L*.self_attn.o_proj</code></td><td>matmul</td><td><code>1×2048</code></td><td><code>1×1536</code></td><td>w1536×2048</td><td>4</td><td>24</td></tr><tr><td>28</td><td><code>D.L*.residual_add@0</code></td><td>add</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>29</td><td><code>D.L*.residual_add@1</code></td><td>add</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>30</td><td><code>D.L*.post_attention_layernorm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>31</td><td><code>D.L*.mlp.gate_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>32</td><td><code>D.L*.mlp.act_fn</code></td><td>silu</td><td><code>1×1×4608</code></td><td><code>1×1×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>33</td><td><code>D.L*.mlp.up_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>34</td><td><code>D.L*.mlp.mul</code></td><td>mul</td><td><code>1×1×4608</code></td><td><code>1×1×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>35</td><td><code>D.L*.mlp.down_proj</code></td><td>matmul</td><td><code>1×4608</code></td><td><code>1×1536</code></td><td>w1536×4608</td><td>4</td><td>24</td></tr><tr><td>36</td><td><code>D.norm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>—</td></tr><tr><td>37</td><td><code>D.lm_head</code></td><td>lm_head</td><td><code>1×1536</code></td><td><code>1×130560</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>38</td><td><code>D.input.input_ids</code></td><td>input</td><td><code>—</code></td><td><code>1×1</code></td><td>—</td><td>2</td><td>—</td></tr><tr><td>39</td><td><code>D.input.cache_position</code></td><td>input</td><td><code>—</code></td><td><code>1</code></td><td>—</td><td>2</td><td>—</td></tr><tr><td>40</td><td><code>D2.embed_tokens</code></td><td>embedding</td><td><code>1×1</code></td><td><code>1×1×1536</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>41</td><td><code>D2.rotary_emb</code></td><td>rope_table</td><td><code>1×1×1</code></td><td><code>1×1×128 等2个</code></td><td>—</td><td>3</td><td>—</td></tr><tr><td>42</td><td><code>D2.L*.input_layernorm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>43</td><td><code>D2.L*.self_attn.q_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×2048</code></td><td>w2048×1536</td><td>4</td><td>24</td></tr><tr><td>44</td><td><code>D2.L*.self_attn.k_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>45</td><td><code>D2.L*.self_attn.v_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×256</code></td><td>w256×1536</td><td>4</td><td>24</td></tr><tr><td>46</td><td><code>D2.L*.self_attn</code></td><td>attention</td><td><code>1×16×1×128</code></td><td><code>1×2×7×128 等3个</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>47</td><td><code>D2.L*.self_attn.o_proj</code></td><td>matmul</td><td><code>1×2048</code></td><td><code>1×1536</code></td><td>w1536×2048</td><td>4</td><td>24</td></tr><tr><td>48</td><td><code>D2.L*.residual_add@0</code></td><td>add</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>49</td><td><code>D2.L*.residual_add@1</code></td><td>add</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>50</td><td><code>D2.L*.post_attention_layernorm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>24</td></tr><tr><td>51</td><td><code>D2.L*.mlp.gate_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>52</td><td><code>D2.L*.mlp.act_fn</code></td><td>silu</td><td><code>1×1×4608</code></td><td><code>1×1×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>53</td><td><code>D2.L*.mlp.up_proj</code></td><td>matmul</td><td><code>1×1536</code></td><td><code>1×4608</code></td><td>w4608×1536</td><td>4</td><td>24</td></tr><tr><td>54</td><td><code>D2.L*.mlp.mul</code></td><td>mul</td><td><code>1×1×4608</code></td><td><code>1×1×4608</code></td><td>—</td><td>3</td><td>24</td></tr><tr><td>55</td><td><code>D2.L*.mlp.down_proj</code></td><td>matmul</td><td><code>1×4608</code></td><td><code>1×1536</code></td><td>w1536×4608</td><td>4</td><td>24</td></tr><tr><td>56</td><td><code>D2.norm</code></td><td>rmsnorm</td><td><code>1×1×1536</code></td><td><code>1×1×1536</code></td><td>w1536,variance_epsilon=float</td><td>4</td><td>—</td></tr><tr><td>57</td><td><code>D2.lm_head</code></td><td>lm_head</td><td><code>1×1536</code></td><td><code>1×130560</code></td><td>w130560×1536</td><td>4</td><td>—</td></tr><tr><td>58</td><td><code>D2.input.input_ids</code></td><td>input</td><td><code>—</code></td><td><code>1×1</code></td><td>—</td><td>2</td><td>—</td></tr><tr><td>59</td><td><code>D2.input.cache_position</code></td><td>input</td><td><code>—</code></td><td><code>1</code></td><td>—</td><td>2</td><td>—</td></tr>
+</table></div>
+</body></html>

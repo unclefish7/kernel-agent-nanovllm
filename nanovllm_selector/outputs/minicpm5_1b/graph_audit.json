@@ -1,0 +1,176 @@
+{
+  "ok": true,
+  "checkpoint_parameters_checked": 219,
+  "attention_weights": {
+    "q_proj": [
+      2048,
+      1536
+    ],
+    "k_proj": [
+      256,
+      1536
+    ],
+    "v_proj": [
+      256,
+      1536
+    ],
+    "o_proj": [
+      1536,
+      2048
+    ]
+  },
+  "two_cache_transitions": [
+    {
+      "from_node": "L*.self_attn",
+      "to_node": "D.L*.self_attn",
+      "tensor": "dt0053",
+      "role": "key",
+      "kind": "state",
+      "source_slot": 0,
+      "target_slot": 4
+    },
+    {
+      "from_node": "L*.self_attn",
+      "to_node": "D.L*.self_attn",
+      "tensor": "dt0055",
+      "role": "value",
+      "kind": "state",
+      "source_slot": 1,
+      "target_slot": 5
+    },
+    {
+      "from_node": "D.L*.self_attn",
+      "to_node": "D2.L*.self_attn",
+      "tensor": "d2t0053",
+      "role": "key",
+      "kind": "state",
+      "source_slot": 0,
+      "target_slot": 4
+    },
+    {
+      "from_node": "D.L*.self_attn",
+      "to_node": "D2.L*.self_attn",
+      "tensor": "d2t0055",
+      "role": "value",
+      "kind": "state",
+      "source_slot": 1,
+      "target_slot": 5
+    }
+  ],
+  "shape_probes": {
+    "fit": [
+      [
+        1,
+        5
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        2,
+        5
+      ]
+    ],
+    "holdout": [
+      2,
+      11
+    ],
+    "base": [
+      1,
+      5
+    ],
+    "unknown_axes": 0,
+    "problems": []
+  },
+  "stats": {
+    "op_counts": {
+      "matmul": 168,
+      "rmsnorm": 49,
+      "add": 48,
+      "attention": 24,
+      "mul": 24,
+      "silu": 24,
+      "embedding": 1,
+      "lm_head": 1,
+      "rope_table": 1
+    },
+    "op_counts_by_phase": {
+      "decode": {
+        "matmul": 168,
+        "rmsnorm": 49,
+        "add": 48,
+        "attention": 24,
+        "mul": 24,
+        "silu": 24,
+        "embedding": 1,
+        "lm_head": 1,
+        "rope_table": 1
+      },
+      "decode_2": {
+        "matmul": 168,
+        "rmsnorm": 49,
+        "add": 48,
+        "attention": 24,
+        "mul": 24,
+        "silu": 24,
+        "embedding": 1,
+        "lm_head": 1,
+        "rope_table": 1
+      },
+      "prefill": {
+        "matmul": 168,
+        "rmsnorm": 49,
+        "add": 48,
+        "attention": 24,
+        "mul": 24,
+        "silu": 24,
+        "arange": 1,
+        "embedding": 1,
+        "lm_head": 1,
+        "rope_table": 1
+      }
+    },
+    "nodes": 1021,
+    "edges": 1620,
+    "graph_inputs": 5,
+    "module_calls": 954,
+    "dispatch_count": 5252,
+    "dispatch_total": 5252,
+    "dispatch_in_nodes": 2635,
+    "dispatch_transparent_only": 1622,
+    "dispatch_both": 995,
+    "dispatch_unassigned": 0,
+    "instance_nodes": 1021,
+    "templates": 60,
+    "replay_checked": 1021,
+    "replay_failed": 0,
+    "dispatch_by_phase": {
+      "prefill": {
+        "dispatch_total": 1784,
+        "dispatch_in_nodes": 879,
+        "dispatch_transparent_only": 540,
+        "dispatch_both": 365,
+        "dispatch_unassigned": 0
+      },
+      "decode": {
+        "dispatch_total": 1734,
+        "dispatch_in_nodes": 878,
+        "dispatch_transparent_only": 541,
+        "dispatch_both": 315,
+        "dispatch_unassigned": 0
+      },
+      "decode_2": {
+        "dispatch_total": 1734,
+        "dispatch_in_nodes": 878,
+        "dispatch_transparent_only": 541,
+        "dispatch_both": 315,
+        "dispatch_unassigned": 0
+      }
+    },
+    "template_mismatches": [],
+    "edges_unresolved": {}
+  },
+  "prompt_characters": 61588,
+  "prompt_sha256": "2616cc6e4889aaf5a07d51d87b4ba54a8da2c4419b56eaee12dbe6c8549bf081"
+}

@@ -1,0 +1,52 @@
+{
+  "repo": "openbmb/MiniCPM5-1B",
+  "revision": "ac83f813ba7da263c51a9f3ec37c2072597e54af",
+  "files": [
+    {
+      "rfilename": "chat_template.jinja",
+      "blobId": "cb2934c459c6eff41b15e45bd6adc13c93846259",
+      "size": 9062
+    },
+    {
+      "rfilename": "config.json",
+      "blobId": "e088beb7e7343bc5620ecd7618cebd255516879b",
+      "size": 726
+    },
+    {
+      "rfilename": "generation_config.json",
+      "blobId": "73dc79c289226ae520cef51a057667aa3d958094",
+      "size": 213
+    },
+    {
+      "rfilename": "model-00000-of-00001.safetensors",
+      "blobId": "5a60719cf790dfe174d53390b379b671d52ed434",
+      "size": 2161290912,
+      "lfs": {
+        "sha256": "7ab8fd86563125929be78aeec8cb3969c7ed2ead3be1ab9d3ec0a9fa69c8660d",
+        "size": 2161290912,
+        "pointerSize": 135
+      }
+    },
+    {
+      "rfilename": "model.safetensors.index.json",
+      "blobId": "cf879b05899b5bc495992c2a7759b283957e573c",
+      "size": 18004
+    },
+    {
+      "rfilename": "special_tokens_map.json",
+      "blobId": "492d4b2966a1763442d426d880dbc29f94906e4c",
+      "size": 551
+    },
+    {
+      "rfilename": "tokenizer.json",
+      "blobId": "ec0bf9a34dc884738494ed1f74d0c5327b06d690",
+      "size": 9894271
+    },
+    {
+      "rfilename": "tokenizer_config.json",
+      "blobId": "2a7bb43f24b04fc8e733b3af8c4ce73eaa974e9a",
+      "size": 94416
+    }
+  ],
+  "verified": true
+}

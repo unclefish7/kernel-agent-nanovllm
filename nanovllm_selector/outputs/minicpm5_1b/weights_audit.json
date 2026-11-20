@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "compared_files": {
+    "graph.json": "e7a8c8763e35c726811e8ebd67ce21f5881dd6263a7b3d113aeb4cbaa17e8da7",
+    "weights.json": "1fe365402003d97207c9b315e285ecfe170e9c5aed9369d32fcfbdd8fc87aac0"
+  },
+  "ignored_fields": [
+    "model.weights_loaded",
+    "tensors[*].storage",
+    "params[*].storage"
+  ],
+  "matching_fields": [
+    "schema_version",
+    "model",
+    "env",
+    "phases",
+    "nodes",
+    "edges",
+    "tensors",
+    "params",
+    "graph_inputs",
+    "graph_outputs",
+    "conflicts",
+    "reconcile"
+  ],
+  "tensor_records": 5338,
+  "parameter_records": 219,
+  "template_nodes": 60,
+  "template_edges": 85,
+  "instance_nodes": 1021,
+  "replay_checked": 1021,
+  "checkpoint_manifest": "snapshot.json"
+}
