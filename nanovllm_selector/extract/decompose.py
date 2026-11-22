@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 import torch
@@ -23,6 +25,7 @@ import torch.nn as nn
 
 from .schema import Evidence, Node, StateRef, TensorRef
 from .source import source_ref
+from .dispatch_program import instruction
 
 # 只改变张量视图/布局、不产生新数值的算子：不建节点，只传播别名
 TRANSPARENT = {
@@ -33,6 +36,7 @@ TRANSPARENT = {
     "aten.t.default",
     "aten.permute.default",
     "aten.squeeze.dim",
+    "aten.squeeze.default",
     "aten.squeeze.dims",
     "aten.unsqueeze.default",
     "aten.slice.Tensor",
@@ -48,6 +52,8 @@ TRANSPARENT = {
     "aten._to_copy.default",
     "aten.as_strided.default",
     "aten.split_with_sizes.default",
+    "aten.split.Tensor",
+    "aten.unbind.int",
     "aten.chunk.default",
 }
 
@@ -62,8 +68,11 @@ FORMULAS = {
     "rope_table": "cos, sin = cos_sin(position_ids; inv_freq)",
     "attention": "y = softmax(q @ k^T / sqrt(d) + mask) @ v",
     "mul": "y = a * b",
-    "add": "y = a + b",
-    "arange": "y = arange(start, end)",
+    "add": "y = a + alpha * b",
+    "arange": "y = arange(start, end, step)",
+    "conv1d": "y = conv1d(x, weight, bias, stride, padding, dilation, groups)",
+    "bmm": "y[b] = a[b] @ b_matrix[b]",
+    "view": "y = view(x; shape, stride, offset)",
     "unknown": "",
 }
 
@@ -176,6 +185,10 @@ class GraphBuilder:
         self.unresolved: dict[str, int] = {}
         # storage -> ("node", cid)：按存储块找生产者，视图/别名也认。
         self._storage_src: dict[str, tuple] = {}
+        self._state_by_storage = {}
+        for kind, items in [("parameter", model.named_parameters()), ("buffer", model.named_buffers())]:
+            for name, tensor in items:
+                self._state_by_storage[tensor.untyped_storage()._cdata] = (name, kind, tensor)
 
     # ---- 张量登记 ---------------------------------------------------
     def tid(self, t: torch.Tensor) -> str:
@@ -237,7 +250,9 @@ class GraphBuilder:
                 if current is not None and call is current_call and not broken:
                     current.op_seqs.append(d.seq)
                     for t in d.inputs:
-                        self._note_consumed(current, self.tid(t), None, d.seq)
+                        slot = _aten_slot(d, t)
+                        self._note_consumed(current, self.tid(t),
+                                            dict(slot, source="aten") if slot else None, d.seq)
                     for t in d.outputs:
                         tid = self.tid(t)
                         current.produced.add(tid)
@@ -362,9 +377,43 @@ class GraphBuilder:
             storages.add(hex(b.untyped_storage().data_ptr()))
         return storages
 
+    def _collect_programs(self):
+        # 每条透明变换都保留在配方中，包括首个数值算子之前的布局变换。
+        if not self._clusters and self.rec.dispatches:
+            steps = self.rec.dispatches
+            call = self._call_for(steps[0])
+            if call is not None and all(d.op in TRANSPARENT for d in steps):
+                cl = _Cluster(cid=0, path=call.path, call_seq=call.seq_start, call=call,
+                              min_seq=steps[0].seq, max_seq=steps[-1].seq)
+                self._clusters[0] = cl
+                for d in steps:
+                    cl.op_seqs.append(d.seq)
+                    for t in d.inputs:
+                        slot = _aten_slot(d, t)
+                        self._note_consumed(cl, self.tid(t), dict(slot, source="aten") if slot else None, d.seq)
+                    for t in d.outputs:
+                        tid = self.tid(t)
+                        cl.produced.add(tid)
+                        cl.produced_at.setdefault(tid, d.seq)
+        owners = {s: cl.cid for cl in self._clusters.values() for s in cl.op_seqs}
+        last_owner = None
+        pending = []
+        self.programs = {cid: [] for cid in self._clusters}
+        for d in self.rec.dispatches:
+            pending.append(d)
+            if d.seq in owners:
+                last_owner = owners[d.seq]
+                self.programs[last_owner].extend(pending)
+                pending.clear()
+        if last_owner is not None:
+            self.programs[last_owner].extend(pending)
+
     # ---- 主流程 -----------------------------------------------------
     def build(self, phase: str = "prefill") -> list[Node]:
         self._cluster_dispatches()
+        self._collect_programs()
+        activation_counts = Counter(d.op for d in self.rec.dispatches
+                                    if d.op in {"aten.silu.default", "aten.gelu.default"})
         merged = self._merged_clusters()
 
         # 合并后重新解析 src 指向
@@ -384,10 +433,55 @@ class GraphBuilder:
             op, confidence = classify_ops(cl.ops, module, self.config)
             state_storages = self._own_state_storages(module)
             in_refs = self._node_inputs(cl, state_storages, resolve_src)
-            nodes.append(
-                self._make_node(nid, cl, op, confidence, module, in_refs, phase)
-            )
+            node = self._make_node(nid, cl, op, confidence, module, in_refs, phase)
+            node._recorded_activations = activation_counts
+            node._program_cid = cl.cid
+            nodes.append(node)
+        self._bind_program_inputs(nodes)
         return nodes
+
+    def _bind_program_inputs(self, nodes):
+        """以执行时序解析配方自由变量，包括槽位登记前已经变形的张量。"""
+        owners = {d.seq: n for n in nodes for d in self.programs[n._program_cid]}
+        previous = {}
+        input_views = {}
+        defined = {}
+        for n in nodes:
+            n.attrs["program_inputs"] = {}
+            defined[n.id] = set()
+            input_views[n.id] = {self._tensors[r.tensor]["obj"].untyped_storage()._cdata: r.tensor
+                                 for r in reversed(n.inputs)}
+        root_slots = self.rec.calls[0].input_slots if self.rec.calls else {}
+        for d in self.rec.dispatches:
+            node = owners.get(d.seq)
+            if node is None:
+                continue
+            bindings = node.attrs["program_inputs"]
+            for t in d.inputs:
+                tid = self.tid(t)
+                if tid in defined[node.id] or tid in bindings:
+                    continue
+                name = node.attrs["program_state"].get(tid)
+                if name is not None:
+                    binding = {"kind": "state", "name": name}
+                elif tid in previous:
+                    producer, seq = previous[tid]
+                    binding = {"kind": "producer", "node": producer, "seq": seq, "tensor": tid}
+                elif d.op == "aten.lift_fresh.default":
+                    binding = {"kind": "literal", "value": d.before[id(t)].tolist()}
+                else:
+                    view = next((r.tensor for r in node.inputs if r.tensor == tid),
+                                input_views[node.id].get(t.untyped_storage()._cdata))
+                    if view:
+                        binding = {"kind": "input", "tensor": view}
+                    else:
+                        binding = dict(kind="external", tensor=tid, **root_slots.get(id(t), {}))
+                bindings[tid] = binding
+            for t in d.outputs:
+                tid = self.tid(t)
+                defined[node.id].add(tid)
+                previous[tid] = node.id, d.seq
+        self.program_input_witnesses = {n.id: deepcopy(n.attrs["program_inputs"]) for n in nodes}
 
     # ---- 输入/输出：集合差，不是边扫边丢 -----------------------------
     def _node_inputs(self, cl: "_Cluster", state_storages: set[str], resolve_src):
@@ -412,10 +506,11 @@ class GraphBuilder:
         external: dict[str, dict] = {}
         for tid, slot in cl.consumed.items():
             m = self._tensors[tid]
-            if tid in cl.produced:
+            if tid in cl.produced and cl.produced_at[tid] < cl.consumed_at[tid]:
                 internal.add(tid)
                 continue
-            if m["storage"] in state_storages:
+            if (m["storage"] in state_storages
+                    or m["obj"].untyped_storage()._cdata in self._state_by_storage):
                 state.add(tid)
                 continue
             seq = produced_storage_seq.get(m["storage"])
@@ -476,8 +571,21 @@ class GraphBuilder:
             "module_path": cl.path or "R",
             "module_class": type(module).__name__ if module is not None else None,
             "seq": [cl.min_seq, cl.max_seq],
+            "program": [instruction(d, self.tid) for d in self.programs[cl.cid]],
+            "program_state": {},
         }
         state: list[StateRef] = []
+        for d in self.programs[cl.cid]:
+            for t in d.inputs:
+                binding = self._state_by_storage.get(t.untyped_storage()._cdata)
+                if binding is None:
+                    continue
+                name, kind, base = binding
+                attrs["program_state"][self.tid(t)] = name
+                parent, _, local = name.rpartition(".")
+                if parent != cl.path and not any(s.name == name for s in state):
+                    state.append(StateRef(name=name, kind=kind, role=_state_role(local, op),
+                                          shape=list(base.shape), dtype=_dtype_str(base)))
         if module is not None:
             for name, p in module.named_parameters(recurse=False):
                 state.append(StateRef(name=name, kind="parameter", role=_state_role(name, op),
@@ -613,10 +721,19 @@ def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str,
     名字只用于最后一道兜底（并且要求同时有形状/属性证据）。
     """
     o = set(ops)
+    if not ops:
+        return "view", "exact"
     if any("scaled_dot_product" in x or "softmax" in x for x in o):
         return "attention", "exact"
     if "aten.embedding.default" in o:
         return "embedding", "exact"
+    if o == {"aten.convolution.default"} and isinstance(module, nn.Conv1d):
+        return "conv1d", "exact"
+    if o == {"aten.bmm.default"}:
+        if isinstance(module, nn.Linear):
+            return ("lm_head" if module.out_features == getattr(config, "vocab_size", None)
+                    else "matmul"), "exact"
+        return "bmm", "exact"
     if o & {"aten.mm.default", "aten.addmm.default", "aten.baddbmm.default", "aten.matmul.default"}:
         vocab = getattr(config, "vocab_size", None)
         if isinstance(module, nn.Linear) and vocab and module.out_features == vocab:
@@ -624,9 +741,9 @@ def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str,
         return "matmul", "exact"
     if "aten.rsqrt.default" in o and ("aten.mean.dim" in o or "aten.mean.default" in o):
         return "rmsnorm", "exact"
-    if "aten.silu.default" in o:
+    if ops == ["aten.silu.default"]:
         return "silu", "exact"
-    if any("gelu" in x for x in o):
+    if ops == ["aten.gelu.default"]:
         return "gelu", "exact"
     if "aten.cos.default" in o and "aten.sin.default" in o:
         # 这一簇只算 cos/sin 表（Qwen3RotaryEmbedding），不旋转任何张量。
@@ -635,10 +752,10 @@ def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str,
     if "aten.mul.Tensor" in o and "aten.add.Tensor" in o and "aten.cat.default" in o:
         # rope 展开后的乘法/加法/拼接群
         return "rope", "inferred"
-    if "aten.mul.Tensor" in o and len(o) == 1:
+    if ops == ["aten.mul.Tensor"]:
         return "mul", "exact"
-    if "aten.add.Tensor" in o and len(o) == 1:
+    if ops == ["aten.add.Tensor"]:
         return "add", "exact"
-    if any("arange" in x for x in o):
+    if len(ops) == 1 and "arange" in ops[0]:
         return "arange", "exact"
     return "unknown", "unknown"

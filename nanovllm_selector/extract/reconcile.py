@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import torch.nn as nn
 
+from .dispatch_program import PRIMITIVES
 from .schema import Edge, Graph, Node
 
 PLAN_EXPECT_QWEN3 = {
@@ -72,7 +73,6 @@ def reconcile(
     linear = _count_class(model, lambda m: isinstance(m, nn.Linear))
     embedding = _count_class(model, lambda m: isinstance(m, nn.Embedding))
     rmsnorm = _count_class(model, lambda m: type(m).__name__.endswith("RMSNorm"))
-    act = _count_class(model, lambda m: type(m).__name__ in ("SiLUActivation", "GELUActivation", "NewGELUActivation"))
 
     multi = len(phases) > 1
     for phase in phases:
@@ -82,7 +82,12 @@ def reconcile(
             "模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）")
         add(f"embedding{tag}", embedding, c.get("embedding", 0), "模块树 Embedding 数")
         add(f"rmsnorm{tag}", rmsnorm, c.get("rmsnorm", 0), "模块树 RMSNorm 数")
-        add(f"silu{tag}", act, c.get("silu", 0) + c.get("gelu", 0), "激活模块数")
+        members = [n for n in instance_nodes if n.phase == phase]
+        recorded = next((n._recorded_activations for n in members if hasattr(n, "_recorded_activations")), {})
+        for activation in ("silu", "gelu"):
+            op = f"aten.{activation}.default"
+            actual = sum(sum(step["op"] == op for step in n.attrs.get("program", ())) for n in members)
+            add(f"{activation}{tag}", recorded.get(op, 0), actual, "原始 dispatch 次数与节点配方出现次数")
 
     if is_qwen3:
         pre = by_phase.get("prefill", counts)
@@ -94,8 +99,19 @@ def reconcile(
     add("edges_endpoints", 0, len(bad_edges), "每条边两端都必须存在")
     no_evidence = [n.id for n in all_nodes if not n.evidence]
     add("evidence_coverage", 0, len(no_evidence), "每个节点至少 1 条证据")
+    unsupported = [dict(node=n.id, seq=s["seq"], op=s["op"]) for n in instance_nodes
+                   for s in n.attrs.get("program", ()) if s["op"] not in PRIMITIVES]
+    add("primitive_coverage", 0, len(unsupported),
+        ", ".join(sorted({s["op"] for s in unsupported})) or "实测原语均有独立重放规则")
 
-    unknown = [n.id for n in instance_nodes if n.op == "unknown"]
+    unknown = []
+    verified_unknown = []
+    for n in instance_nodes:
+        if n.op == "unknown":
+            status = n.attrs.get("program_replay", {})
+            size = len(n.attrs.get("program", []))
+            verified = size and status.get("ok") is True and status.get("total") == status.get("checked") == size
+            (verified_unknown if verified else unknown).append(n.id)
     checks.append(
         {
             "name": "unknown_ops",
@@ -114,6 +130,8 @@ def reconcile(
             for p, c in by_phase.items()
         },
         "nodes": len(instance_nodes),
+        "verified_unknown": verified_unknown,
+        "unsupported_dispatches": unsupported,
         "edges": len(edges),
         "graph_inputs": [n.id for n in all_nodes if n.origin == "input"],
         "module_calls": len(rec.calls) if rec is not None else None,

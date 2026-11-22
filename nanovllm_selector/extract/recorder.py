@@ -54,6 +54,34 @@ class Dispatch:
     func: object = None
     # id(tensor) -> {"path": "args[0][1]", "arg_name": "tensors"}，口径同 Call.input_slots
     input_slots: dict = field(default_factory=dict)
+    args: tuple = ()
+    kwargs: dict = field(default_factory=dict)
+    result: object = None
+    writes: list = field(default_factory=list)
+    before: dict = field(default_factory=dict)
+    after: dict = field(default_factory=dict)
+
+
+class _Snapshots:
+    """同一 storage 的各种视图共用一份快照，原地写后建立下一个版本。"""
+
+    def __init__(self):
+        self.storage = {}
+
+    def capture(self, tensors):
+        result = {}
+        for t in tensors:
+            storage = t.untyped_storage()
+            key = storage._cdata
+            if key not in self.storage:
+                self.storage[key] = storage.clone()
+            result[id(t)] = torch.empty(0, dtype=t.dtype, device=t.device).set_(
+                self.storage[key], t.storage_offset(), t.shape, t.stride())
+        return result
+
+    def invalidate(self, tensors):
+        for t in tensors:
+            self.storage.pop(t.untyped_storage()._cdata, None)
 
 
 def flatten_tensors(obj, out: list | None = None) -> list:
@@ -156,10 +184,17 @@ class _RecorderMode(TorchDispatchMode):
     def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         kwargs = kwargs or {}
         slots = dispatch_input_slots(func, args, kwargs)
-        out = func(*args, **kwargs)
         ins = flatten_tensors((args, kwargs))
+        writes = []
+        for i, param in enumerate(func._schema.arguments):
+            if param.alias_info is not None and param.alias_info.is_write:
+                flatten_tensors(args[i] if i < len(args) else kwargs.get(param.name), writes)
+        before = self.rec._snapshots.capture(ins)
+        out = func(*args, **kwargs)
         outs = flatten_tensors(out)
         rec = self.rec
+        rec._snapshots.invalidate(writes)
+        after = rec._snapshots.capture(outs + writes)
         rec._keep.extend(ins)
         rec._keep.extend(outs)
         rec.dispatches.append(
@@ -171,6 +206,7 @@ class _RecorderMode(TorchDispatchMode):
                 inside=rec._stack[-1] if rec._stack else "",
                 func=func,
                 input_slots=slots,
+                args=args, kwargs=kwargs, result=out, writes=writes, before=before, after=after,
             )
         )
         return out
@@ -187,6 +223,7 @@ class Recorder:
         self._keep: list = []
         self._open: list[Call] = []
         self._mode = _RecorderMode(self)
+        self._snapshots = _Snapshots()
         self._leaf_paths: set[str] = set()
 
     # ---- 序号 -------------------------------------------------------
@@ -318,7 +355,11 @@ def record_forward(
     kw = {"input_ids": input_ids, "use_cache": True}
     if past_key_values is not None:
         kw["past_key_values"] = past_key_values
-        kw["cache_position"] = cache_position
+    if cache_position is not None:
+        params = inspect.signature(model.forward).parameters.values()
+        if any(p.kind == p.VAR_KEYWORD or (p.name == "cache_position" and
+               p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)) for p in params):
+            kw["cache_position"] = cache_position
     with torch.no_grad():
         with rec:
             out = model(**kw)

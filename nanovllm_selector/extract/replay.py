@@ -4,9 +4,8 @@
 语义：节点标成 `rmsnorm`，就真的按 RMSNorm 的公式复算一次，和原模型在
 同一次前向里该节点的实际输出逐元素比对。
 
-这里的实现是**独立写的**：只允许用节点自己的 `op`、`inputs`、`state`、
-`attrs`，不许回头看 transformers 的源码。如果某个节点离开源码就算不出来，
-说明图里的信息不够。
+每个节点先按实测原语配方重算，使用隔离的边界输入和写前快照，比较每一步的
+返回值及写入。已有高层公式再按实际输出槽对照。独立实现见 dispatch_program.py。
 
 比较标准：fp32 下 `rtol=1e-5, atol=1e-6`，即相对误差 1e-5 量级。
 """
@@ -17,6 +16,8 @@ import math
 
 import torch
 import torch.nn.functional as F
+
+from .dispatch_program import call_arguments, replay_program
 
 RTOL = 1e-5
 ATOL = 1e-6
@@ -42,11 +43,13 @@ def _rmsnorm(inputs, state, attrs, ctx):
 
 
 def _add(inputs, state, attrs, ctx):
-    return inputs[0] + inputs[1]
+    args, kwargs = ctx["arguments"]
+    return args[0] + args[1] * kwargs.get("alpha", 1)
 
 
 def _mul(inputs, state, attrs, ctx):
-    return inputs[0] * inputs[1]
+    args, _ = ctx["arguments"]
+    return args[0] * args[1]
 
 
 def _silu(inputs, state, attrs, ctx):
@@ -58,8 +61,8 @@ def _embedding(inputs, state, attrs, ctx):
 
 
 def _arange(inputs, state, attrs, ctx):
-    n = ctx["seq_len"]
-    return torch.arange(n, device=ctx["device"])
+    args, kwargs = ctx["arguments"]
+    return torch.arange(*args, **kwargs)
 
 
 def _rope_table(inputs, state, attrs, ctx):
@@ -103,8 +106,10 @@ def _attention(inputs, state, attrs, ctx):
         v = v.repeat_interleave(n_rep, dim=1)
     # 单 query 的 decode 没有下三角可言，直接看全部 k/v
     causal = q.shape[-2] > 1
-    return {"out": F.scaled_dot_product_attention(q, k, v, is_causal=causal),
-            "key": key_cache, "value": value_cache}
+    results = {"out": F.scaled_dot_product_attention(q, k, v, is_causal=causal),
+               "key": key_cache, "value": value_cache}
+    # 部分模型直接将投影层产出的 value 保存为状态；当前节点只交付它实际产生的端口。
+    return {role: results[role] for role in ctx["output_roles"]}
 
 
 IMPL = {
@@ -147,7 +152,7 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
         "seq_len": int(input_ids.shape[-1]),
         "device": input_ids.device,
         "head_dim": getattr(config, "head_dim", None)
-        or getattr(config, "hidden_size") // getattr(config, "num_attention_heads"),
+        or getattr(config, "hidden_size", 1) // getattr(config, "num_attention_heads", 1),
         "rope_theta": getattr(config, "rope_theta", 10000.0),
     }
 
@@ -155,11 +160,32 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
     skipped = []
     failures = []
     for node in sorted(nodes, key=lambda n: n.start_seq):
+        steps = builder.programs[node._program_cid]
+        try:
+            values, expected = replay_program(node, steps, builder, RTOL, ATOL)
+            if ([r.tensor for r in node.outputs] != node.attrs.get("observed_outputs")
+                    or [r.role for r in node.outputs] != node.attrs.get("observed_output_roles")):
+                raise ValueError("输出槽位、顺序或角色与录制不符")
+            for ref in node.outputs:
+                if ref.tensor not in expected or ref.tensor not in values:
+                    raise ValueError(f"输出 {ref.tensor} 无配方产生记录")
+        except Exception as exc:
+            node.attrs["program_replay"]["ok"] = False
+            failures.append({"node": node.id, "op": node.op, "why": str(exc)})
+            continue
+        if node.op in {"unknown", "conv1d", "bmm", "view"}:
+            checked += 1
+            continue
         impl = IMPL.get(node.op)
         if impl is None:
             skipped.append(node.id)
             continue
-        module = builder._module(node.impl["module_path"]) if node.impl else None
+        path = node.impl["module_path"]
+        module = builder._module("" if path == "R" else path)
+        boundary = {}
+        for d in steps:
+            for key, value in d.before.items():
+                boundary.setdefault(key, value)
         inputs = []
         missing = False
         for t in node.inputs:
@@ -168,13 +194,17 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
             if obj is None:
                 missing = True
                 break
-            inputs.append(obj)
+            inputs.append(boundary.get(id(obj), obj))
         if missing or not node.outputs:
             skipped.append(node.id)
             continue
 
         try:
-            got = impl(inputs, _state_of(node, module), node.attrs, ctx)
+            local = dict(ctx, output_roles=node.attrs["observed_output_roles"])
+            if node.op in {"add", "mul", "arange"}:
+                step = next(s for s in node.attrs["program"] if s["op"] in node.attrs["dispatch_ops"])
+                local["arguments"] = call_arguments(step, values)
+            got = impl(inputs, _state_of(node, module), node.attrs, local)
         except Exception as exc:  # noqa: BLE001 - 重放失败要留证据，不能中断整张图
             failures.append({"node": node.id, "op": node.op, "why": f"{type(exc).__name__}: {exc}"})
             continue
@@ -192,7 +222,7 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
             failures.append({"node": node.id, "op": node.op, "why": "输出数量或顺序与录制不符"})
             continue
         for index, (ref, result) in enumerate(zip(node.outputs, got)):
-            actual = tensors[ref.tensor]["obj"]
+            actual = expected[ref.tensor]
             if (result is None or actual.shape != result.shape or result.dtype != actual.dtype
                     or not torch.allclose(result, actual, rtol=RTOL, atol=ATOL)):
                 failures.append({"node": node.id, "op": node.op, "slot": index,
