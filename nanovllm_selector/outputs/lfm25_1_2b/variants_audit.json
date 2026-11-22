@@ -1,0 +1,65 @@
+{
+  "graph_sha256": "7881450e243560d9d0cb1d5fd33a00f58b76bfff5079efe42097e3c27c6d159e",
+  "prompt_sha256": "40c0f1409efb98bcfd431a30ab338135fd7b9662e0e2149015cb15e72edbf6b4",
+  "prompt_sent": false,
+  "variants_nodes": 60,
+  "verified_variants": 120,
+  "node_counts_by_phase": {
+    "decode": 30,
+    "decode_2": 30
+  },
+  "graph_checks": 31,
+  "graph_ok": true,
+  "example_node": "D.L0.conv.out_proj",
+  "cases": [
+    {
+      "observed": [
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          17
+        ]
+      ],
+      "steps": [
+        "aten.t.default",
+        "aten.expand.default",
+        "aten.view.default",
+        "aten.expand.default",
+        "aten.view.default",
+        "aten.bmm.default",
+        "aten._unsafe_view.default"
+      ],
+      "replay": {
+        "ok": true,
+        "checked": 7,
+        "total": 7
+      }
+    },
+    {
+      "observed": [
+        [
+          2,
+          5
+        ],
+        [
+          2,
+          11
+        ]
+      ],
+      "steps": [
+        "aten.t.default",
+        "aten.view.default",
+        "aten.mm.default",
+        "aten._unsafe_view.default"
+      ],
+      "replay": {
+        "ok": true,
+        "checked": 4,
+        "total": 4
+      }
+    }
+  ]
+}

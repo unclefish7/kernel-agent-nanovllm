@@ -1,0 +1,49 @@
+{
+  "nanovllm_commit": "fe704c8719e2af78bf16d840cfb34cf72c4712ae",
+  "regressions": {
+    "llama": {
+      "ok": true,
+      "criterion": "exact",
+      "compared": 12,
+      "decoded": 8,
+      "max_abs": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3"
+    },
+    "minicpm": {
+      "ok": true,
+      "criterion": "exact",
+      "compared": 12,
+      "decoded": 8,
+      "max_abs": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff"
+    },
+    "qwen": {
+      "ok": true,
+      "criterion": "argmax + max_abs <= 2.0 + cosine >= 0.999",
+      "compared": 12,
+      "decoded": 8,
+      "max_abs": 0.34375,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "candidate_sha256": "66fac0463cc8eabfc5fd9382d7f3d42d9dac45a58f44dc933f89a75341f76536"
+    }
+  },
+  "engine_unit_tests": 27,
+  "selector_gpu_unit_tests": 5
+}
