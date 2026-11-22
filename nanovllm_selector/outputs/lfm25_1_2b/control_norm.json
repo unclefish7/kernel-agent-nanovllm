@@ -1,0 +1,87 @@
+{
+  "purpose": "prefill_diagnostic",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_2.py",
+  "candidate_sha256": "0accc4e691b00c23ef9412b7e2604261a7505f09d15e1331ac7e6ef63903556d",
+  "length": 128,
+  "token_ids_sha256": "42fad2194c23fca928abefc95aa13d99bf2fe8895c6824669fc0ad8d472e2557",
+  "compared": 309,
+  "first_difference": {
+    "engine_path": "model.layers.2.self_attn.out_proj",
+    "engine_phase": "input",
+    "hf_path": "model.layers.2.self_attn.out_proj",
+    "hf_phase": "input",
+    "call_index": 0,
+    "engine_shape": [
+      128,
+      2048
+    ],
+    "hf_shape": [
+      1,
+      128,
+      2048
+    ],
+    "engine_dtype": "torch.bfloat16",
+    "hf_dtype": "torch.bfloat16",
+    "engine": {
+      "class": "RowParallelLinear",
+      "raw_shapes": {
+        "x": [
+          128,
+          2048
+        ]
+      },
+      "view": "主输入"
+    },
+    "hf": {
+      "class": "Linear",
+      "raw_shapes": {
+        "input": [
+          1,
+          128,
+          2048
+        ]
+      },
+      "view": "主输入"
+    },
+    "previous_match": [
+      "model.layers.2.self_attn.k_layernorm",
+      "output",
+      "model.layers.2.self_attn.k_layernorm"
+    ],
+    "different_elements": 110150,
+    "elements": 262144,
+    "max_abs_diff": 0.000732421875,
+    "first_flat_index": 2064,
+    "engine_value": 6.532669067382812e-05,
+    "hf_value": 6.4849853515625e-05
+  },
+  "logits": {
+    "different_elements": 59084,
+    "elements": 65536,
+    "max_abs_diff": 0.203125,
+    "first_flat_index": 0,
+    "engine_value": -6.53125,
+    "hf_value": -6.46875
+  },
+  "unpaired": {
+    "engine_paths": 7,
+    "hf_paths": 61,
+    "engine_examples": [
+      "model.layers.10.self_attn.attn",
+      "model.layers.12.self_attn.attn",
+      "model.layers.14.self_attn.attn",
+      "model.layers.2.self_attn.attn",
+      "model.layers.2.self_attn.rotary_emb",
+      "model.layers.5.self_attn.attn"
+    ],
+    "hf_examples": [
+      "model.layers.0.conv.conv",
+      "model.layers.0.feed_forward.w1",
+      "model.layers.0.feed_forward.w3",
+      "model.layers.1.conv.conv",
+      "model.layers.1.feed_forward.w1",
+      "model.layers.1.feed_forward.w3"
+    ]
+  },
+  "control": "仅在内存中替换归一化和残差，正式验收使用原始候选"
+}

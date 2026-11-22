@@ -1,0 +1,342 @@
+{
+  "ok": true,
+  "stage": "compare",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+  "lengths": [
+    255
+  ],
+  "tensor_parallel_size": 1,
+  "criterion": "exact",
+  "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+  "prompt_file": "nanovllm_selector/outputs/lfm25_1_2b/holdout.txt",
+  "prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+  "deterministic_algorithms": true,
+  "prefix_reuse": {
+    "enabled": false,
+    "block_size": 256,
+    "reason": "固定请求状态没有前缀块快照，无法从共享 KV 前缀恢复。"
+  },
+  "cached_prefix_tokens": [
+    0,
+    0
+  ],
+  "reference": {
+    "cache_class": "Lfm2HybridConvCache",
+    "prefix_strategy": "rebuild_and_step",
+    "reason": "缓存含其他或未知状态，独立重建目标前缀",
+    "crop": {
+      "ok": false,
+      "max_abs_diff": 7.1875,
+      "limit": 0.484375
+    },
+    "multi_token": {
+      "ok": false,
+      "max_abs_diff": 5.4296875,
+      "limit": 0.53125
+    },
+    "probe_prefix_tokens": 6
+  },
+  "comparisons": [
+    {
+      "argmax_actual": 1317,
+      "argmax_expected": 1317,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 1.0000067949295044,
+      "vocab_size": 65536,
+      "exact": true,
+      "top5_actual": [
+        1317,
+        1198,
+        2646,
+        7592,
+        4354
+      ],
+      "top5_expected": [
+        1317,
+        1198,
+        2646,
+        7592,
+        4354
+      ],
+      "ok": true,
+      "length": 255
+    }
+  ],
+  "generation_prefill": {
+    "argmax_actual": 1317,
+    "argmax_expected": 1317,
+    "argmax_match": true,
+    "max_abs_diff": 0.0,
+    "cosine": 1.0000067949295044,
+    "vocab_size": 65536,
+    "exact": true,
+    "top5_actual": [
+      1317,
+      1198,
+      2646,
+      7592,
+      4354
+    ],
+    "top5_expected": [
+      1317,
+      1198,
+      2646,
+      7592,
+      4354
+    ],
+    "ok": true
+  },
+  "decode": {
+    "steps": 8,
+    "matched": 8,
+    "items": [
+      {
+        "argmax_actual": 4767,
+        "argmax_expected": 4767,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.000004768371582,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          4767,
+          5293,
+          6865,
+          47642,
+          15650
+        ],
+        "top5_expected": [
+          4767,
+          5293,
+          6865,
+          47642,
+          15650
+        ],
+        "ok": true,
+        "step": 1,
+        "position": 255,
+        "input_token": 1317
+      },
+      {
+        "argmax_actual": 3696,
+        "argmax_expected": 3696,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999974370002747,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          3696,
+          3042,
+          33586,
+          29068,
+          3116
+        ],
+        "top5_expected": [
+          3696,
+          3042,
+          33586,
+          29068,
+          3116
+        ],
+        "ok": true,
+        "step": 2,
+        "position": 256,
+        "input_token": 4767
+      },
+      {
+        "argmax_actual": 15080,
+        "argmax_expected": 15080,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000051259994507,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          15080,
+          41858,
+          6172,
+          18541,
+          2528
+        ],
+        "top5_expected": [
+          15080,
+          41858,
+          6172,
+          18541,
+          2528
+        ],
+        "ok": true,
+        "step": 3,
+        "position": 257,
+        "input_token": 3696
+      },
+      {
+        "argmax_actual": 6172,
+        "argmax_expected": 6172,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000032186508179,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          6172,
+          6877,
+          3394,
+          35965,
+          2109
+        ],
+        "top5_expected": [
+          6172,
+          6877,
+          3394,
+          35965,
+          2109
+        ],
+        "ok": true,
+        "step": 4,
+        "position": 258,
+        "input_token": 15080
+      },
+      {
+        "argmax_actual": 2109,
+        "argmax_expected": 2109,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.000000238418579,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          2109,
+          35965,
+          3394,
+          10132,
+          3767
+        ],
+        "top5_expected": [
+          2109,
+          35965,
+          3394,
+          10132,
+          3767
+        ],
+        "ok": true,
+        "step": 5,
+        "position": 259,
+        "input_token": 6172
+      },
+      {
+        "argmax_actual": 21658,
+        "argmax_expected": 21658,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999964237213135,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          21658,
+          3232,
+          21241,
+          35054,
+          18558
+        ],
+        "top5_expected": [
+          21658,
+          3232,
+          21241,
+          35054,
+          18558
+        ],
+        "ok": true,
+        "step": 6,
+        "position": 260,
+        "input_token": 2109
+      },
+      {
+        "argmax_actual": 14159,
+        "argmax_expected": 14159,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.999994158744812,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          14159,
+          36196,
+          3836,
+          3767,
+          35639
+        ],
+        "top5_expected": [
+          14159,
+          36196,
+          3836,
+          3767,
+          35639
+        ],
+        "ok": true,
+        "step": 7,
+        "position": 261,
+        "input_token": 21658
+      },
+      {
+        "argmax_actual": 3767,
+        "argmax_expected": 3767,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000028610229492,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          3767,
+          1317,
+          47681,
+          19324,
+          15526
+        ],
+        "top5_expected": [
+          3767,
+          1317,
+          47681,
+          19324,
+          15526
+        ],
+        "ok": true,
+        "step": 8,
+        "position": 262,
+        "input_token": 14159
+      }
+    ],
+    "expected_steps": 8,
+    "ok": true
+  },
+  "comparison": {
+    "argmax_actual": 1317,
+    "argmax_expected": 1317,
+    "argmax_match": true,
+    "max_abs_diff": 0.0,
+    "cosine": 1.0000067949295044,
+    "vocab_size": 65536,
+    "exact": true,
+    "top5_actual": [
+      1317,
+      1198,
+      2646,
+      7592,
+      4354
+    ],
+    "top5_expected": [
+      1317,
+      1198,
+      2646,
+      7592,
+      4354
+    ],
+    "ok": true,
+    "length": 255
+  },
+  "logits_file": "nanovllm_selector/outputs/lfm25_1_2b/holdout_logits.pt",
+  "elapsed": 17.46,
+  "outcome": "passed"
+}

@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "candidate": "/workspace/nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+  "sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+  "cases": [
+    {
+      "name": "结束词一",
+      "actual": [
+        1
+      ],
+      "expected": [
+        1
+      ],
+      "ok": true
+    },
+    {
+      "name": "结束词二",
+      "actual": [
+        130073
+      ],
+      "expected": [
+        130073
+      ],
+      "ok": true
+    },
+    {
+      "name": "普通词后结束",
+      "actual": [
+        42,
+        1
+      ],
+      "expected": [
+        42,
+        1
+      ],
+      "ok": true
+    },
+    {
+      "name": "忽略结束词并达到长度上限",
+      "actual": [
+        130073,
+        1,
+        42
+      ],
+      "expected": [
+        130073,
+        1,
+        42
+      ],
+      "ok": true
+    }
+  ]
+}

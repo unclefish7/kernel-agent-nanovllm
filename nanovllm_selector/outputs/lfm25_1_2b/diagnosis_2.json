@@ -1,0 +1,82 @@
+{
+  "purpose": "prefill_diagnostic",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_2.py",
+  "candidate_sha256": "0accc4e691b00c23ef9412b7e2604261a7505f09d15e1331ac7e6ef63903556d",
+  "length": 128,
+  "token_ids_sha256": "42fad2194c23fca928abefc95aa13d99bf2fe8895c6824669fc0ad8d472e2557",
+  "compared": 309,
+  "first_difference": {
+    "engine_path": "model.layers.0.operator_norm",
+    "engine_phase": "output",
+    "hf_path": "model.layers.0.operator_norm",
+    "hf_phase": "output",
+    "call_index": 0,
+    "engine_shape": [
+      128,
+      2048
+    ],
+    "hf_shape": [
+      1,
+      128,
+      2048
+    ],
+    "engine_dtype": "torch.bfloat16",
+    "hf_dtype": "torch.bfloat16",
+    "engine": {
+      "class": "RMSNorm",
+      "raw_shapes": [
+        128,
+        2048
+      ],
+      "view": "原始输出"
+    },
+    "hf": {
+      "class": "Lfm2RMSNorm",
+      "raw_shapes": [
+        1,
+        128,
+        2048
+      ],
+      "view": "原始输出"
+    },
+    "previous_match": [
+      "model.layers.0.operator_norm",
+      "input",
+      "model.layers.0.operator_norm"
+    ],
+    "different_elements": 67906,
+    "elements": 262144,
+    "max_abs_diff": 0.015625,
+    "first_flat_index": 0,
+    "engine_value": -0.3984375,
+    "hf_value": -0.400390625
+  },
+  "logits": {
+    "different_elements": 52369,
+    "elements": 65536,
+    "max_abs_diff": 0.1875,
+    "first_flat_index": 0,
+    "engine_value": -6.5,
+    "hf_value": -6.46875
+  },
+  "unpaired": {
+    "engine_paths": 7,
+    "hf_paths": 61,
+    "engine_examples": [
+      "model.layers.10.self_attn.attn",
+      "model.layers.12.self_attn.attn",
+      "model.layers.14.self_attn.attn",
+      "model.layers.2.self_attn.attn",
+      "model.layers.2.self_attn.rotary_emb",
+      "model.layers.5.self_attn.attn"
+    ],
+    "hf_examples": [
+      "model.layers.0.conv.conv",
+      "model.layers.0.feed_forward.w1",
+      "model.layers.0.feed_forward.w3",
+      "model.layers.1.conv.conv",
+      "model.layers.1.feed_forward.w1",
+      "model.layers.1.feed_forward.w3"
+    ]
+  }
+}

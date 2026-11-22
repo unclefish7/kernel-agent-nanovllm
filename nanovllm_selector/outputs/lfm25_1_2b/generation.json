@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "prompt": "为了记录河流水位的每日变化，观测员首先",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+  "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+  "expected": [
+    16529,
+    17323,
+    6036,
+    5293,
+    6656,
+    1317,
+    36880,
+    17379
+  ],
+  "actual": [
+    16529,
+    17323,
+    6036,
+    5293,
+    6656,
+    1317,
+    36880,
+    17379
+  ],
+  "text": "需要测量水位的平均值"
+}

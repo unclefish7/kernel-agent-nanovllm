@@ -1,0 +1,32 @@
+{
+  "ok": false,
+  "attempt": 3,
+  "path": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_3.py",
+  "report": null,
+  "history": [
+    {
+      "attempt": 1,
+      "path": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_1.py",
+      "ok": false,
+      "stage": "compare",
+      "elapsed": 324.73,
+      "error": "长度 128：argmax 相同=True，最大绝对误差=0.1445，余弦相似度=0.999977；长度 256：argmax 相同=True，最大绝对误差=0.1484，余弦相似度=0.999939；长度 768：argmax 相同=True，最大绝对误差=0.1875，余弦相似度=0.999976"
+    },
+    {
+      "attempt": 2,
+      "path": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_2.py",
+      "ok": false,
+      "stage": "compare",
+      "elapsed": 225.71,
+      "error": "长度 128：argmax 相同=True，最大绝对误差=0.1875，余弦相似度=0.999964；长度 256：argmax 相同=True，最大绝对误差=0.1367，余弦相似度=0.999948；长度 768：argmax 相同=True，最大绝对误差=0.1406，余弦相似度=0.999979"
+    },
+    {
+      "attempt": 3,
+      "path": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_3.py",
+      "ok": false,
+      "stage": "compare",
+      "elapsed": 182.86,
+      "error": "长度 256：argmax 相同=True，最大绝对误差=0.1250，余弦相似度=0.999965；长度 768：argmax 相同=True，最大绝对误差=0.1250，余弦相似度=0.999984"
+    }
+  ]
+}

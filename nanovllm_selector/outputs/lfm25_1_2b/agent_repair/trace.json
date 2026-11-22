@@ -1,0 +1,413 @@
+{
+  "ok": true,
+  "attempt": 1,
+  "path": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+  "report": {
+    "ok": true,
+    "stage": "compare",
+    "candidate": "/workspace/nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+    "lengths": [
+      128,
+      256,
+      768
+    ],
+    "tensor_parallel_size": 1,
+    "criterion": "exact",
+    "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+    "prompt_file": null,
+    "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+    "deterministic_algorithms": true,
+    "prefix_reuse": {
+      "enabled": false,
+      "block_size": 256,
+      "reason": "固定请求状态没有前缀块快照，无法从共享 KV 前缀恢复。"
+    },
+    "cached_prefix_tokens": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "reference": {
+      "cache_class": "Lfm2HybridConvCache",
+      "prefix_strategy": "rebuild_and_step",
+      "reason": "缓存含其他或未知状态，独立重建目标前缀",
+      "crop": {
+        "ok": false,
+        "max_abs_diff": 13.3125,
+        "limit": 0.61328125
+      },
+      "multi_token": {
+        "ok": false,
+        "max_abs_diff": 7.8125,
+        "limit": 0.640625
+      },
+      "probe_prefix_tokens": 6
+    },
+    "comparisons": [
+      {
+        "argmax_actual": 46199,
+        "argmax_expected": 46199,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.000010371208191,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          46199,
+          4605,
+          944,
+          7,
+          4949
+        ],
+        "top5_expected": [
+          46199,
+          4605,
+          944,
+          7,
+          4949
+        ],
+        "ok": true,
+        "length": 128
+      },
+      {
+        "argmax_actual": 1391,
+        "argmax_expected": 1391,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000046491622925,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          1391,
+          7,
+          3511,
+          779,
+          2
+        ],
+        "top5_expected": [
+          1391,
+          7,
+          3511,
+          779,
+          2
+        ],
+        "ok": true,
+        "length": 256
+      },
+      {
+        "argmax_actual": 46199,
+        "argmax_expected": 46199,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 0.9999988675117493,
+        "vocab_size": 65536,
+        "exact": true,
+        "top5_actual": [
+          46199,
+          944,
+          5019,
+          809,
+          4605
+        ],
+        "top5_expected": [
+          46199,
+          944,
+          5019,
+          809,
+          4605
+        ],
+        "ok": true,
+        "length": 768
+      }
+    ],
+    "generation_prefill": {
+      "argmax_actual": 46199,
+      "argmax_expected": 46199,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 0.9999988675117493,
+      "vocab_size": 65536,
+      "exact": true,
+      "top5_actual": [
+        46199,
+        944,
+        5019,
+        809,
+        4605
+      ],
+      "top5_expected": [
+        46199,
+        944,
+        5019,
+        809,
+        4605
+      ],
+      "ok": true
+    },
+    "decode": {
+      "steps": 8,
+      "matched": 8,
+      "items": [
+        {
+          "argmax_actual": 4949,
+          "argmax_expected": 4949,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.000006079673767,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            4949,
+            7,
+            9889,
+            3446,
+            7640
+          ],
+          "top5_expected": [
+            4949,
+            7,
+            9889,
+            3446,
+            7640
+          ],
+          "ok": true,
+          "step": 1,
+          "position": 768,
+          "input_token": 46199
+        },
+        {
+          "argmax_actual": 523,
+          "argmax_expected": 523,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.0000048875808716,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            523,
+            819,
+            7,
+            521,
+            22749
+          ],
+          "top5_expected": [
+            523,
+            819,
+            7,
+            521,
+            22749
+          ],
+          "ok": true,
+          "step": 2,
+          "position": 769,
+          "input_token": 4949
+        },
+        {
+          "argmax_actual": 941,
+          "argmax_expected": 941,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.0000033378601074,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            941,
+            7,
+            2,
+            9941,
+            730
+          ],
+          "top5_expected": [
+            941,
+            7,
+            2,
+            9941,
+            730
+          ],
+          "ok": true,
+          "step": 3,
+          "position": 770,
+          "input_token": 523
+        },
+        {
+          "argmax_actual": 4605,
+          "argmax_expected": 4605,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.0000128746032715,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            4605,
+            6388,
+            14587,
+            7,
+            58641
+          ],
+          "top5_expected": [
+            4605,
+            6388,
+            14587,
+            7,
+            58641
+          ],
+          "ok": true,
+          "step": 4,
+          "position": 771,
+          "input_token": 941
+        },
+        {
+          "argmax_actual": 10800,
+          "argmax_expected": 10800,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.000014066696167,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            10800,
+            7,
+            9420,
+            4165,
+            521
+          ],
+          "top5_expected": [
+            10800,
+            7,
+            9420,
+            4165,
+            521
+          ],
+          "ok": true,
+          "step": 5,
+          "position": 772,
+          "input_token": 4605
+        },
+        {
+          "argmax_actual": 36387,
+          "argmax_expected": 36387,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.0000066757202148,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            36387,
+            43199,
+            16697,
+            7,
+            5500
+          ],
+          "top5_expected": [
+            36387,
+            43199,
+            16697,
+            7,
+            5500
+          ],
+          "ok": true,
+          "step": 6,
+          "position": 773,
+          "input_token": 10800
+        },
+        {
+          "argmax_actual": 56586,
+          "argmax_expected": 56586,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.000009536743164,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            56586,
+            774,
+            12727,
+            7,
+            10796
+          ],
+          "top5_expected": [
+            56586,
+            774,
+            12727,
+            7,
+            10796
+          ],
+          "ok": true,
+          "step": 7,
+          "position": 774,
+          "input_token": 36387
+        },
+        {
+          "argmax_actual": 1391,
+          "argmax_expected": 1391,
+          "argmax_match": true,
+          "max_abs_diff": 0.0,
+          "cosine": 1.000006079673767,
+          "vocab_size": 65536,
+          "exact": true,
+          "top5_actual": [
+            1391,
+            3511,
+            7,
+            5295,
+            779
+          ],
+          "top5_expected": [
+            1391,
+            3511,
+            7,
+            5295,
+            779
+          ],
+          "ok": true,
+          "step": 8,
+          "position": 775,
+          "input_token": 56586
+        }
+      ],
+      "expected_steps": 8,
+      "ok": true
+    },
+    "comparison": {
+      "argmax_actual": 46199,
+      "argmax_expected": 46199,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 1.000010371208191,
+      "vocab_size": 65536,
+      "exact": true,
+      "top5_actual": [
+        46199,
+        4605,
+        944,
+        7,
+        4949
+      ],
+      "top5_expected": [
+        46199,
+        4605,
+        944,
+        7,
+        4949
+      ],
+      "ok": true,
+      "length": 128
+    },
+    "elapsed": 17.42,
+    "outcome": "passed",
+    "report_file": "/workspace/nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.report.json"
+  },
+  "history": [
+    {
+      "attempt": 1,
+      "path": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+      "ok": true,
+      "stage": "compare",
+      "outcome": "passed",
+      "report_file": "/workspace/nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.report.json",
+      "elapsed": 73.6,
+      "error": null
+    }
+  ]
+}

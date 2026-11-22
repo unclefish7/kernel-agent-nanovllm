@@ -1,0 +1,674 @@
+{
+  "ok": true,
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+  "model": "tmp/models/LFM2.5-1.2B-Base",
+  "exact": true,
+  "tensor_parallel_size": 1,
+  "rounds": [
+    {
+      "order": [
+        "A",
+        "B"
+      ],
+      "batches": [
+        {
+          "phase": "prefill",
+          "requests": [
+            "A",
+            "B"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "A",
+            "B"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B",
+            "A"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B"
+          ]
+        }
+      ],
+      "requests": {
+        "A": {
+          "steps": [
+            {
+              "argmax_actual": 1334,
+              "argmax_expected": 1334,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 1.0000029802322388,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                1334,
+                5242,
+                708,
+                1144,
+                2538
+              ],
+              "top5_expected": [
+                1334,
+                5242,
+                708,
+                1144,
+                2538
+              ],
+              "ok": true,
+              "step": 0,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 542,
+              "argmax_expected": 542,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999968409538269,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                542,
+                13815,
+                64009,
+                574,
+                1098
+              ],
+              "top5_expected": [
+                542,
+                13815,
+                64009,
+                574,
+                1098
+              ],
+              "ok": true,
+              "step": 1,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 523,
+              "argmax_expected": 523,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999992847442627,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                523,
+                518,
+                535,
+                3771,
+                4887
+              ],
+              "top5_expected": [
+                523,
+                518,
+                535,
+                3771,
+                4887
+              ],
+              "ok": true,
+              "step": 2,
+              "greedy_token_match": true
+            }
+          ],
+          "ok": true,
+          "reference": {
+            "cache_class": "Lfm2HybridConvCache",
+            "prefix_strategy": "rebuild_and_step",
+            "reason": "缓存含其他或未知状态，独立重建目标前缀",
+            "crop": {
+              "ok": false,
+              "max_abs_diff": 5.79248046875,
+              "limit": 0.5546875
+            },
+            "multi_token": {
+              "ok": false,
+              "max_abs_diff": 7.90625,
+              "limit": 0.5546875
+            },
+            "probe_prefix_tokens": 4
+          },
+          "prompt": [
+            1,
+            1098,
+            5706,
+            803,
+            4481,
+            856
+          ],
+          "generated": [
+            1334,
+            542,
+            523
+          ]
+        },
+        "B": {
+          "steps": [
+            {
+              "argmax_actual": 1993,
+              "argmax_expected": 1993,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999953508377075,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                1993,
+                14443,
+                39292,
+                23252,
+                1334
+              ],
+              "top5_expected": [
+                1993,
+                14443,
+                39292,
+                23252,
+                1334
+              ],
+              "ok": true,
+              "step": 0,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 779,
+              "argmax_expected": 779,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999967813491821,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                779,
+                768,
+                4903,
+                4661,
+                2316
+              ],
+              "top5_expected": [
+                779,
+                768,
+                4903,
+                4661,
+                2316
+              ],
+              "ok": true,
+              "step": 1,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 4661,
+              "argmax_expected": 4661,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 1.0000004768371582,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                4661,
+                4659,
+                4071,
+                2773,
+                1941
+              ],
+              "top5_expected": [
+                4661,
+                4659,
+                4071,
+                2773,
+                1941
+              ],
+              "ok": true,
+              "step": 2,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 11436,
+              "argmax_expected": 11436,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999985694885254,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                11436,
+                2511,
+                708,
+                1090,
+                1515
+              ],
+              "top5_expected": [
+                11436,
+                2511,
+                708,
+                1090,
+                1515
+              ],
+              "ok": true,
+              "step": 3,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 523,
+              "argmax_expected": 523,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999985694885254,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                523,
+                810,
+                819,
+                1334,
+                811
+              ],
+              "top5_expected": [
+                523,
+                810,
+                819,
+                1334,
+                811
+              ],
+              "ok": true,
+              "step": 4,
+              "greedy_token_match": true
+            }
+          ],
+          "ok": true,
+          "reference": {
+            "cache_class": "Lfm2HybridConvCache",
+            "prefix_strategy": "rebuild_and_step",
+            "reason": "缓存含其他或未知状态，独立重建目标前缀",
+            "crop": {
+              "ok": false,
+              "max_abs_diff": 11.8125,
+              "limit": 0.57421875
+            },
+            "multi_token": {
+              "ok": false,
+              "max_abs_diff": 7.03985595703125,
+              "limit": 0.59765625
+            },
+            "probe_prefix_tokens": 6
+          },
+          "prompt": [
+            1,
+            542,
+            3290,
+            22017,
+            2209,
+            1011,
+            1941,
+            779,
+            10509,
+            797,
+            1033,
+            13184,
+            968
+          ],
+          "generated": [
+            1993,
+            779,
+            4661,
+            11436,
+            523
+          ]
+        }
+      },
+      "ok": true
+    },
+    {
+      "order": [
+        "B",
+        "A"
+      ],
+      "batches": [
+        {
+          "phase": "prefill",
+          "requests": [
+            "B",
+            "A"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B",
+            "A"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "A",
+            "B"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B"
+          ]
+        },
+        {
+          "phase": "decode",
+          "requests": [
+            "B"
+          ]
+        }
+      ],
+      "requests": {
+        "B": {
+          "steps": [
+            {
+              "argmax_actual": 1993,
+              "argmax_expected": 1993,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999953508377075,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                1993,
+                14443,
+                39292,
+                23252,
+                1334
+              ],
+              "top5_expected": [
+                1993,
+                14443,
+                39292,
+                23252,
+                1334
+              ],
+              "ok": true,
+              "step": 0,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 779,
+              "argmax_expected": 779,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999967813491821,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                779,
+                768,
+                4903,
+                4661,
+                2316
+              ],
+              "top5_expected": [
+                779,
+                768,
+                4903,
+                4661,
+                2316
+              ],
+              "ok": true,
+              "step": 1,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 4661,
+              "argmax_expected": 4661,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 1.0000004768371582,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                4661,
+                4659,
+                4071,
+                2773,
+                1941
+              ],
+              "top5_expected": [
+                4661,
+                4659,
+                4071,
+                2773,
+                1941
+              ],
+              "ok": true,
+              "step": 2,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 11436,
+              "argmax_expected": 11436,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999985694885254,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                11436,
+                2511,
+                708,
+                1090,
+                1515
+              ],
+              "top5_expected": [
+                11436,
+                2511,
+                708,
+                1090,
+                1515
+              ],
+              "ok": true,
+              "step": 3,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 523,
+              "argmax_expected": 523,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999985694885254,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                523,
+                810,
+                819,
+                1334,
+                811
+              ],
+              "top5_expected": [
+                523,
+                810,
+                819,
+                1334,
+                811
+              ],
+              "ok": true,
+              "step": 4,
+              "greedy_token_match": true
+            }
+          ],
+          "ok": true,
+          "reference": {
+            "cache_class": "Lfm2HybridConvCache",
+            "prefix_strategy": "rebuild_and_step",
+            "reason": "缓存含其他或未知状态，独立重建目标前缀",
+            "crop": {
+              "ok": false,
+              "max_abs_diff": 11.8125,
+              "limit": 0.57421875
+            },
+            "multi_token": {
+              "ok": false,
+              "max_abs_diff": 7.03985595703125,
+              "limit": 0.59765625
+            },
+            "probe_prefix_tokens": 6
+          },
+          "prompt": [
+            1,
+            542,
+            3290,
+            22017,
+            2209,
+            1011,
+            1941,
+            779,
+            10509,
+            797,
+            1033,
+            13184,
+            968
+          ],
+          "generated": [
+            1993,
+            779,
+            4661,
+            11436,
+            523
+          ]
+        },
+        "A": {
+          "steps": [
+            {
+              "argmax_actual": 1334,
+              "argmax_expected": 1334,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 1.0000029802322388,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                1334,
+                5242,
+                708,
+                1144,
+                2538
+              ],
+              "top5_expected": [
+                1334,
+                5242,
+                708,
+                1144,
+                2538
+              ],
+              "ok": true,
+              "step": 0,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 542,
+              "argmax_expected": 542,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999968409538269,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                542,
+                13815,
+                64009,
+                574,
+                1098
+              ],
+              "top5_expected": [
+                542,
+                13815,
+                64009,
+                574,
+                1098
+              ],
+              "ok": true,
+              "step": 1,
+              "greedy_token_match": true
+            },
+            {
+              "argmax_actual": 523,
+              "argmax_expected": 523,
+              "argmax_match": true,
+              "max_abs_diff": 0.0,
+              "cosine": 0.9999992847442627,
+              "vocab_size": 65536,
+              "exact": true,
+              "top5_actual": [
+                523,
+                518,
+                535,
+                3771,
+                4887
+              ],
+              "top5_expected": [
+                523,
+                518,
+                535,
+                3771,
+                4887
+              ],
+              "ok": true,
+              "step": 2,
+              "greedy_token_match": true
+            }
+          ],
+          "ok": true,
+          "reference": {
+            "cache_class": "Lfm2HybridConvCache",
+            "prefix_strategy": "rebuild_and_step",
+            "reason": "缓存含其他或未知状态，独立重建目标前缀",
+            "crop": {
+              "ok": false,
+              "max_abs_diff": 5.79248046875,
+              "limit": 0.5546875
+            },
+            "multi_token": {
+              "ok": false,
+              "max_abs_diff": 7.90625,
+              "limit": 0.5546875
+            },
+            "probe_prefix_tokens": 4
+          },
+          "prompt": [
+            1,
+            1098,
+            5706,
+            803,
+            4481,
+            856
+          ],
+          "generated": [
+            1334,
+            542,
+            523
+          ]
+        }
+      },
+      "ok": true
+    }
+  ],
+  "outcome": "passed",
+  "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+  "prefix_reuse": {
+    "enabled": false,
+    "block_size": 256,
+    "reason": "固定请求状态没有前缀块快照，无法从共享 KV 前缀恢复。"
+  }
+}

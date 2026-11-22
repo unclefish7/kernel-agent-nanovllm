@@ -1,0 +1,396 @@
+{
+  "ok": false,
+  "stage": "compare",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent/attempt_3.py",
+  "lengths": [
+    128,
+    256,
+    768
+  ],
+  "tensor_parallel_size": 1,
+  "criterion": "exact",
+  "candidate_sha256": "663e96edc1137e55d3137d920784f98a13dc73907ee813dccceb1be1759a6b5a",
+  "prompt_file": null,
+  "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+  "deterministic_algorithms": true,
+  "prefix_reuse": {
+    "enabled": false,
+    "block_size": 256,
+    "reason": "固定请求状态没有前缀块快照，无法从共享 KV 前缀恢复。"
+  },
+  "cached_prefix_tokens": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "reference": {
+    "cache_class": "Lfm2HybridConvCache",
+    "prefix_strategy": "rebuild_and_step",
+    "reason": "缓存含其他或未知状态，独立重建目标前缀",
+    "crop": {
+      "ok": false,
+      "max_abs_diff": 13.3125,
+      "limit": 0.61328125
+    },
+    "multi_token": {
+      "ok": false,
+      "max_abs_diff": 7.8125,
+      "limit": 0.640625
+    },
+    "probe_prefix_tokens": 6
+  },
+  "comparisons": [
+    {
+      "argmax_actual": 46199,
+      "argmax_expected": 46199,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 1.000010371208191,
+      "vocab_size": 65536,
+      "exact": true,
+      "top5_actual": [
+        46199,
+        4605,
+        944,
+        7,
+        4949
+      ],
+      "top5_expected": [
+        46199,
+        4605,
+        944,
+        7,
+        4949
+      ],
+      "ok": true,
+      "length": 128
+    },
+    {
+      "argmax_actual": 1391,
+      "argmax_expected": 1391,
+      "argmax_match": true,
+      "max_abs_diff": 0.125,
+      "cosine": 0.9999647736549377,
+      "vocab_size": 65536,
+      "exact": false,
+      "top5_actual": [
+        1391,
+        7,
+        3511,
+        5295,
+        779
+      ],
+      "top5_expected": [
+        1391,
+        7,
+        3511,
+        779,
+        2
+      ],
+      "ok": false,
+      "length": 256
+    },
+    {
+      "argmax_actual": 46199,
+      "argmax_expected": 46199,
+      "argmax_match": true,
+      "max_abs_diff": 0.125,
+      "cosine": 0.9999836683273315,
+      "vocab_size": 65536,
+      "exact": false,
+      "top5_actual": [
+        46199,
+        944,
+        5019,
+        809,
+        4605
+      ],
+      "top5_expected": [
+        46199,
+        944,
+        5019,
+        809,
+        4605
+      ],
+      "ok": false,
+      "length": 768
+    }
+  ],
+  "generation_prefill": {
+    "argmax_actual": 46199,
+    "argmax_expected": 46199,
+    "argmax_match": true,
+    "max_abs_diff": 0.125,
+    "cosine": 0.9999836683273315,
+    "vocab_size": 65536,
+    "exact": false,
+    "top5_actual": [
+      46199,
+      944,
+      5019,
+      809,
+      4605
+    ],
+    "top5_expected": [
+      46199,
+      944,
+      5019,
+      809,
+      4605
+    ],
+    "ok": false
+  },
+  "decode": {
+    "steps": 8,
+    "matched": 0,
+    "items": [
+      {
+        "argmax_actual": 4949,
+        "argmax_expected": 4949,
+        "argmax_match": true,
+        "max_abs_diff": 0.125,
+        "cosine": 0.9999920129776001,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          4949,
+          7,
+          9889,
+          3446,
+          7640
+        ],
+        "top5_expected": [
+          4949,
+          7,
+          9889,
+          3446,
+          7640
+        ],
+        "ok": false,
+        "step": 1,
+        "position": 768,
+        "input_token": 46199
+      },
+      {
+        "argmax_actual": 523,
+        "argmax_expected": 523,
+        "argmax_match": true,
+        "max_abs_diff": 0.125,
+        "cosine": 0.9999333620071411,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          523,
+          819,
+          7,
+          521,
+          22749
+        ],
+        "top5_expected": [
+          523,
+          819,
+          7,
+          521,
+          22749
+        ],
+        "ok": false,
+        "step": 2,
+        "position": 769,
+        "input_token": 4949
+      },
+      {
+        "argmax_actual": 941,
+        "argmax_expected": 941,
+        "argmax_match": true,
+        "max_abs_diff": 0.09375,
+        "cosine": 0.9999793171882629,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          941,
+          7,
+          2,
+          9941,
+          730
+        ],
+        "top5_expected": [
+          941,
+          7,
+          2,
+          9941,
+          730
+        ],
+        "ok": false,
+        "step": 3,
+        "position": 770,
+        "input_token": 523
+      },
+      {
+        "argmax_actual": 4605,
+        "argmax_expected": 4605,
+        "argmax_match": true,
+        "max_abs_diff": 0.126953125,
+        "cosine": 0.9999756813049316,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          4605,
+          6388,
+          14587,
+          7,
+          58641
+        ],
+        "top5_expected": [
+          4605,
+          6388,
+          14587,
+          7,
+          58641
+        ],
+        "ok": false,
+        "step": 4,
+        "position": 771,
+        "input_token": 941
+      },
+      {
+        "argmax_actual": 10800,
+        "argmax_expected": 10800,
+        "argmax_match": true,
+        "max_abs_diff": 0.125,
+        "cosine": 0.9999884963035583,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          10800,
+          7,
+          9420,
+          4165,
+          521
+        ],
+        "top5_expected": [
+          10800,
+          7,
+          9420,
+          4165,
+          521
+        ],
+        "ok": false,
+        "step": 5,
+        "position": 772,
+        "input_token": 4605
+      },
+      {
+        "argmax_actual": 36387,
+        "argmax_expected": 36387,
+        "argmax_match": true,
+        "max_abs_diff": 0.125,
+        "cosine": 0.9999840259552002,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          36387,
+          43199,
+          16697,
+          7,
+          5500
+        ],
+        "top5_expected": [
+          36387,
+          43199,
+          16697,
+          7,
+          5500
+        ],
+        "ok": false,
+        "step": 6,
+        "position": 773,
+        "input_token": 10800
+      },
+      {
+        "argmax_actual": 56586,
+        "argmax_expected": 56586,
+        "argmax_match": true,
+        "max_abs_diff": 0.09375,
+        "cosine": 0.9999929070472717,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          56586,
+          774,
+          12727,
+          7,
+          10796
+        ],
+        "top5_expected": [
+          56586,
+          774,
+          12727,
+          7,
+          10796
+        ],
+        "ok": false,
+        "step": 7,
+        "position": 774,
+        "input_token": 36387
+      },
+      {
+        "argmax_actual": 1391,
+        "argmax_expected": 1391,
+        "argmax_match": true,
+        "max_abs_diff": 0.125,
+        "cosine": 0.9999703168869019,
+        "vocab_size": 65536,
+        "exact": false,
+        "top5_actual": [
+          1391,
+          3511,
+          7,
+          5295,
+          779
+        ],
+        "top5_expected": [
+          1391,
+          3511,
+          7,
+          5295,
+          779
+        ],
+        "ok": false,
+        "step": 8,
+        "position": 775,
+        "input_token": 56586
+      }
+    ],
+    "expected_steps": 8,
+    "ok": false
+  },
+  "comparison": {
+    "argmax_actual": 1391,
+    "argmax_expected": 1391,
+    "argmax_match": true,
+    "max_abs_diff": 0.125,
+    "cosine": 0.9999647736549377,
+    "vocab_size": 65536,
+    "exact": false,
+    "top5_actual": [
+      1391,
+      7,
+      3511,
+      5295,
+      779
+    ],
+    "top5_expected": [
+      1391,
+      7,
+      3511,
+      779,
+      2
+    ],
+    "ok": false,
+    "length": 256
+  },
+  "error": "长度 256：argmax 相同=True，最大绝对误差=0.1250，余弦相似度=0.999965；长度 768：argmax 相同=True，最大绝对误差=0.1250，余弦相似度=0.999984",
+  "elapsed": 17.74,
+  "outcome": "candidate_failed"
+}

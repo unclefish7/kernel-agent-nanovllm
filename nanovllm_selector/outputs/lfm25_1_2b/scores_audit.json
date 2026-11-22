@@ -1,0 +1,16 @@
+{
+  "logits.pt": {
+    "rows": 12,
+    "vocab_size": 65536,
+    "all_finite": true,
+    "max_abs": 0,
+    "sha256": "c62f27122b14593c63a527bd1c8113b13a557724bc5b16b9fa73ac9378267930"
+  },
+  "holdout_logits.pt": {
+    "rows": 10,
+    "vocab_size": 65536,
+    "all_finite": true,
+    "max_abs": 0,
+    "sha256": "0a4bff6ae97af0a8fe74336a87ee51b2ec165d7226c42752b5ec64d31821c811"
+  }
+}
