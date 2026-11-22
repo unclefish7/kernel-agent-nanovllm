@@ -1,0 +1,38 @@
+{
+  "architecture": "Lfm2ForCausalLM",
+  "dtype": "torch.bfloat16",
+  "device": "_CudaDeviceProperties(name='AMD Instinct MI100', major=9, minor=0, gcnArchName='gfx908:sramecc+:xnack-', total_memory=32752MB, multi_processor_count=120, uuid=36656166-3331-3865-3938-666634373237, pci_bus_id=3, pci_device_id=0, pci_domain_id=0, L2_cache_size=8MB)",
+  "fast_conv": false,
+  "prompt": "为了记录河流水位的每日变化，观测员首先",
+  "prompt_ids": [
+    1,
+    39150,
+    15650,
+    24825,
+    19354,
+    8546,
+    5293,
+    6656,
+    1317,
+    14624,
+    2566,
+    43770,
+    1198,
+    15429,
+    17323,
+    8732,
+    63717
+  ],
+  "generated_ids": [
+    16529,
+    17323,
+    6036,
+    5293,
+    6656,
+    1317,
+    36880,
+    17379
+  ],
+  "text": "需要测量水位的平均值",
+  "holdout_tokens": 384
+}

@@ -1,0 +1,186 @@
+{
+  "graphs": {
+    "graph_weights.json": {
+      "sha256": "93cfacc7c51743e217ae1de93ae2df9b94d4760e4c15525b83345238f338bb72",
+      "weights_loaded": true,
+      "nodes": 686,
+      "edges": 1040,
+      "checks": 30,
+      "passed": 30,
+      "validation_errors": [],
+      "replay": {
+        "checked": 681,
+        "skipped": 0,
+        "failed": 0
+      },
+      "verified_high_level_unknowns": 31,
+      "dispatch": {
+        "prefill": {
+          "dispatch_total": 1048,
+          "dispatch_in_nodes": 587,
+          "dispatch_transparent_only": 274,
+          "dispatch_both": 187,
+          "dispatch_unassigned": 0
+        },
+        "decode": {
+          "dispatch_total": 1088,
+          "dispatch_in_nodes": 612,
+          "dispatch_transparent_only": 295,
+          "dispatch_both": 181,
+          "dispatch_unassigned": 0
+        },
+        "decode_2": {
+          "dispatch_total": 1088,
+          "dispatch_in_nodes": 612,
+          "dispatch_transparent_only": 295,
+          "dispatch_both": 181,
+          "dispatch_unassigned": 0
+        }
+      },
+      "shape_probes": {
+        "fit": [
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            17
+          ],
+          [
+            2,
+            5
+          ]
+        ],
+        "holdout": [
+          2,
+          11
+        ],
+        "base": [
+          1,
+          5
+        ],
+        "unknown_axes": 10,
+        "problems": []
+      },
+      "state_by_phase": {
+        "prefill": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        },
+        "decode": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        },
+        "decode_2": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        }
+      },
+      "allocated_only": [
+        "conv_cache[10]",
+        "conv_cache[12]",
+        "conv_cache[14]",
+        "conv_cache[2]",
+        "conv_cache[5]",
+        "conv_cache[8]"
+      ]
+    },
+    "graph_final.json": {
+      "sha256": "d0a2a0ca5bcdbfabd3f79e9dbfca5bb4bc01711b6af1a8230140264c950e9daa",
+      "weights_loaded": true,
+      "nodes": 686,
+      "edges": 1040,
+      "checks": 30,
+      "passed": 30,
+      "validation_errors": [],
+      "replay": {
+        "checked": 681,
+        "skipped": 0,
+        "failed": 0
+      },
+      "verified_high_level_unknowns": 31,
+      "dispatch": {
+        "prefill": {
+          "dispatch_total": 1048,
+          "dispatch_in_nodes": 587,
+          "dispatch_transparent_only": 274,
+          "dispatch_both": 187,
+          "dispatch_unassigned": 0
+        },
+        "decode": {
+          "dispatch_total": 1088,
+          "dispatch_in_nodes": 612,
+          "dispatch_transparent_only": 295,
+          "dispatch_both": 181,
+          "dispatch_unassigned": 0
+        },
+        "decode_2": {
+          "dispatch_total": 1088,
+          "dispatch_in_nodes": 612,
+          "dispatch_transparent_only": 295,
+          "dispatch_both": 181,
+          "dispatch_unassigned": 0
+        }
+      },
+      "shape_probes": {
+        "fit": [
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            17
+          ],
+          [
+            2,
+            5
+          ]
+        ],
+        "holdout": [
+          2,
+          11
+        ],
+        "base": [
+          1,
+          5
+        ],
+        "unknown_axes": 0,
+        "problems": []
+      },
+      "state_by_phase": {
+        "prefill": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        },
+        "decode": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        },
+        "decode_2": {
+          "key": 6,
+          "value": 6,
+          "conv_cache": 10
+        }
+      },
+      "allocated_only": [
+        "conv_cache[10]",
+        "conv_cache[12]",
+        "conv_cache[14]",
+        "conv_cache[2]",
+        "conv_cache[5]",
+        "conv_cache[8]"
+      ]
+    }
+  },
+  "message_sha256": {
+    "initial_messages.json": "bb3b51e9209bb4dc1462824f97d71b7fdfbf0666929b940130655ed9181be55e",
+    "repair_messages.json": "c45c18d25eab770a6ffd5d8e9c5c1c6950540c3caa90dd1878ca4aa5acf44ec9"
+  }
+}
