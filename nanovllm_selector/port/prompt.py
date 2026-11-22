@@ -7,15 +7,19 @@
 3. 算子库索引（`kernels/index.md`）：只供查看写法，不供调用；
 4. 同构模板（`nano-vllm/nanovllm/models/qwen3.py`）：类划分与写法基准。
 
-本模块只做文本组装，不调用模型、不依赖 torch。图按模板折叠后的节点展开，
-`instances` 只显示条数，不逐个列出实例。
+本模块在生成前检查图的验证证据，再按实测阶段和层顺序组装文本。
 """
 
 from __future__ import annotations
 
+import ast
+import hashlib
 import json
 import re
+from bisect import bisect_left
 from collections import defaultdict
+from importlib.util import find_spec
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 
@@ -45,11 +49,11 @@ def _read_text(value: Any, label: str) -> str:
     if isinstance(value, Path):
         return Path(value).read_text(encoding="utf-8")
     if isinstance(value, str):
+        if "\n" in value:
+            return value
         path = Path(value)
         if path.is_file():
             return path.read_text(encoding="utf-8")
-        if "\n" in value:
-            return value
         raise FileNotFoundError(f"找不到{label}：{value}")
     raise TypeError(f"{label} 必须是路径或文本，收到 {type(value).__name__}")
 
@@ -63,13 +67,10 @@ def load_graph(graph: Any) -> dict:
     if isinstance(graph, Path):
         text = graph.read_text(encoding="utf-8")
     elif isinstance(graph, str):
-        path = Path(graph)
-        if path.is_file():
-            text = path.read_text(encoding="utf-8")
-        elif graph.lstrip().startswith("{"):
+        if graph.lstrip().startswith("{"):
             text = graph
         else:
-            raise FileNotFoundError(f"找不到参考图：{graph}")
+            text = Path(graph).read_text(encoding="utf-8")
     else:
         raise TypeError(f"graph 必须是 Graph、dict 或路径，收到 {type(graph).__name__}")
     try:
@@ -140,7 +141,9 @@ def _fmt_tensor(ref: dict, tensors: dict, *, output: bool = False, profile=None)
         pieces.append(f"偏移={meta['offset']}")
     if ref.get("role") in ("key", "value"):
         pieces.append(ref["role"])
-    if profile:
+    if profile and "alternatives" in profile:
+        pieces.append("条件形状=" + _json(profile))
+    elif profile:
         pieces.append("轴=" + _fmt_shape(profile["axes"]))
         pieces.append("样本=" + "/".join(_fmt_shape(shape) for shape in profile["samples"]))
     return " ".join(pieces)
@@ -156,6 +159,306 @@ def _model_names(graph: dict) -> tuple[str, str, str]:
 
 def _fold_layer_index(name: str) -> str:
     return re.sub(r"\.layers\.\d+\.", ".layers.*.", name)
+
+
+def _json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+class _Catalog:
+    """内容完全相同才共用编号。编号按首次出现的顺序分配。"""
+
+    def __init__(self, prefix: str):
+        self.prefix = prefix
+        self.entries: dict[str, str] = {}
+
+    def intern(self, body: str) -> str:
+        return self.entries.setdefault(body, f"{self.prefix}{len(self.entries) + 1}")
+
+    def lines(self) -> list[str]:
+        return [f"{name} {body}" for body, name in self.entries.items()]
+
+
+_NODE_ADDRESS = re.compile(r"^(?P<phase>D\d*\.)?(?:L(?P<layer>\d+|\*)\.)?(?P<name>.+)$")
+
+
+def _node_address(node_id: str, phase_prefix: str, layer: int | None) -> str:
+    match = _NODE_ADDRESS.fullmatch(node_id)
+    prefix, index, name = match.groups()
+    phase = "" if (prefix or "") == phase_prefix else (prefix or "prefill.")
+    if index is None:
+        return phase + name
+    if index == "*" or layer is None:
+        return f"{phase}L{index}.{name}"
+    delta = int(index) - layer
+    return phase + ("L." if delta == 0 else f"L[{delta:+d}].") + name
+
+
+def _layer_path(name: str, layer: int | None) -> str:
+    return re.sub(rf"(?<=\.layers\.){layer}(?=\.|$)", "*", name) if layer is not None else name
+
+
+def _tensor_ids(value):
+    if isinstance(value, dict):
+        if value.keys() == {"tensor"}:
+            yield value["tensor"]
+        else:
+            for item in value.values():
+                yield from _tensor_ids(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _tensor_ids(item)
+
+
+def _program_text(node: dict, layer: int | None, layouts: _Catalog, tensors: dict,
+                  sources: dict) -> str:
+    """只重命名配方内的张量变量。常量、参数、容器位置和写入顺序均参与比较。"""
+    attrs = node["attrs"]
+    prefix = _NODE_ADDRESS.fullmatch(node["id"])["phase"] or ""
+    inputs = {ref["tensor"]: f"in{i}" for i, ref in enumerate(node.get("inputs", []))}
+    weights = attrs.get("program_state") or {}
+    free = attrs.get("program_inputs") or {}
+    names, bindings = {}, []
+    temp = 0
+
+    def operand(value, *, result=False):
+        nonlocal temp
+        if isinstance(value, dict):
+            if value.keys() == {"tensor"}:
+                tid = value["tensor"]
+                if tid not in names:
+                    if result:
+                        temp += 1
+                        names[tid] = f"v{temp}"
+                    elif tid in inputs and free.get(tid, {}).get("kind") not in ("literal", "state"):
+                        names[tid] = inputs[tid]
+                    else:
+                        previous = sources.get(tid, [])
+                        before = bisect_left(previous, (step["seq"],))
+                        binding = free.get(tid, {})
+                        if binding.get("kind") == "literal":
+                            source = _json(binding["value"])
+                        elif binding.get("kind") == "input":
+                            source = inputs[binding["tensor"]]
+                        elif binding.get("kind") == "state":
+                            source = _layer_path(binding["name"], layer)
+                        elif tid in weights:
+                            source = _layer_path(weights[tid], layer)
+                        elif before:
+                            _, owner, output = previous[before - 1]
+                            source = _node_address(owner, prefix, layer) + "." + output
+                        else:
+                            source = tid
+                        names[tid] = f"x{len(bindings)}"
+                        layout = layouts.intern(_json(_layout(tensors.get(tid, {}))))
+                        bindings.append(f"{names[tid]}={source}/{layout}")
+                return "$" + names[tid]
+            return {k: operand(v, result=result) for k, v in value.items()}
+        if isinstance(value, list):
+            return [operand(v, result=result) for v in value]
+        return value
+
+    lines = []
+    for step in attrs["program"]:
+        args = _json(operand(step["args"]))
+        kwargs = _json(operand(step["kwargs"])) if step["kwargs"] else ""
+        target = _json(operand(step["result"], result=True))
+        writes = [names.get(tid, tid) for tid in step["writes"]]
+        mutation = " 写入 " + ",".join(writes) if writes else ""
+        lines.append(f"  {target} = {step['op']} {args}{kwargs}{mutation}")
+    outputs = [operand({"tensor": ref["tensor"]}) for ref in node.get("outputs", [])]
+    lines.append("  out=" + _json(outputs))
+    if bindings:
+        lines.insert(0, "  来源/布局 " + " ".join(bindings))
+    return "\n".join(lines)
+
+
+def _layout(meta: dict) -> dict:
+    return {k: meta[k] for k in ("dtype", "shape", "stride", "offset") if k in meta}
+
+
+def _state_contracts(records: list[dict]) -> list[str]:
+    groups: dict[str, list[str]] = defaultdict(list)
+    for record in records:
+        layer = record["layer"]
+        prefix = _NODE_ADDRESS.fullmatch(record["producer"])["phase"] or ""
+
+        def normalize_path(path):
+            # 抽取器将路径中的首个整型索引记为层号。其余索引属于槽内部。
+            return re.sub(r"\[(\d+)\]", lambda m: "[L]" if int(m[1]) == layer else m[0],
+                          path, count=1)
+
+        def reader(item):
+            if isinstance(item, str):
+                return _node_address(item, prefix, layer)
+            return {**item, "node": _node_address(item["node"], prefix, layer)}
+
+        body = {k: v for k, v in record.items() if k not in ("phase", "layer", "tensor")}
+        body.update(path=normalize_path(record["path"]),
+                    aliases=[normalize_path(p) for p in record["aliases"]],
+                    producer=_node_address(record["producer"], prefix, layer),
+                    readers=[reader(r) for r in record["readers"]])
+        # 未改写的旧生产者也可能来自更早的阶段，必须保留其阶段。
+        producer_phase = "prefill" if not prefix else (
+            "decode" if prefix == "D." else "decode_" + prefix[1:-1])
+        if producer_phase != record["phase"]:
+            body["producer_phase"] = producer_phase
+        groups[_json(body)].append(f"{record['phase']}/L{layer}={record['tensor']}")
+    return [f"{' '.join(locations)} {body}" for body, locations in groups.items()]
+
+
+def _reference_methods(nodes: list[dict]) -> list[str]:
+    """从录制定位且文件哈希一致的本地实现摘取计算方法，不执行 HF 代码。"""
+    classes = defaultdict(set)
+    for node in nodes:
+        source = node.get("impl", {}).get("source") or {}
+        qualname = source.get("qualname", "")
+        if qualname.startswith("transformers.models.") and source.get("sha256"):
+            key = qualname, source["sha256"]
+            classes[key].add(node["op"])
+            for step in node["attrs"].get("program", []):
+                classes[key].add(step["op"].removeprefix("aten.").split(".")[0])
+    package = find_spec("transformers") if classes else None
+    root = Path(package.origin).parent if package and package.origin else None
+    files, shown, lines = {}, set(), []
+    for (qualname, digest), ops in classes.items():
+        if not ops.intersection({"rmsnorm", "attention", "rope_table", "rsqrt", "roll", "sum"}):
+            continue
+        parts = qualname.split(".")
+        if not all(p.isidentifier() for p in parts):
+            continue
+        path = Path(*parts[1:-1]).with_suffix(".py")
+        if (path, digest) not in files:
+            data = (root / path).read_bytes() if root and (root / path).is_file() else b""
+            files[path, digest] = ({n.name: n for n in ast.parse(data).body
+                                    if isinstance(n, (ast.ClassDef, ast.FunctionDef))}
+                                   if hashlib.sha256(data).hexdigest() == digest else {})
+        definitions = files[path, digest]
+        cls = definitions.get(parts[-1])
+        if not isinstance(cls, ast.ClassDef):
+            lines.append(f"- {qualname} sha256={digest}，当前环境缺少匹配源码。")
+            continue
+        methods = {fn.name: fn for fn in cls.body if isinstance(fn, ast.FunctionDef)}
+        if "forward" not in methods:
+            continue
+        pending = [(parts[-1] + ".forward", methods["forward"])]
+        while pending:
+            name, fn = pending.pop(0)
+            key = (path, digest, fn.lineno)
+            if key in shown:
+                continue
+            shown.add(key)
+            # 保留分支条件和实际算式；略去装饰器、注解、文档字符串。
+            body = [stmt for stmt in fn.body if not (
+                isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))]
+            code = "\n".join(ast.unparse(stmt) for stmt in body)
+            lines += [f"`{path}:{fn.lineno} {name}` (sha256 {digest[:12]})",
+                      "```python", code, "```"]
+            for call in (n.func for n in ast.walk(fn) if isinstance(n, ast.Call)):
+                if isinstance(call, ast.Name) and isinstance(definitions.get(call.id), ast.FunctionDef):
+                    pending.append((call.id, definitions[call.id]))
+                if (isinstance(call, ast.Attribute) and isinstance(call.value, ast.Name)
+                        and call.value.id == "self" and call.attr in methods):
+                    helper = methods[call.attr]
+                    evidence = {n.attr for n in ast.walk(helper) if isinstance(n, ast.Attribute)}
+                    if evidence & ops:
+                        pending.append((parts[-1] + "." + call.attr, helper))
+    return lines
+
+
+def _render_program_graph(graph: dict) -> list[str]:
+    """分别对张量布局、原语和整层接口去重，保留每次执行指向的契约。"""
+    tensors = graph.get("tensors", {})
+    layouts, programs, contracts, blocks = _Catalog("T"), _Catalog("P"), _Catalog("N"), _Catalog("C")
+    sources = defaultdict(list)
+    for node in graph.get("nodes", []):
+        for i, step in enumerate(node.get("attrs", {}).get("program", [])):
+            for j, tid in enumerate(_tensor_ids(step["result"])):
+                sources[tid].append((step["seq"], node["id"], f"step{i}[{j}]"))
+        if node.get("origin") == "input":
+            for ref in node.get("outputs", []):
+                sources[ref["tensor"]].append((-1, node["id"], f"out{ref['index']}"))
+    for history in sources.values():
+        history.sort()
+    incoming = defaultdict(list)
+    for edge in graph.get("edges", []):
+        incoming[edge["to_node"]].append(edge)
+
+    # 每段保留录制顺序；全局节点可同时出现在第一层之前和最后一层之后。
+    events = defaultdict(list)
+    for node in graph.get("nodes", []):
+        node_id = node["id"]
+        match = _NODE_ADDRESS.fullmatch(node_id)
+        prefix = match["phase"] or ""
+        indices = tuple(node.get("instances") or ())
+        if match["layer"] and match["layer"] != "*":
+            indices = (int(match["layer"]),)
+        layer = indices[0] if indices else None
+        attrs = node.get("attrs", {})
+        row = [_node_address(node_id, prefix, layer), node["op"]]
+        impl = node.get("impl") or {}
+        if impl:
+            row.extend([str(impl.get("class") or ""), _layer_path(impl.get("module_path") or "", layer)])
+        if node.get("semantics", {}).get("formula"):
+            row.append(node["semantics"]["formula"])
+        for direction in ("inputs", "outputs"):
+            ports = []
+            profiles = attrs.get("shape_profile", {}).get(direction, [])
+            for index, ref in enumerate(node.get(direction, [])):
+                meta = _layout(tensors.get(ref["tensor"], {}))
+                if profiles:
+                    meta["profile"] = profiles[index]
+                fields = [layouts.intern(_json(meta)), ref.get("role"), ref.get("path"), ref.get("arg_name")]
+                ports.append(fields)
+            row.append(("in=" if direction == "inputs" else "out=") + _json(ports))
+        for edge in incoming[node_id]:
+            source = _node_address(edge["from_node"], prefix, layer)
+            row.append(f"{edge.get('kind')}:{source}.out{edge.get('source_slot')}"
+                       f"→in{edge.get('target_slot')}({edge.get('role')})")
+        if node.get("state"):
+            state = [{**s, "name": _layer_path(s["name"], layer)} for s in node["state"]]
+            row.append("state=" + _json(state))
+        if attrs.get("program"):
+            row.append(programs.intern(_program_text(node, layer, layouts, tensors, sources)))
+        phase = node.get("phase", "prefill")
+        contract = contracts.intern(" ".join(row))
+        program = attrs.get("program") or []
+        if not program:
+            events[phase].append((-1, indices, contract, 0, 1))
+        for i, step in enumerate(program):
+            events[phase].append((step["seq"], indices, contract, i, len(program)))
+
+    layer_types = (graph.get("model", {}).get("config") or {}).get("layer_types") or []
+    lines = ["## 2.4 各阶段的真实执行顺序", "",
+             "L 表示当前层，L[-1] 表示前一层。输入输出按槽号排列；端口依次给出布局、角色、路径和形参。",
+             "C 按执行顺序列出节点 N，T 为布局，P 为有序原语配方。$ 标记张量引用。"
+             "stepi[j] 表示第 i 条原语的第 j 个张量返回，均从 0 起算。N[a:b] 只执行该节点的原语切片。"]
+    for phase, steps in events.items():
+        order = []
+        for indices, run in groupby(sorted(steps), key=lambda e: e[1]):
+            rows = []
+            for contract, segment in groupby(run, key=lambda e: e[2]):
+                ops = list(segment)
+                first, last, size = ops[0][3], ops[-1][3] + 1, ops[-1][4]
+                rows.append(contract if (first, last) == (0, size) else f"{contract}[{first}:{last}]")
+            block = blocks.intern(" ".join(rows))
+            labels = [f"L{i}({layer_types[i]})" if i < len(layer_types) else f"L{i}" for i in indices]
+            order.append(f"{','.join(labels) or '全局'}={block}")
+        lines.append(f"- {phase} " + " → ".join(order))
+    lines += ["", "## 2.5 节点与依赖", *blocks.lines(), *contracts.lines(),
+              "", "## 2.6 原语配方（从上往下执行）", *programs.lines(),
+              "", "## 2.7 张量布局与维度样本", *layouts.lines(),
+              "", "## 2.8 跨步状态（阶段/层=本步张量）",
+              *_state_contracts(graph.get("env", {}).get("state_slots", []))]
+    if graph.get("env", {}).get("allocated_only"):
+        lines.append("仅观察到分配的槽 " + _json(graph["env"]["allocated_only"]))
+    source = _reference_methods(graph.get("nodes", []))
+    if source:
+        lines += ["", "## 2.9 实测模块的本地源码与舍入位置",
+                  "FP32 抽图时，同类型转换可能消失。用以下源码确认 BF16 运行时的升精度、回转、归约和乘法顺序。"
+                  "源码列出了可能分支，使用对应阶段配方确认实际路径。Q/K 的归一化位置、旋转维度、配对及顺序均以目标图和源码为准。",
+                  *source]
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -175,13 +478,14 @@ def _render_task(graph: dict) -> str:
 
 ## 1.1 硬性要求
 
-1. 第 3 节的 must 全部成立；第 5 节的 `qwen3.py` 是写法基准，类划分、Context 用法、`packed_modules_mapping` 写法都要同构同式。
+1. 遵守第 3 节全部 must。引擎调用与装载接口同模板同构同式；模型内部按图的真实层序、每层权重及分阶段计算实现。
 2. 文件顶层必须有一个类名以 `ForCausalLM` 结尾的模型类，并且类体内有 `packed_modules_mapping` 类属性；没有需要打包的权重也写 `{{}}`。
 3. 文件里必须出现 `from nanovllm.utils.context import get_context`。
 4. 只使用标准库、`torch`、`transformers` 和 `nanovllm` 已有模块；不要新增依赖，不要修改引擎。
 5. 第 4 节的 `kernels/` 只看写法，不得 import 或调用；算子最终由你自己写。
 6. 权重名按第 2.3 节和模板的 `packed_modules_mapping` 映射；需要按 tp 切分的参数使用模板里的并行层。
-7. 除 KV cache 外不要保存跨 step 状态；KV cache 只通过 `Attention` 读写。
+7. 按图的状态槽逐项实现初始化、读取、更新和写回。K/V 使用引擎分页缓存；其他状态按第 3 节已支持的接口按请求和层隔离。遇到能力缺口，遵守规约指定的运行限制，不能用模块私有缓存伪造支持。
+8. 按有序原语配方解析输入依赖、常量、权重视图、分支结果及原地写入。高层算子名未知时直接实现经重放的配方。尺寸样本中的数值用第 2 节的轴关系、配置及当前请求长度解释。
 
 模型类型是 `{model_type}`。形状来自实测；有多个样本时按样本解释各轴。`×N` 表示对应计算在 N 个层实例中重复。
 """
@@ -252,16 +556,20 @@ def _render_graph(graph: dict) -> str:
 
     params = graph.get("params") or []
     if params:
-        folded: dict[tuple[str, tuple], int] = {}
+        folded = defaultdict(list)
         for param in params:
-            name = _fold_layer_index(str(param.get("name") or ""))
+            original = param["name"]
+            name = _fold_layer_index(original)
             shape = tuple(param.get("shape") or [])
-            key = (name, shape)
-            folded[key] = folded.get(key, 0) + 1
+            index = re.search(r"\.layers\.(\d+)\.", original)
+            folded[name, shape, param.get("dtype")].append(int(index[1]) if index else None)
         lines += ["", "## 2.3 权重名（按层号折叠去重）", ""]
-        for (name, shape), count in folded.items():
-            suffix = f" ×{count}" if count > 1 else ""
-            lines.append(f"- `{name}` {_fmt_shape(list(shape))}{suffix}")
+        for (name, shape, dtype), indices in folded.items():
+            scope = " 层=" + ",".join(map(str, indices)) if indices[0] is not None else ""
+            lines.append(f"- `{name}` {_fmt_shape(shape)} {_fmt_dtype(dtype)}{scope}")
+
+    if "state_slots" in env or any("program" in n.get("attrs", {}) for n in nodes):
+        return "\n".join([*lines, "", *_render_program_graph(graph)])
 
     lines += ["", "## 2.4 逐节点", ""]
     for number, node in enumerate(nodes, 1):
@@ -478,6 +786,12 @@ def _render_spec(spec: dict, include_toolbox: bool = True) -> str:
             )
     else:
         lines.append("- 无字段")
+    lines += ["", "## 3.4 引擎能力与缺口", ""]
+    if not spec.get("capabilities"):
+        lines.append("当前规约没有单列能力清单。仅使用上文有依据的接口。")
+    for capability in spec.get("capabilities") or []:
+        label = "支持" if capability["supported"] is True else "缺口"
+        lines.append(f"- {label} `{capability['id']}` {capability['detail']}")
     return "\n".join(lines).strip()
 
 
@@ -501,7 +815,7 @@ def _render_kernels(text: str) -> str:
 def _render_template(text: str) -> str:
     return f"""# 五、同构模板：`qwen3.py`
 
-> 生成物必须与它同构同式：同样的类划分（Attention / MLP / DecoderLayer / Model / ForCausalLM）、同样的 Context 用法、同样的 `packed_modules_mapping` 写法。
+> 参照模板的 Context、权重装载及模型入口。按目标图组装层类型，并保留各阶段独有的计算和状态更新。
 
 ```python
 {text.strip()}
@@ -512,6 +826,144 @@ def _render_template(text: str) -> str:
 # ---------------------------------------------------------------------------
 # 对外组装
 # ---------------------------------------------------------------------------
+
+
+def _check_agent_graph(graph: dict) -> None:
+    """核对实际传给 agent 的图及其重放覆盖，兼容早期已核验的 graph.v1。"""
+    from nanovllm_selector.extract.schema import Graph, SCHEMA_VERSION
+
+    report = graph.get("reconcile") or {}
+    checks = report.get("checks") or []
+    for check in checks:
+        if check.get("ok") is not True:
+            raise ValueError(f"{check.get('name')}，期望 {check.get('expected')}，实测 {check.get('actual')} "
+                             f"{check.get('note', '')}")
+    if report.get("ok") is not True or not checks:
+        raise ValueError("缺少通过的 reconcile 对账记录")
+    for issues in (graph.get("conflicts"), report.get("invariants"), report.get("validate_problems")):
+        if issues:
+            raise ValueError(str(issues[0]))
+    version = graph.get("schema_version")
+    if version not in {"graph.v1", SCHEMA_VERSION}:
+        raise ValueError(f"无法验证 schema_version={version}")
+    nodes = graph.get("nodes") or []
+    phases = graph.get("phases") or []
+    if not nodes or not phases or not graph.get("graph_inputs"):
+        raise ValueError("缺少节点、图输入或阶段记录")
+    if not graph.get("model", {}).get("config") or not graph.get("params"):
+        raise ValueError("缺少模型配置或权重名表")
+    check_ids = {check["name"].split()[0] for check in checks}
+    missing = {"I1", "I2", "I3", "R1"} - check_ids
+    if missing:
+        raise ValueError("缺少抽取或重放检查 " + ", ".join(sorted(missing)))
+    replay = report.get("replay") or {}
+    if replay.get("ok") is not True or replay.get("skipped") or replay.get("failures"):
+        raise ValueError("节点重放不完整 " + str(replay.get("failures") or replay.get("skipped") or ""))
+    compute = [n for n in nodes if n.get("origin") != "input"]
+    total = sum(len(n.get("instances") or []) or 1 for n in compute)
+    if not total or replay.get("checked") != total:
+        raise ValueError(f"重放覆盖 {replay.get('checked')} 个节点，图中有 {total} 个计算实例")
+    problems = Graph.from_dict(graph).validate()
+    if problems:
+        raise ValueError("；".join(problems[:5]))
+
+    env = graph.get("env") or {}
+    modern = (version != "graph.v1" or "state_slots" in env
+              or any("program" in n.get("attrs", {}) for n in compute))
+    if not modern:
+        if any(n.get("op") in (None, "unknown") for n in compute):
+            raise ValueError("旧图含高层名称未知且缺少重放配方的节点")
+        return
+    if phases[:3] != ["prefill", "decode", "decode_2"]:
+        raise ValueError("缺少 prefill、decode 和连续第二步 decode_2 的执行证据")
+    if not env.get("shape_probes") or "S1" not in check_ids:
+        raise ValueError("缺少独立样本检验的 shape_probes")
+    if not all(graph.get("graph_outputs", {}).get(p) for p in phases):
+        raise ValueError("缺少各阶段的模型返回槽位")
+    if not isinstance(env.get("state_slots"), list):
+        raise ValueError("缺少逐阶段 state_slots")
+    state_phases = {s["phase"] for s in env["state_slots"]}
+    if (state_phases or any(e.get("kind") == "state" for e in graph.get("edges", []))) and (
+            state_phases != set(phases)):
+        raise ValueError("state_slots 未覆盖图中的跨步状态阶段")
+    previous, witnessed = {}, set()
+    edges = {(e["from_node"], e["source_slot"], e["to_node"], e["role"])
+             for e in graph["edges"] if e.get("kind") == "state"}
+    for slot in env["state_slots"]:
+        path = slot["path"]
+        update = slot.get("update") or {}
+        if update.get("kind") not in {"initial", "shift", "resized", "updated", "unchanged"}:
+            raise ValueError(f"{slot['phase']} {path} 缺少可解释的 update")
+        if update["kind"] == "shift" and not {"axis", "retained_columns"} <= update.keys():
+            raise ValueError(f"{slot['phase']} {path} 缺少移窗轴或保留列数")
+        if path in previous:
+            old = previous[path]
+            witnessed.update((old["producer"], old["source_slot"], reader, old["role"])
+                             for reader in slot["readers"])
+        previous[path] = slot
+    if edges != witnessed:
+        raise ValueError(f"state_slots.readers 与跨步边不符 {next(iter(edges ^ witnessed))}")
+    external = {r["tensor"] for n in nodes if n.get("origin") == "input" for r in n["outputs"]}
+    produced = set()
+    folded = {}
+    for node in compute:
+        owner = node["id"]
+        indices = node.get("instances") or []
+        if indices:
+            for index in indices[1:]:
+                folded[owner.replace("L*.", f"L{index}.", 1)] = owner
+            owner = owner.replace("L*.", f"L{indices[0]}.", 1)
+        for step in node.get("attrs", {}).get("program") or []:
+            produced.update((owner, step["seq"], tid) for tid in _tensor_ids(step["result"]))
+    for node in compute:
+        attrs = node.get("attrs") or {}
+        steps = attrs.get("program")
+        evidence = attrs.get("program_replay") or {}
+        if (not isinstance(steps, list) or not steps or evidence.get("ok") is not True
+                or evidence.get("checked") != len(steps) or evidence.get("total") != len(steps)):
+            raise ValueError(f"{node['id']} 缺少覆盖全部原语的 program_replay")
+        if "observed_inputs" not in attrs or "observed_outputs" not in attrs:
+            raise ValueError(f"{node['id']} 缺少实测输入输出槽")
+        seqs = [s["seq"] for s in steps]
+        if any(a >= b for a, b in zip(seqs, seqs[1:])):
+            raise ValueError(f"{node['id']} 的原语没有按实测顺序排列")
+        bound = attrs.get("program_inputs")
+        if not isinstance(bound, dict):
+            raise ValueError(f"{node['id']} 缺少 program_inputs 来源表")
+        defined, free = set(), {}
+        for step in steps:
+            if not {"op", "args", "kwargs", "result", "writes"} <= step.keys():
+                raise ValueError(f"{node['id']} 第 {step['seq']} 条原语缺少参数、结果或写入记录")
+            operands = set(_tensor_ids([step["args"], step["kwargs"]]))
+            for tid in operands - defined:
+                free.setdefault(tid, step["seq"])
+            defined.update(_tensor_ids(step["result"]))
+            if not set(step["writes"]) <= operands:
+                raise ValueError(f"{node['id']} 第 {step['seq']} 条原语写入目标未绑定")
+        if bound.keys() != free.keys():
+            raise ValueError(f"{node['id']} program_inputs 与原语自由张量不符 {sorted(bound.keys() ^ free.keys())}")
+        input_ids = {r["tensor"] for r in node["inputs"]}
+        for tid, binding in bound.items():
+            kind = binding["kind"]
+            if kind == "producer":
+                owner, seq = binding["node"], binding["seq"]
+                matches = (owner, seq, tid) in produced
+                if not matches and owner in folded:
+                    # 折叠后仅保留代表层的原语。其他实例必须仍能追溯到已验证的输入边。
+                    storage = graph["tensors"][tid]["storage"]
+                    matches = any(ref and ref[0] == folded[owner]
+                                  and graph["tensors"][port["tensor"]]["storage"] == storage
+                                  for port, ref in zip(node["inputs"], attrs["observed_inputs"]))
+                if binding["tensor"] != tid or seq >= free[tid] or not matches:
+                    raise ValueError(f"{node['id']} {tid} 的生产者 {owner} seq={seq} 无对应实测结果；"
+                                     "保留逐层实例可使用 --no-collapse")
+            valid = (kind == "literal" and "value" in binding
+                     or kind == "state" and binding.get("name")
+                     or kind == "input" and binding.get("tensor") in input_ids
+                     or kind == "producer" and {"node", "seq", "tensor"} <= binding.keys()
+                     or kind == "external" and (tid in external or tid in input_ids))
+            if not valid:
+                raise ValueError(f"{node['id']} {tid} 缺少可用的参数、输入、常量或生产者来源")
 
 
 def build_sections(
@@ -525,14 +977,14 @@ def build_sections(
 ) -> dict[str, str]:
     """生成五个小节，键与 `SECTION_ORDER` 一致。"""
     graph_data = load_graph(graph)
-    if graph_data.get("reconcile", {}).get("ok") is False:
-        raise ValueError("参考图未通过抽图检查")
-    if any("observed_outputs" in node.get("attrs", {}) for node in graph_data.get("nodes", [])):
-        from nanovllm_selector.extract.schema import Graph
-
-        problems = Graph.from_dict(graph_data).validate()
-        if problems:
-            raise ValueError("参考图与实测记录不符：" + "；".join(problems[:5]))
+    try:
+        _check_agent_graph(graph_data)
+        graph_text = _render_graph(graph_data)
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise ValueError(f"参考图与实测记录不符：{exc}。请修复该项后重新抽取："
+                         "python -m nanovllm_selector.extract.cli --model <本地模型目录> "
+                         "--phases prefill,decode --decode-steps 2 --shape-probes --check "
+                         "--out <graph.json>") from exc
     spec_data = load_spec(spec_path)
     kernels_text = _read_text(kernels_index, "算子库索引")
     template_text = _read_text(template_path, "模型模板")
@@ -541,10 +993,10 @@ def build_sections(
     if exact:
         engine_context += "\n\n" + Path(__file__).with_name("exact_reference.md").read_text(encoding="utf-8")
         template += ("\n\n本次使用逐项相等验收。第 3 节的单卡实现依据给出了经过验证的回退代码。"
-                     "遇到相应运算时，请把这些计算写进候选文件；模板的类划分和权重装载接口继续沿用。")
+                     "仅在目标图出现相同运算、类型与顺序时采用相应实现。")
     return {
         "task": _render_task(graph_data),
-        "graph": _render_graph(graph_data),
+        "graph": graph_text,
         "spec": engine_context,
         "kernels": _render_kernels(kernels_text),
         "template": template,
