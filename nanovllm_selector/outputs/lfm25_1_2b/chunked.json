@@ -1,0 +1,108 @@
+{
+  "ok": false,
+  "schedule": [
+    {
+      "phase": "prefill",
+      "processed": 0,
+      "chunk": 16,
+      "slot": 0
+    },
+    {
+      "phase": "prefill",
+      "processed": 16,
+      "chunk": 8,
+      "slot": 0
+    },
+    {
+      "phase": "decode",
+      "processed": 24,
+      "chunk": 1,
+      "slot": 0
+    },
+    {
+      "phase": "decode",
+      "processed": 25,
+      "chunk": 1,
+      "slot": 0
+    }
+  ],
+  "generated": [
+    36387,
+    56586,
+    1391
+  ],
+  "comparisons": [
+    {
+      "argmax_actual": 36387,
+      "argmax_expected": 36387,
+      "argmax_match": true,
+      "max_abs_diff": 0.2099609375,
+      "cosine": 0.9999488592147827,
+      "vocab_size": 65536,
+      "exact": false,
+      "top5_actual": [
+        36387,
+        4949,
+        792,
+        43377,
+        16697
+      ],
+      "top5_expected": [
+        36387,
+        4949,
+        792,
+        43377,
+        16697
+      ],
+      "ok": false
+    },
+    {
+      "argmax_actual": 56586,
+      "argmax_expected": 56586,
+      "argmax_match": true,
+      "max_abs_diff": 0.125,
+      "cosine": 0.999973475933075,
+      "vocab_size": 65536,
+      "exact": false,
+      "top5_actual": [
+        56586,
+        945,
+        41186,
+        856,
+        996
+      ],
+      "top5_expected": [
+        56586,
+        945,
+        41186,
+        856,
+        996
+      ],
+      "ok": false
+    },
+    {
+      "argmax_actual": 1391,
+      "argmax_expected": 1391,
+      "argmax_match": true,
+      "max_abs_diff": 0.140625,
+      "cosine": 0.9999188780784607,
+      "vocab_size": 65536,
+      "exact": false,
+      "top5_actual": [
+        1391,
+        523,
+        3648,
+        787,
+        884
+      ],
+      "top5_expected": [
+        1391,
+        523,
+        3648,
+        787,
+        884
+      ],
+      "ok": false
+    }
+  ]
+}
