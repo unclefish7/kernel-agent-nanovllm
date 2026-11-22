@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -30,6 +31,8 @@ STAGE_NAMES = {
     "class": "找出 ForCausalLM 类",
     "run": "在引擎里构造、装权重、跑前向",
     "compare": "与 transformers 的 logits 对比",
+    "reference": "独立 HF 参照",
+    "input": "准备评测输入",
 }
 
 
@@ -51,6 +54,38 @@ def load_dotenv(path: Path = DOTENV) -> list[str]:
     return loaded
 
 
+def _diagnostic_feedback(diagnosis: dict) -> list[str]:
+    if diagnosis.get("error"):
+        return ["附加诊断未完成：" + str(diagnosis["error"])[-600:]]
+    lines = [f"单请求 prefill 诊断，长度 {diagnosis.get('length')}。"]
+    diff = diagnosis.get("first_difference") or {}
+    if diff.get("engine_path") and diff.get("hf_path") and (
+        (diff.get("different_elements") or 0) > 0 or (
+            "elements" in diff and diff.get("engine_dtype") != diff.get("hf_dtype")
+        ) or diff.get("kind") == "shape_mismatch"
+    ):
+        lines.append("按候选执行顺序，首个可对齐的分歧边界：")
+        for side, label in (("engine", "候选"), ("hf", "HF")):
+            meta = diff[side] if isinstance(diff.get(side), dict) else {}
+            lines.append(f"- {label} {diff[side + '_path']} ({diff.get(side + '_phase')})，"
+                         f"{diff.get(side + '_shape')} {diff.get(side + '_dtype', '')}，{meta.get('view', '')}")
+        if diff.get("max_abs_diff") is not None:
+            lines.append(f"边界最大绝对误差 {diff['max_abs_diff']:.6g}，"
+                         f"{diff.get('different_elements')}/{diff.get('elements')} 项不同。")
+        previous = diff.get("previous_match")
+        if isinstance(previous, list) and len(previous) == 3:
+            path, phase, _ = previous
+            lines.append(f"此前已匹配 {path} ({phase})。")
+    else:
+        lines.append("该提示长度的逐模块对比没有确认分歧边界。")
+    logits = diagnosis.get("logits") or {}
+    if logits.get("max_abs_diff") is not None:
+        lines.append(f"该次诊断输出 logits 的最大绝对误差为 {logits['max_abs_diff']:.6g}。")
+    elif logits:
+        lines.append(f"该次诊断输出 logits：{logits.get('reason', '包含非有限值')}。")
+    return lines
+
+
 def build_feedback(report: dict, code: str = "") -> str:
     """把一份评测报告改写成给模型看的"哪里错了"。"""
     stage = report.get("stage", "?")
@@ -58,7 +93,9 @@ def build_feedback(report: dict, code: str = "") -> str:
     error = str(report.get("error") or "").strip()
     if error:
         lines += ["", "真实报错：", "```", error[-3000:], "```"]
-    if report.get("criterion") == "exact" and stage == "compare":
+    if report.get("diagnosis"):
+        lines += ["", *_diagnostic_feedback(report["diagnosis"])]
+    elif report.get("criterion") == "exact" and stage == "compare":
         called = [name for name in ("self.qkv_proj", "self.gate_up_proj", "SiluAndMul")
                   if name + "(" in code]
         if called:
@@ -142,6 +179,8 @@ def run_loop(
                 "path": str(path),
                 "ok": bool(report.get("ok")),
                 "stage": report.get("stage"),
+                "outcome": report.get("outcome"),
+                **{k: report[k] for k in ("report_file", "diagnosis_file") if k in report},
                 "elapsed": round(time.time() - started, 2),
                 "error": (str(report.get("error") or ""))[-1500:] or None,
             }
@@ -156,6 +195,11 @@ def run_loop(
                 "report": report,
                 "history": history,
             }
+        if report.get("outcome") in ("evaluation_error", "reference_unreliable"):
+            say(f"停止生成：{report['outcome']}。")
+            break
+        if attempt == max_iters:
+            break
         prompt = prompt + [
             {"role": "assistant", "content": text},
             {"role": "user", "content": build_feedback(report, code)},
@@ -163,9 +207,9 @@ def run_loop(
 
     return {
         "ok": False,
-        "attempt": max_iters,
-        "path": history[-1]["path"] if history else None,
-        "report": None,
+        "attempt": attempt,
+        "path": str(path),
+        "report": report,
         "history": history,
     }
 
@@ -177,10 +221,49 @@ def subprocess_evaluate(
     work_dir: Path = REPO_ROOT,
     timeout: float = 1200.0,
     exact: bool = True,
+    diagnose_length: int | None = None,
 ) -> Callable[[Path], dict]:
     """返回一个评测函数：每个候选文件起一个子进程，读它写出的 JSON 报告。"""
 
+    if diagnose_length is not None and diagnose_length < 1:
+        raise ValueError("diagnose_length 必须为正")
+
+    def attach_diagnosis(report, candidate):
+        path = candidate.with_suffix(".diagnosis.json")
+        cmd = [sys.executable, "-m", "nanovllm_selector.port.diagnose", "--model", str(model_dir),
+               "--candidate", str(candidate), "--length", str(diagnose_length), "--report", str(path)]
+        if arch:
+            cmd += ["--arch", arch]
+        try:
+            path.unlink(missing_ok=True)
+            proc = subprocess.run(cmd, cwd=str(work_dir), capture_output=True, text=True, timeout=timeout)
+            if proc.returncode:
+                tail = (proc.stderr or proc.stdout or "")[-1500:]
+                raise ValueError(f"诊断子进程退出码 {proc.returncode}，{tail}")
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if (not isinstance(data, dict) or data.get("purpose") != "prefill_diagnostic"
+                    or data.get("length") != diagnose_length or not isinstance(data.get("logits"), dict)):
+                raise ValueError("诊断报告缺少本次运行的长度或分数信息")
+            for stats in (data["logits"], data.get("first_difference") or {}):
+                if not isinstance(stats, dict):
+                    raise ValueError("诊断边界数据无效")
+                for field in ("max_abs_diff", "different_elements", "elements"):
+                    value = stats.get(field)
+                    if value is not None and (not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0):
+                        raise ValueError(f"诊断指标 {field} 无效")
+            if report.get("candidate_sha256") and data.get("candidate_sha256") != report["candidate_sha256"]:
+                raise ValueError("诊断与正式验收的候选摘要不同")
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            data = {"purpose": "prefill_diagnostic", "length": diagnose_length, "error": str(exc)}
+            try:
+                path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except OSError as save_error:
+                report["diagnosis"] = {**data, "save_error": str(save_error)}
+                return
+        report.update(diagnosis=data, diagnosis_file=str(path))
+
     def evaluate(candidate: Path) -> dict:
+        candidate = Path(candidate).resolve()
         report_path = Path(candidate).with_suffix(".report.json")
         if report_path.exists():
             report_path.unlink()
@@ -200,7 +283,17 @@ def subprocess_evaluate(
         except subprocess.TimeoutExpired:
             return {"ok": False, "stage": "run", "error": f"评测超时（{timeout:.0f} 秒）"}
         if report_path.exists():
-            report = json.loads(report_path.read_text(encoding="utf-8"))
+            try:
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                if not isinstance(report, dict) or not isinstance(report.get("ok"), bool):
+                    raise ValueError("正式验收报告没有有效判定")
+            except (ValueError, OSError) as exc:
+                return {"ok": False, "stage": "report", "outcome": "evaluation_error",
+                        "report_file": str(report_path), "error": str(exc)}
+            report["report_file"] = str(report_path)
+            if (diagnose_length is not None and exact and not report["ok"] and report.get("criterion") == "exact"
+                    and report.get("stage") == "compare" and report.get("outcome", "candidate_failed") == "candidate_failed"):
+                attach_diagnosis(report, candidate)
             return report
         tail = ((proc.stderr or "") + "\n" + (proc.stdout or ""))[-4000:]
         return {"ok": False, "stage": "run", "error": f"子进程退出码 {proc.returncode}\n{tail}"}
@@ -217,6 +310,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template", type=Path, required=True, help="同构模板 qwen3.py")
     parser.add_argument("--out-dir", type=Path, required=True, help="每轮生成的文件放这里")
     parser.add_argument("--max-iters", type=int, default=3)
+    parser.add_argument("--diagnose-length", type=int, help="严格数值验收失败后，追加指定词元长度的单请求 prefill 诊断")
     parser.add_argument("--exact", action=argparse.BooleanOptionalAction, default=True,
                         help="默认要求各步整个词表逐项相等，--no-exact 使用原有容差")
     parser.add_argument("--arch", default=None, help="架构名，默认取图的 architectures[0]")
@@ -226,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--llm-model", default=None)
     parser.add_argument("--timeout", type=float, default=180.0, help="单次 API 请求超时秒数")
     args = parser.parse_args(argv)
+    if args.diagnose_length is not None and args.diagnose_length < 1:
+        parser.error("--diagnose-length 必须为正")
 
     loaded = load_dotenv()
     if loaded:
@@ -243,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         model=args.llm_model,
         timeout=args.timeout,
     )
-    evaluate = subprocess_evaluate(model_dir=args.model, arch=arch, exact=args.exact)
+    evaluate = subprocess_evaluate(model_dir=args.model, arch=arch, exact=args.exact, diagnose_length=args.diagnose_length)
 
     result = run_loop(
         messages=messages,
