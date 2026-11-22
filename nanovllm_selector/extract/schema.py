@@ -322,7 +322,7 @@ class Graph:
                             problems.append(f"{n.id} 非空输入被跳过: {ref.tensor}")
                         continue
                     source, slot, role = witness
-                    kind = "state" if role in ("key", "value") else "data"
+                    kind = "state" if ref.role == "state" else "data"
                     if (n.id, index, source, slot, role, ref.tensor, kind) not in connections:
                         problems.append(f"{n.id} in[{index}] {role} 缺少实测来源 {source} out[{slot}]")
             if not n.evidence:
@@ -330,6 +330,23 @@ class Graph:
             for t in list(n.inputs) + list(n.outputs):
                 if t.tensor not in self.tensors:
                     problems.append(f"节点 {n.id} 引用了未登记的张量 {t.tensor}")
+        previous = {}
+        state_edges = {(e.from_node, e.source_slot, e.to_node, e.role)
+                       for e in self.edges if e.kind == "state"}
+        for slot in self.env.get("state_slots", ()):
+            name = slot["path"]
+            producer = by_id.get(slot["producer"])
+            source = slot["source_slot"]
+            tensor = self.tensors.get(slot["tensor"])
+            if (not producer or not 0 <= source < len(producer.outputs)
+                    or producer.outputs[source].role != slot["role"] or tensor is None
+                    or tensor.shape != slot["shape"] or tensor.dtype != slot["dtype"]):
+                problems.append(f"{slot['phase']} {name} 的状态输出与图不符")
+            prior = previous.get(name)
+            for reader in slot["readers"]:
+                if not prior or (prior["producer"], prior["source_slot"], reader, prior["role"]) not in state_edges:
+                    problems.append(f"{slot['phase']} {name} 缺少通往 {reader} 的历史边")
+            previous[name] = slot
         if self.env.get("shape_probes"):
             from .shapes import validate_profiles
 

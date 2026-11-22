@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 
 def _variables(batch, length, phase):
     if phase == "prefill":
@@ -10,6 +12,17 @@ def _variables(batch, length, phase):
     past = length + step - 1
     return {"B": batch, "P": past, "P+1": past + 1, "B*P": batch * past,
             "B*(P+1)": batch * (past + 1)}
+
+
+def _axis_value(label, variables):
+    if label.isdecimal():
+        return int(label)
+    if label in variables:
+        return variables[label]
+    offset = re.fullmatch(r"(B|S|P)([+-]\d+)", label)
+    if offset and offset[1] in variables:
+        return variables[offset[1]] + int(offset[2])
+    return None
 
 
 def _signature(node):
@@ -46,6 +59,32 @@ def _config_axes(config, node, ref, direction, rank):
     return {1: (heads, config.get(heads)), 3: (field, head_dim)}
 
 
+def _layouts(cases, shapes, phase):
+    """按实际批大小保留布局；尺寸规律用同批大小的保留样本检验。"""
+    by_batch = {}
+    for case, shape in zip(cases, shapes):
+        group = by_batch.setdefault(case[0], {"cases": [], "shapes": []})
+        group["cases"].append(list(case))
+        group["shapes"].append(shape)
+    for group in by_batch.values():
+        found = group["shapes"]
+        if len({len(shape) for shape in found}) != 1:
+            raise ValueError("同批大小内张量秩也变化")
+        variables = [_variables(*case, phase) for case in group["cases"]]
+        axes = []
+        for sizes in zip(*found):
+            if len(set(sizes)) == 1:
+                axes.append(str(sizes[0]))
+            else:
+                matching = [name for name in variables[0]
+                            if all(v[name] == size for v, size in zip(variables, sizes))]
+                if not matching:
+                    raise ValueError("保留样本不能验证条件维度")
+                axes.append(matching[0])
+        group["axes"] = axes
+    return list(by_batch.values())
+
+
 def validate_profiles(graph):
     probes = graph.env.get("shape_probes")
     if not probes:
@@ -63,6 +102,18 @@ def validate_profiles(graph):
                 if ref.tensor not in graph.tensors:
                     continue
                 shapes = [*profile["samples"], graph.tensors[ref.tensor].shape]
+                if "alternatives" in profile:
+                    try:
+                        expected = _layouts(cases[:-1], shapes[:-1], node.phase)
+                        if expected != profile["alternatives"]:
+                            raise ValueError("形状记录与样本不符")
+                        layout = next(g for g in expected if g["cases"][0][0] == cases[-1][0])
+                        sizes = [int(a) if a.isdecimal() else values[-1][a] for a in layout["axes"]]
+                        if sizes != shapes[-1]:
+                            raise ValueError("基础形状与条件维度不符")
+                    except (ValueError, KeyError, StopIteration) as exc:
+                        problems.append(f"{node.id} {direction}[{ref.index}] 条件形状无法验证：{exc}")
+                    continue
                 axes = profile["axes"]
                 if len(cases) != len(shapes) or any(len(shape) != len(axes) for shape in shapes):
                     problems.append(f"{node.id} {direction}[{ref.index}] 尺寸记录不完整")
@@ -73,9 +124,7 @@ def validate_profiles(graph):
                         continue
                     name, size = fixed.get(i, (None, None))
                     for shape, variables in zip(shapes, values):
-                        expected = variables.get(axis, size if axis == name else None)
-                        if axis.isdecimal():
-                            expected = int(axis)
+                        expected = size if axis == name else _axis_value(axis, variables)
                         if shape[i] != expected:
                             problems.append(f"{node.id} {direction}[{ref.index}] 轴 {i} 的 {axis} 与实测不符")
                             break
@@ -111,7 +160,12 @@ def profile_shapes(graph, batch, length, trace):
                           for sample, other in zip(samples, aligned)]
                 base = graph.tensors[ref.tensor].shape
                 if any(len(shape) != len(base) for shape in shapes):
-                    problems.append(f"{node.id} {direction}[{i}] 维数变化")
+                    try:
+                        variants = _layouts(cases, shapes, node.phase)
+                        profiles[direction].append({"axes": ["?"] * len(base), "samples": shapes,
+                                                    "alternatives": variants})
+                    except ValueError as exc:
+                        problems.append(f"{node.id} {direction}[{i}] 条件形状不明：{exc}")
                     continue
                 axes = []
                 config_axes = _config_axes(config, node, ref, direction, len(base))
@@ -129,9 +183,20 @@ def profile_shapes(graph, batch, length, trace):
                         label = matches[0]
                         prediction, base_prediction = values[-1][label], base_values[label]
                     else:
-                        label = "?"
-                        unknown += 1
-                        prediction, base_prediction = sizes[-1], base[axis]
+                        offsets = []
+                        for name in ("B", "S", "P"):
+                            if name in values[0]:
+                                shifts = {size - v[name] for size, v in zip(fitted, values[:-1])}
+                                if len(shifts) == 1:
+                                    offsets.append(f"{name}{shifts.pop():+d}")
+                        if len(offsets) == 1:
+                            label = offsets[0]
+                            prediction = _axis_value(label, values[-1])
+                            base_prediction = _axis_value(label, base_values)
+                        else:
+                            label = "?"
+                            unknown += 1
+                            prediction, base_prediction = sizes[-1], base[axis]
                     if prediction != sizes[-1] or base_prediction != base[axis]:
                         problems.append(f"{node.id} {direction}[{i}] 轴 {axis} 的 {label} 与实测不符")
                     axes.append(label)

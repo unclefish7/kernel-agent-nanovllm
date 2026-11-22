@@ -16,11 +16,12 @@ from .edges import build_edges, tensor_view, to_tensor_meta
 from .loader import load_model
 from .trace_io import cache_tensors, observe_ports
 from .recorder import record_forward
+from .runtime_state import PreviousState, restore_buffers, written_buffers
 from .checks import check_invariants
 from .replay import replay_nodes
 from .reconcile import reconcile
 from .schema import Graph
-from .template import fold, template_id_of
+from .template import fold, layer_index, template_id_of
 
 __all__ = ["extract_graph"]
 
@@ -76,7 +77,12 @@ def extract_graph(
     return graph
 
 
-def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collapse_template,
+def _trace(model, config, **options):
+    with restore_buffers(model):
+        return _trace_model(model, config, **options)
+
+
+def _trace_model(model, config, *, dtype, device, batch_size, seq_len, phases, collapse_template,
            reconcile_graph, replay_graph, decode_steps):
     if min(batch_size, seq_len, decode_steps) < 1:
         raise ValueError("batch_size、seq_len 和 decode_steps 都必须为正数")
@@ -86,6 +92,9 @@ def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collaps
     tokens = torch.randint(vocab, (batch_size, seq_len + counts - 1), generator=generator).to(device)
     instances, all_nodes, edges = [], [], []
     tensors, history, graph_outputs = {}, {}, {}
+    state_records = []
+    active_state_paths = set()
+    active_buffers = set()
     phase_checks, phase_stats, problems, failures, skipped = [], {}, [], [], []
     replay_checked = dispatch_count = module_calls = offset = 0
     past = None
@@ -96,30 +105,60 @@ def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collaps
         position = seq_len + step - 1
         cache_position = torch.tensor([position], device=device) if step else None
         ids = tokens[:, position:position + 1].contiguous() if step else tokens[:, :seq_len].contiguous()
+        old_buffers = dict(model.named_buffers())
         recording, output = record_forward(model, ids, past_key_values=past,
                                            cache_position=cache_position, seq_offset=offset)
         offset = recording._seq
         builder = GraphBuilder(model, recording, config, dtype, prefix.lower().rstrip("."), prefix)
         nodes = builder.build(phase)
         past = getattr(output, "past_key_values", None)
-        if counts > 1 and past is None:
-            raise ValueError(f"{phase} 未返回 decode 所需的历史缓存")
-        cache = cache_tensors(past)
+        cache = cache_tensors(past, written_buffers(model, recording, old_buffers, active_buffers))
         external = {"input_ids": ids}
         if step:
             external["cache_position"] = cache_position
-        observation = observe_ports(builder, nodes, recording.calls[0].outputs, cache, external)
-        local_edges, local_nodes = build_edges(nodes, builder, observation, history, external)
+        try:
+            observation = observe_ports(builder, nodes, recording.calls[0].outputs, cache, external, history)
+            local_edges, local_nodes = build_edges(nodes, builder, observation, history, external)
+        except ValueError as exc:
+            # 保留已有轨迹和失败阶段，供诊断工具展示。未完成的图不能进入候选生成。
+            problems.append({"kind": "ports", "phase": phase, "detail": str(exc)})
+            instances.extend(nodes)
+            all_nodes.extend(nodes)
+            tensors.update(to_tensor_meta(builder))
+            break
         origins, _, slots, writes = observation
         graph_outputs[phase] = []
         for tensor in recording.calls[0].outputs:
             origin = origins[id(tensor)]
-            producer = template_id_of(origin[0]) if collapse_template else origin[0]
-            graph_outputs[phase].append(dict(node=producer, slot=slots[origin], tensor=builder.tid(tensor)))
-        history = {tensor_view(cache[key]): (key, origin[0], slots[origin])
-                   for key, origin in writes.items()}
-        if len(history) != len(cache):
-            raise ValueError(f"{phase} 多个缓存槽共享相同张量，归属不唯一")
+            graph_outputs[phase].append(dict(node=origin[0], slot=slots[origin], tensor=builder.tid(tensor)))
+        previous = {s.key: s for s in history.values()}
+        readers = {}
+        for owner, incoming in builder.state_reads.items():
+            for s in incoming.values():
+                readers.setdefault(s.key, set()).add(owner)
+        history = {}
+        for key, tensor in cache.items():
+            origin = writes.get(key)
+            prior = previous.get(key)
+            if origin is not None:
+                producer, slot = origin[0], slots[origin]
+                if origin in builder.computed_origins:
+                    active_state_paths.add(key.path)
+            elif prior is not None:
+                producer, slot = prior.producer, prior.slot
+            else:
+                continue
+            if key in readers:
+                active_state_paths.add(key.path)
+            state_records.append(dict(phase=phase, path=key.path, aliases=cache.aliases[key],
+                                      layer=key.layer, role=key.role, shape=list(tensor.shape),
+                                      dtype=str(tensor.dtype).removeprefix("torch."), producer=producer,
+                                      source_slot=slot, tensor=builder.tid(tensor),
+                                      readers=sorted(readers.get(key, ())),
+                                      update=prior.update(tensor) if prior else {"kind": "initial"}))
+            history[tensor_view(tensor)] = PreviousState(key, producer, slot, tensor, tensor.detach().clone())
+        if counts > 1 and not history:
+            problems.append({"kind": "history", "detail": f"{phase} 未观察到连续生成所需的历史状态"})
         instances.extend(nodes)
         all_nodes.extend(local_nodes)
         edges.extend(local_edges)
@@ -143,8 +182,20 @@ def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collaps
 
     report = (reconcile(instances, all_nodes, edges, model, config) if reconcile_graph
               else {"ok": True, "checks": [], "stats": {}})
-    if collapse_template:
+    structure = {}
+    for node in instances:
+        index = layer_index(node.id)
+        if index is not None:
+            structure.setdefault(index, []).append((template_id_of(node.id), node.op))
+    uniform = len({tuple(signature) for signature in structure.values()}) <= 1
+    if collapse_template and uniform:
         graph_nodes, graph_edges, fold_report = fold(all_nodes, edges)
+        for returns in graph_outputs.values():
+            for item in returns:
+                item["node"] = template_id_of(item["node"])
+        for item in state_records:
+            item["producer"] = template_id_of(item["producer"])
+            item["readers"] = [template_id_of(r) for r in item["readers"]]
     else:
         graph_nodes, graph_edges, fold_report = all_nodes, edges, {}
     report["checks"].extend(phase_checks)
@@ -169,7 +220,10 @@ def _trace(model, config, *, dtype, device, batch_size, seq_len, phases, collaps
     graph = Graph(
         model={key: meta.get(key) for key in ("model_path", "model_type", "architectures", "num_layers",
                                                "config_sha256", "weights_sha256", "weights_loaded")},
-        env=dict(dtype=dtype, device=device, torch=torch.__version__, transformers=transformers.__version__,
+        env=dict(dtype=dtype, device=device,
+                 state_slots=[s for s in state_records if s["path"] in active_state_paths],
+                 allocated_only=sorted({s["path"] for s in state_records} - active_state_paths),
+                 torch=torch.__version__, transformers=transformers.__version__,
                  python=sys.version.split()[0], platform=platform.platform()),
         phases=list(dict.fromkeys(node.phase for node in instances)), nodes=graph_nodes, edges=graph_edges,
         tensors=tensors, params=_collect_params(model),

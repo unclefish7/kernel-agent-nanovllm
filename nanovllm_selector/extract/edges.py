@@ -17,30 +17,53 @@ def build_edges(nodes, builder, observation, history, external):
     inputs = {}
     named_inputs = {builder.node_prefix + "input." + name: name for name in external}
     edges = []
-    reads = set()
     for node in nodes:
         observed_inputs = []
         connected = set()
+        supplied = {consumed[node.id].get(ref.tensor, origins.get(id(builder._tensors[ref.tensor]["obj"])))
+                    for ref in node.inputs}
+        for tid, source in consumed[node.id].items():
+            if source not in supplied:
+                index = len(node.inputs)
+                node.inputs.append(TensorRef(tid, role="input", index=index,
+                                             path=f"dispatch[{index}]", arg_name="tensor"))
+                supplied.add(source)
+        incoming_state = builder.state_reads.get(node.id, {})
+        bound_states = {tensor_view(builder._tensors[ref.tensor]["obj"]) for ref in node.inputs}
+        for tid, state in incoming_state.items():
+            view = tensor_view(builder._tensors[tid]["obj"])
+            if view not in bound_states:
+                node.inputs.append(TensorRef(tid, role="state", index=len(node.inputs),
+                                             path=state.key.path, arg_name=state.key.role))
+                bound_states.add(view)
         for index, ref in enumerate(node.inputs):
             tid = ref.tensor
             if tid not in metadata:
                 raise ValueError(f"{node.id} in[{index}] 未登记张量 {tid}")
             tensor = builder._tensors[tid]["obj"]
-            origin = origins.get(id(tensor))
+            binding = builder.port_witnesses[node.id].get(tensor_view(tensor))
+            if binding and ref.path is None:
+                ref.path = binding.get("path")
+                ref.arg_name = binding.get("arg_name")
+                ref.arg_source = "dispatch"
+            origin = consumed[node.id].get(tid, origins.get(id(tensor)))
+            prior = incoming_state.get(tid)
+            if prior is None and tensor_view(tensor) in history:
+                prior = next((s for s in incoming_state.values()
+                              if s is history[tensor_view(tensor)]), None)
             role, kind = "input", "data"
-            if origin and origin[0] != node.id:
+            if prior is not None:
+                producer, source_slot = prior.producer, prior.slot
+                role, kind = prior.key.role, "state"
+                ref.role = "state"
+                node.state.append(StateRef(role, "runtime_tensor", "read_write",
+                                           list(tensor.shape), metadata[tid]["dtype"]))
+            elif origin and origin[0] != node.id and origin in slots:
                 producer, source_slot = origin[0], slots[origin]
                 connected.add(origin)
                 if producer in named_inputs and producer not in inputs:
                     inputs[producer] = _make_input_node(producer, origin[1], metadata, named_inputs[producer])
                     inputs[producer].phase = node.phase
-            elif tensor_view(tensor) in history:
-                key, producer, source_slot = history[tensor_view(tensor)]
-                reads.add(key)
-                role, kind = key[1], "state"
-                ref.role = "state"
-                node.state.append(StateRef(role, "runtime_tensor", "read_write",
-                                           list(tensor.shape), metadata[tid]["dtype"]))
             elif tensor.numel() == 0:
                 node.attrs.setdefault("empty_inputs", []).append(tid)
                 observed_inputs.append(None)
@@ -58,9 +81,6 @@ def build_edges(nodes, builder, observation, history, external):
         if missing:
             raise ValueError(f"{node.id} 缺少轨迹实测的输入来源 {sorted(missing)}")
         node.attrs["observed_inputs"] = observed_inputs
-    unread = {value[0] for value in history.values()} - reads
-    if unread:
-        raise ValueError(f"decode 缺少逐层缓存读取 {sorted(unread)}")
     return edges, list(nodes) + list(inputs.values())
 
 
