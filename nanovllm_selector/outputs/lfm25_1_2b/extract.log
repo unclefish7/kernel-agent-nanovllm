@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/workspace/nanovllm_selector/extract/cli.py", line 54, in main
+    graph = extract_graph(
+            ^^^^^^^^^^^^^^
+  File "/workspace/nanovllm_selector/extract/api.py", line 69, in extract_graph
+    graph = _trace(model, config, batch_size=batch_size, seq_len=seq_len, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nanovllm_selector/extract/api.py", line 107, in _trace
+    cache = cache_tensors(past)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nanovllm_selector/extract/trace_io.py", line 14, in cache_tensors
+    raise ValueError(f"无法读取 {type(cache).__name__} 的逐层缓存")
+ValueError: 无法读取 Lfm2HybridConvCache 的逐层缓存
+[失败] 抽图过程中出错，见上方堆栈

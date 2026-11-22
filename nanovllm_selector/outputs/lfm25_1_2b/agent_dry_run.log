@@ -1,0 +1,11 @@
+usage: python -m nanovllm_selector.port.cli [-h] [--graph GRAPH] [--spec SPEC]
+                                            [--kernels KERNELS]
+                                            [--template TEMPLATE] [--out OUT]
+                                            [--dry-run] [--no-toolbox]
+                                            [--check-import]
+                                            [--engine-root ENGINE_ROOT]
+                                            [--api-key-env API_KEY_ENV]
+                                            [--api-base API_BASE]
+                                            [--model MODEL]
+                                            [--timeout TIMEOUT]
+python -m nanovllm_selector.port.cli: error: 找不到参考图：nanovllm_selector/outputs/lfm25_1_2b/graph.json

@@ -309,6 +309,8 @@ Llama 每层 14 个节点（没有 q/k norm），16 × 14 + 5 = 229；重放全�
 
 MiniCPM5-1B 已完成单卡端到端验收，报告包含计算图、生成的模型代码、完整词表分数对比，以及缓存换块与多结束词测试。[MiniCPM5-1B 验收报告](outputs/minicpm5_1b/README.md)
 
+LFM2.5-1.2B-Base 含 10 个短卷积层和 6 个注意力层。单卡已验证真实权重计算图、每请求卷积窗口、不同长度提示和双请求换序生成。报告列出逐值比对、生成过程中定位的误差及分块计算的验证范围。[LFM2.5 验收报告](outputs/lfm25_1_2b/README.md)
+
 ```bash
 # 容器内，工作目录 /workspace
 python -B -m unittest nanovllm_selector.test_extract          # 31 项，约 80 秒

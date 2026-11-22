@@ -1,0 +1,222 @@
+{
+  "model_type": "lfm2",
+  "layer_types": [
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv"
+  ],
+  "real_weights": false,
+  "seed": 17,
+  "device": "cpu",
+  "torch": "2.12.0+rocm10.0.0",
+  "transformers": "4.57.3",
+  "config_sha256": "15d6157fb6df3f8272e2fe90e18f57727ccf02a125c94469198b0f3281510185",
+  "engine": {
+    "cpu_interface_probe": true,
+    "error": "ValueError: 模型里只有 6 个模块带 KV cache，但 config 声明 16 层；少掉的层会读写未分配的 cache",
+    "assigned_kv_modules": 6,
+    "assigned_conv_modules": 0
+  },
+  "cache_class": "Lfm2HybridConvCache",
+  "extract_cache_error": "ValueError: 无法读取 Lfm2HybridConvCache 的逐层缓存",
+  "reference_prefix": {
+    "attention_length_after_crop": 3,
+    "conv_windows_unchanged_from_length_5": 10,
+    "conv_windows_different_from_clean_length_3": 10,
+    "cropped_vs_clean_next_max_abs": 5.005970478057861,
+    "clean_multitoken_vs_serial_last_max_abs": 5.818184852600098,
+    "clean_serial_vs_full_last_max_abs": 1.3232231140136719e-05
+  },
+  "activation_count_check": {
+    "name": "silu",
+    "expected": 0,
+    "actual": 16,
+    "ok": false,
+    "note": "激活模块数"
+  },
+  "has_conv_replay_rule": false,
+  "zero_first_conv_window_next_logits": {
+    "different_entries": 65535,
+    "max_abs_diff": 4.663145542144775,
+    "entries": 65536
+  },
+  "phases": [
+    {
+      "phase": "prefill",
+      "cached_length": 5,
+      "finite": true,
+      "max_abs_diff_to_full": 1.4901161193847656e-05,
+      "top1_matches_full": true,
+      "conv_shapes": {
+        "[1, 2048, 3]": 10
+      },
+      "key_shapes": {
+        "[1, 8, 5, 64]": 6
+      },
+      "value_shapes": {
+        "[1, 8, 5, 64]": 6
+      },
+      "conv1d_labels": {
+        "unknown": 10
+      },
+      "first_conv_nodes": [
+        {
+          "module": "model.layers.0.conv.in_proj",
+          "label": "matmul",
+          "operations": [
+            "aten.mm.default"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv",
+          "label": "unknown",
+          "operations": [
+            "aten._local_scalar_dense.default",
+            "aten.constant_pad_nd.default",
+            "aten.copy_.default",
+            "aten.gt.Scalar",
+            "aten.mul.Tensor",
+            "aten.split.Tensor"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv",
+          "label": "mul",
+          "operations": [
+            "aten.mul.Tensor"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv.conv",
+          "label": "unknown",
+          "operations": [
+            "aten.convolution.default"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv.out_proj",
+          "label": "matmul",
+          "operations": [
+            "aten.mm.default"
+          ]
+        }
+      ],
+      "unknown_labels": 20
+    },
+    {
+      "phase": "decode_1",
+      "cached_length": 6,
+      "finite": true,
+      "max_abs_diff_to_full": 1.33514404296875e-05,
+      "top1_matches_full": true,
+      "conv_shapes": {
+        "[1, 2048, 3]": 10
+      },
+      "key_shapes": {
+        "[1, 8, 6, 64]": 6
+      },
+      "value_shapes": {
+        "[1, 8, 6, 64]": 6
+      },
+      "conv1d_labels": {},
+      "first_conv_nodes": [
+        {
+          "module": "model.layers.0.conv.in_proj",
+          "label": "matmul",
+          "operations": [
+            "aten.mm.default"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv",
+          "label": "unknown",
+          "operations": [
+            "aten.mul.Tensor",
+            "aten._local_scalar_dense.default",
+            "aten.clamp.default",
+            "aten.copy_.default",
+            "aten.gt.Scalar",
+            "aten.index_put_.default",
+            "aten.roll.default",
+            "aten.split.Tensor",
+            "aten.sum.dim_IntList"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv.out_proj",
+          "label": "unknown",
+          "operations": [
+            "aten.bmm.default"
+          ]
+        }
+      ],
+      "unknown_labels": 20,
+      "layers_with_preserved_overlap": 10,
+      "layers_with_changed_last_slot": 10
+    },
+    {
+      "phase": "decode_2",
+      "cached_length": 7,
+      "finite": true,
+      "max_abs_diff_to_full": 1.2874603271484375e-05,
+      "top1_matches_full": true,
+      "conv_shapes": {
+        "[1, 2048, 3]": 10
+      },
+      "key_shapes": {
+        "[1, 8, 7, 64]": 6
+      },
+      "value_shapes": {
+        "[1, 8, 7, 64]": 6
+      },
+      "conv1d_labels": {},
+      "first_conv_nodes": [
+        {
+          "module": "model.layers.0.conv.in_proj",
+          "label": "matmul",
+          "operations": [
+            "aten.mm.default"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv",
+          "label": "unknown",
+          "operations": [
+            "aten.mul.Tensor",
+            "aten._local_scalar_dense.default",
+            "aten.clamp.default",
+            "aten.copy_.default",
+            "aten.gt.Scalar",
+            "aten.index_put_.default",
+            "aten.roll.default",
+            "aten.split.Tensor",
+            "aten.sum.dim_IntList"
+          ]
+        },
+        {
+          "module": "model.layers.0.conv.out_proj",
+          "label": "unknown",
+          "operations": [
+            "aten.bmm.default"
+          ]
+        }
+      ],
+      "unknown_labels": 20,
+      "layers_with_preserved_overlap": 10,
+      "layers_with_changed_last_slot": 10
+    }
+  ]
+}
