@@ -1,6 +1,7 @@
 """生成入口的证据门控与混合层上下文。只在内存里修改样本。"""
 import unittest
 import hashlib
+import re
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -29,6 +30,32 @@ def program_node(layer, shift):
     }
 
 
+def decode_projection(layer):
+    x, weight, y = (f"{prefix}{layer}" for prefix in ("x", "w", "y"))
+
+    def branch(batch, op):
+        # 不同样本有意复用张量号，但形状和权重视图不同。
+        dims = [1, 1, 4] if batch == 1 else [2, 4]
+        shapes = {x: dims, weight: [1, 4, 3] if batch == 1 else [4, 3], y: [*dims[:-1], 3]}
+        inputs = [{"index": 0, "tensor": x}]
+        outputs = [{"index": 0, "tensor": y}]
+        step = {"seq": layer + batch, "op": op, "args": [{"tensor": x}, {"tensor": weight}],
+                "kwargs": {}, "result": {"tensor": y}, "writes": []}
+        name = f"model.layers.{layer}.out_proj.weight"
+        return {"cases": [[batch, 5], [batch, 17 if batch == 1 else 11]],
+                "representative_case": [batch, 5], "inputs": inputs, "outputs": outputs,
+                "tensors": {t: {"shape": shape, "dtype": "float32"} for t, shape in shapes.items()},
+                "program": [step], "program_inputs": {x: {"kind": "input", "tensor": x},
+                                                     weight: {"kind": "state", "name": name}},
+                "program_state": {weight: name}, "program_replay": {"ok": True, "checked": 1, "total": 1}}
+
+    single, pair = branch(1, "aten.bmm.default"), branch(2, "aten.mm.default")
+    attrs = {key: single[key] for key in ("program", "program_inputs", "program_state", "program_replay")}
+    return {"id": f"D.L{layer}.out_proj", "phase": "decode", "op": "matmul",
+            "inputs": single["inputs"], "outputs": single["outputs"],
+            "attrs": {**attrs, "program_variants": [single, pair]}}
+
+
 class PromptContractsTest(unittest.TestCase):
     def test_no_call_when_graph_lacks_validation(self):
         graph = {"schema_version": "graph.v1", "nodes": [program_node(0, -1)]}
@@ -47,6 +74,13 @@ class PromptContractsTest(unittest.TestCase):
         graph["reconcile"]["replay"]["checked"] -= 1
         with self.assertRaisesRegex(ValueError, r"重放.*452.*453.*重新抽取"):
             build_sections(graph, {}, "index\n", "template\n")
+
+    def test_variants_require_probe_evidence_even_on_a_legacy_graph(self):
+        graph = load_graph(Path(__file__).parents[1] / "outputs/graph_qwen3/graph.json")
+        node = graph["nodes"][0]
+        node["attrs"]["program_variants"] = decode_projection(0)["attrs"]["program_variants"]
+        with self.assertRaisesRegex(ValueError, "program_variants.*shape_probes"):
+            generate_model(graph, {}, "index\n", "template\n", lambda _: self.fail("调用了模型"))
 
     def test_shared_program_keeps_operand_order_constant_and_writes(self):
         nodes = [program_node(i, shift) for i, shift in enumerate([-1, -1, -2])]
@@ -93,6 +127,58 @@ class PromptContractsTest(unittest.TestCase):
         self.assertIn('{"cases":[[1,5]],"shapes":[[5,12]]}', rendered)
         self.assertIn('{"cases":[[2,5]],"shapes":[[2,5,12]]}', rendered)
 
+    def test_decode_cases_select_their_own_program_and_weight_view(self):
+        nodes = [decode_projection(i) for i in (0, 3)]
+        tensors = {t: meta for n in nodes for t, meta in n["attrs"]["program_variants"][0]["tensors"].items()}
+        rendered = _render_graph({"nodes": nodes, "env": {"state_slots": []}, "tensors": tensors})
+        for cases, representative, op, shape in (
+            ("[[1,5],[1,17]]", "[1,5]", "aten.bmm.default", "[1,4,3]"),
+            ("[[2,5],[2,11]]", "[2,5]", "aten.mm.default", "[4,3]"),
+        ):
+            with self.subTest(cases=cases):
+                rows = [row for row in rendered.splitlines() if cases in row]
+                self.assertEqual(len(rows), 1)
+                self.assertIn(f"代表={representative}", rows[0])
+                program = re.search(r"\bP\d+\b", rows[0]).group()
+                recipe = re.search(rf"^{program} (.*?)(?=^P\d+ |^## |\Z)", rendered, re.M | re.S)[1]
+                self.assertIn(op, recipe)
+                layout = re.search(r"out_proj\.weight/(T\d+)", recipe)[1]
+                self.assertRegex(rendered, rf'(?m)^{layout} .*"shape":{re.escape(shape)}')
+                self.assertEqual(rendered.count(op), 1)
+
+    def test_variant_uses_its_own_producer_even_when_tensor_ids_agree(self):
+        node = decode_projection(0)
+        pair = node["attrs"]["program_variants"][1]
+        pair["program_inputs"]["x0"] = {
+            "kind": "producer", "tensor": "x0", "node": "D.L0.alternate_source",
+            "seq": 1, "step": 3, "result_index": 2,
+        }
+        rendered = _render_graph({"nodes": [node], "env": {"state_slots": []}})
+        self.assertIn("L.alternate_source.step3[2]", rendered)
+
+    @unittest.skipUnless(find_spec("torch") and find_spec("transformers"), "需要本地 CPU 抽图环境")
+    def test_generation_gate_checks_variant_samples_and_replay(self):
+        from nanovllm_selector.extract.shapes import profile_shapes
+        from nanovllm_selector.test_mixed_state import tiny_mixed_graph
+
+        graph = tiny_mixed_graph()
+        profile_shapes(graph, 1, 5, tiny_mixed_graph)
+        name = "D.L0.conv.out_proj"
+        self.assertIn("program_variants", graph.node(name).attrs)
+        sections = build_sections(graph, {}, "index\n", "template\n", exact=False)
+        self.assertIn("代表=[2,5]", sections["graph"])
+        for change in ("cases", "replay"):
+            with self.subTest(change=change):
+                data = load_graph(graph.to_json())
+                node = next(n for n in data["nodes"] if n["id"] == name)
+                pair = node["attrs"]["program_variants"][1]
+                if change == "cases":
+                    pair["cases"].pop()
+                else:
+                    pair["program_replay"]["checked"] -= 1
+                with self.assertRaisesRegex(ValueError, re.escape(name)):
+                    generate_model(data, {}, "index\n", "template\n", lambda _: self.fail("调用了模型"))
+
     def test_interleaved_nodes_keep_the_global_write_order(self):
         left, right = program_node(0, -1), program_node(0, -7)
         right["id"] = "L0.reader"
@@ -131,7 +217,7 @@ class PromptContractsTest(unittest.TestCase):
         self.assertNotIn(expected, _render_graph(graph))
 
     def test_incomplete_verified_artifact_is_rejected_before_call(self):
-        path = Path(__file__).parents[1] / "outputs/lfm25_1_2b/graph_weights.json"
+        path = Path(__file__).parents[1] / "outputs/lfm25_1_2b/graph_final.json"
         if not path.is_file():
             self.skipTest("需要本地已通过验证的混合图")
         for change in ("program_inputs", "producer", "readers", "update"):

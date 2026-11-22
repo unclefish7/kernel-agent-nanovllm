@@ -211,7 +211,7 @@ def _tensor_ids(value):
 
 
 def _program_text(node: dict, layer: int | None, layouts: _Catalog, tensors: dict,
-                  sources: dict) -> str:
+                  sources: dict | None) -> str:
     """只重命名配方内的张量变量。常量、参数、容器位置和写入顺序均参与比较。"""
     attrs = node["attrs"]
     prefix = _NODE_ADDRESS.fullmatch(node["id"])["phase"] or ""
@@ -230,11 +230,10 @@ def _program_text(node: dict, layer: int | None, layouts: _Catalog, tensors: dic
                     if result:
                         temp += 1
                         names[tid] = f"v{temp}"
-                    elif tid in inputs and free.get(tid, {}).get("kind") not in ("literal", "state"):
+                    elif (tid in inputs and free.get(tid, {}).get("kind") not in ("literal", "state")
+                          and (sources is not None or free[tid]["kind"] == "input")):
                         names[tid] = inputs[tid]
                     else:
-                        previous = sources.get(tid, [])
-                        before = bisect_left(previous, (step["seq"],))
                         binding = free.get(tid, {})
                         if binding.get("kind") == "literal":
                             source = _json(binding["value"])
@@ -242,13 +241,22 @@ def _program_text(node: dict, layer: int | None, layouts: _Catalog, tensors: dic
                             source = inputs[binding["tensor"]]
                         elif binding.get("kind") == "state":
                             source = _layer_path(binding["name"], layer)
+                        elif binding.get("kind") == "producer" and sources is None:
+                            owner = _node_address(binding["node"], prefix, layer)
+                            output = (f"step{binding['step']}[{binding['result_index']}]"
+                                      if "step" in binding else f"out{binding['output_slot']}")
+                            source = f"{owner}.{output}"
+                        elif binding.get("kind") == "external" and sources is None:
+                            source = "external=" + _json(binding)
                         elif tid in weights:
                             source = _layer_path(weights[tid], layer)
-                        elif before:
-                            _, owner, output = previous[before - 1]
-                            source = _node_address(owner, prefix, layer) + "." + output
                         else:
                             source = tid
+                            previous = sources.get(tid, []) if sources is not None else []
+                            before = bisect_left(previous, (step["seq"],))
+                            if before:
+                                _, owner, output = previous[before - 1]
+                                source = _node_address(owner, prefix, layer) + "." + output
                         names[tid] = f"x{len(bindings)}"
                         layout = layouts.intern(_json(_layout(tensors.get(tid, {}))))
                         bindings.append(f"{names[tid]}={source}/{layout}")
@@ -275,6 +283,22 @@ def _program_text(node: dict, layer: int | None, layouts: _Catalog, tensors: dic
 
 def _layout(meta: dict) -> dict:
     return {k: meta[k] for k in ("dtype", "shape", "stride", "offset") if k in meta}
+
+
+def _variant_text(node: dict, layer: int | None, layouts: _Catalog, programs: _Catalog) -> str:
+    rows = []
+    for variant in node["attrs"]["program_variants"]:
+        tensors = variant["tensors"]
+        branch = {"id": node["id"], "attrs": variant,
+                  "inputs": variant["inputs"], "outputs": variant["outputs"]}
+        recipe = programs.intern(_program_text(branch, layer, layouts, tensors, sources=None))
+        ports = []
+        for direction in ("inputs", "outputs"):
+            refs = [layouts.intern(_json(_layout(tensors[r["tensor"]]))) for r in variant[direction]]
+            ports.append(("in=" if direction == "inputs" else "out=") + _json(refs))
+        rows.append(f"  样本={_json(variant['cases'])} 代表={_json(variant['representative_case'])} "
+                    f"{recipe} {' '.join(ports)}")
+    return "\n" + "\n".join(rows)
 
 
 def _state_contracts(records: list[dict]) -> list[str]:
@@ -370,6 +394,7 @@ def _render_program_graph(graph: dict) -> list[str]:
     """分别对张量布局、原语和整层接口去重，保留每次执行指向的契约。"""
     tensors = graph.get("tensors", {})
     layouts, programs, contracts, blocks = _Catalog("T"), _Catalog("P"), _Catalog("N"), _Catalog("C")
+    variants = _Catalog("V")
     sources = defaultdict(list)
     for node in graph.get("nodes", []):
         for i, step in enumerate(node.get("attrs", {}).get("program", [])):
@@ -420,6 +445,8 @@ def _render_program_graph(graph: dict) -> list[str]:
             row.append("state=" + _json(state))
         if attrs.get("program"):
             row.append(programs.intern(_program_text(node, layer, layouts, tensors, sources)))
+        if "program_variants" in attrs:
+            row.append(variants.intern(_variant_text(node, layer, layouts, programs)))
         phase = node.get("phase", "prefill")
         contract = contracts.intern(" ".join(row))
         program = attrs.get("program") or []
@@ -445,8 +472,13 @@ def _render_program_graph(graph: dict) -> list[str]:
             labels = [f"L{i}({layer_types[i]})" if i < len(layer_types) else f"L{i}" for i in indices]
             order.append(f"{','.join(labels) or '全局'}={block}")
         lines.append(f"- {phase} " + " → ".join(order))
-    lines += ["", "## 2.5 节点与依赖", *blocks.lines(), *contracts.lines(),
-              "", "## 2.6 原语配方（从上往下执行）", *programs.lines(),
+    lines += ["", "## 2.5 节点与依赖", *blocks.lines(), *contracts.lines()]
+    if variants.entries:
+        lines += ["", "### 按实测样本选择原语配方",
+                  "V 按（批大小 B，提示长度 S）列出观测样本、代表样本的配方与端口布局。"
+                  "匹配样本时按该分支的 P 执行。节点切片和全局顺序来自基础录制。"
+                  "样本分组的适用范围仅限表内观测。", *variants.lines()]
+    lines += ["", "## 2.6 原语配方（从上往下执行）", *programs.lines(),
               "", "## 2.7 张量布局与维度样本", *layouts.lines(),
               "", "## 2.8 跨步状态（阶段/层=本步张量）",
               *_state_contracts(graph.get("env", {}).get("state_slots", []))]
@@ -863,11 +895,15 @@ def _check_agent_graph(graph: dict) -> None:
     total = sum(len(n.get("instances") or []) or 1 for n in compute)
     if not total or replay.get("checked") != total:
         raise ValueError(f"重放覆盖 {replay.get('checked')} 个节点，图中有 {total} 个计算实例")
+    env = graph.get("env") or {}
+    if not env.get("shape_probes"):
+        for node in nodes:
+            if "program_variants" in node.get("attrs", {}):
+                raise ValueError(f"{node['id']} 的 program_variants 缺少逐样本校验所需的 shape_probes")
     problems = Graph.from_dict(graph).validate()
     if problems:
         raise ValueError("；".join(problems[:5]))
 
-    env = graph.get("env") or {}
     modern = (version != "graph.v1" or "state_slots" in env
               or any("program" in n.get("attrs", {}) for n in compute))
     if not modern:
