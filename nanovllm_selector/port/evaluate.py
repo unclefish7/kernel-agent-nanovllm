@@ -8,8 +8,10 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import sys
@@ -69,6 +71,8 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
     b = expected.detach().float()
     if a.shape != b.shape or a.ndim != 1 or a.numel() == 0:
         return {"ok": False, "reason": f"形状不一致：{tuple(a.shape)} vs {tuple(b.shape)}"}
+    if not torch.isfinite(a).all() or not torch.isfinite(b).all():
+        return {"ok": False, "exact": False, "reason": "词表分数含 NaN 或无穷大"}
     cosine = torch.nn.functional.cosine_similarity(a, b, dim=0).item()
     max_abs = (a - b).abs().max().item()
     argmax_match = int(a.argmax()) == int(b.argmax())
@@ -84,7 +88,7 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
         "top5_expected": b.topk(min(5, b.numel())).indices.tolist(),
     }
     if exact:
-        report["ok"] = report["exact"] and bool(torch.isfinite(a).all())
+        report["ok"] = report["exact"]
     else:
         report["ok"] = bool(argmax_match and max_abs <= max_abs_tol and cosine >= min_cosine)
     return report
@@ -107,45 +111,192 @@ def reference_logits(model_dir: str, ids: list[int],
 
 
 def reference_logits_multi(model_dir: str, sequences: list[list[int]]) -> list[torch.Tensor]:
-    """每个序列一条 prompt，取各自最后一位的 logits；拼成最长的那个再按位置取。"""
+    """只有同一提示的真实前缀才能共享一次前向。"""
+    if not sequences or any(not seq for seq in sequences):
+        raise ValueError("HF 参照需要非空提示")
     longest = max(sequences, key=len)
+    if any(seq != longest[:len(seq)] for seq in sequences):
+        return [reference_logits(model_dir, seq, [len(seq) - 1])[0] for seq in sequences]
     return reference_logits(model_dir, longest, [len(s) - 1 for s in sequences])
 
 
-@torch.inference_mode()
-def reference_steps(model_dir, sequences, prefix_lengths, generated, decode_steps):
-    """HF 按引擎实际复用的前缀长度独立计算缓存，不读取引擎的缓存数值。"""
-    import copy
-    import inspect
-    from transformers import AutoModelForCausalLM
+def _hf_consistency(actual, expected, dtype):
+    """不同输入形状的 HF 自检允许舍入误差。此容差只用于参照内部。"""
+    tolerance = max(1e-4, 4 * torch.finfo(dtype).eps)
+    if actual.shape != expected.shape:
+        return {"ok": False, "reason": f"HF 输出形状不同 {actual.shape} / {expected.shape}"}
+    a, b = actual.float(), expected.float()
+    delta = (a - b).abs().max().item()
+    limit = tolerance * max(b.abs().max().item(), 1e-6)
+    finite = bool(torch.isfinite(a).all() and torch.isfinite(b).all())
+    return {"ok": finite and delta <= limit, "max_abs_diff": delta if finite else None,
+            "limit": limit if finite else None}
 
-    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16).cuda().eval()
-    output_options = {"logits_to_keep": 1} if "logits_to_keep" in inspect.signature(model.forward).parameters else {}
-    prompts = [*sequences, max(sequences, key=len)] if decode_steps else sequences
+
+def _full_kv(cache):
+    from transformers.cache_utils import DynamicCache, DynamicLayer
+
+    return (type(cache) is DynamicCache and bool(cache.layers)
+            and vars(cache).keys() <= {"layers", "layer_class_to_replicate", "offloading"}
+            and all(type(layer) is DynamicLayer and vars(layer).keys() <= {
+                "keys", "values", "is_initialized", "dtype", "device"
+            } for layer in cache.layers))
+
+
+def _kv_snapshot(prior, history_length, prefix):
+    """保留原来分段计算的逐位置 K/V；严格限制为没有额外状态的完整 KV 层。"""
+    if not _full_kv(prior):
+        raise ValueError("HF 命中来源含有无法准确快照的状态")
+    snapshot = copy.deepcopy(prior)
+    for layer in snapshot.layers:
+        k, v = layer.keys, layer.values
+        if (not layer.is_initialized or k.ndim != 4 or v.ndim != 4
+                or k.shape[:3] != v.shape[:3] or k.size(-2) != history_length):
+            raise ValueError("HF 完整 KV 页长度或形状与来源历史不符")
+        layer.keys = k[..., :prefix, :]
+        layer.values = v[..., :prefix, :]
+    return snapshot
+
+
+def _probe_reuse(call, tokens, info, model_dtype):
+    """在独立短前缀上一次只改变一个条件。探针缓存与验收缓存互不共享。"""
+    n = len(tokens) - 2
+    if n < 1:
+        for name in ("crop", "multi_token"):
+            info[name] = {"ok": None, "reason": "探针至少需要三个词元"}
+        return
+    prefix, suffix = tokens[:n], tokens[n:]
+    def clean_first():
+        return call(suffix[:1], call(prefix).past_key_values)
+
+    try:
+        cropped = call(tokens).past_key_values
+        cropped.crop(n)
+        resumed = call(suffix[:1], cropped)
+        clean = clean_first().logits[0, -1]
+        info["crop"] = _hf_consistency(resumed.logits[0, -1], clean, model_dtype or clean.dtype)
+    except Exception as exc:
+        info["crop"] = {"ok": False, "reason": f"{type(exc).__name__}: {exc}"}
+    try:
+        first = clean_first()
+        serial = [first.logits[0, -1].clone()]
+        second = call(suffix[1:], first.past_key_values)
+        serial.append(second.logits[0, -1])
+        together = call(suffix, call(prefix).past_key_values, keep=0)
+        info["multi_token"] = _hf_consistency(together.logits[0], torch.stack(serial), model_dtype or serial[0].dtype)
+    except Exception as exc:
+        info["multi_token"] = {"ok": False, "reason": f"{type(exc).__name__}: {exc}"}
+    info["probe_prefix_tokens"] = n
+
+
+@torch.inference_mode()
+def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
+    """按请求顺序计算各提示末位、最后一个提示的逐词续写。仅接受词元与命中长度。"""
+    if not prompts or len(prefix_lengths) != len(prompts):
+        raise ValueError("前缀长度记录与实际请求数不符")
+    supports_keep = "logits_to_keep" in inspect.signature(model.forward).parameters
+    model_dtype = getattr(model, "dtype", None)
+
+    def call(ids, past=None, *, keep=1, use_cache=True):
+        options = {"logits_to_keep": keep} if supports_keep else {}
+        return model(input_ids=torch.tensor([ids], device=model.device), past_key_values=past,
+                     use_cache=use_cache, **options)
+
+    def score(output):
+        row = output.logits[0, -1]
+        if row.ndim != 1 or not row.numel() or not torch.isfinite(row).all():
+            raise ValueError("HF 未返回有限的完整词表分数")
+        return row.detach().float().cpu().clone()
+
+    def check_history(out, history):
+        full = call(history, use_cache=False)
+        check = _hf_consistency(out.logits[0, -1], full.logits[0, -1], model_dtype or out.logits.dtype)
+        if not check["ok"]:
+            raise ValueError(f"HF 逐词缓存与从头计算在长度 {len(history)} 处不一致：{check}")
+
+    sample = max(prompts, key=len)[:8]
+    cache = call(sample).past_key_values
+    if cache is None and (continuation or any(prefix_lengths)):
+        raise ValueError("HF 未返回续写所需的历史缓存")
+    full_kv = _full_kv(cache)
+    diagnostics.update(cache_class=type(cache).__name__,
+                       prefix_strategy="full_kv_snapshot" if full_kv else "rebuild_and_step",
+                       reason="逐层完整 DynamicLayer 键值历史" if full_kv else "缓存含其他或未知状态，独立重建目标前缀")
+    _probe_reuse(call, sample, diagnostics, model_dtype)
+    if full_kv and any(diagnostics[k]["ok"] is False for k in ("crop", "multi_token")):
+        diagnostics["reason"] = ("跨形状探针分数不一致。按已验证的完整 KV 结构复制原分段产生的逐位置键值，"
+                                 "保持实际命中的输入形状进行 HF 评分")
     saved = []
     prefill, decode = [], []
-    if len(prefix_lengths) != len(prompts):
-        raise ValueError("前缀长度记录与实际请求数不符")
     for seq, prefix in zip(prompts, prefix_lengths):
         if not 0 <= prefix < len(seq):
             raise ValueError(f"非法前缀长度 {prefix}，本次提示长度 {len(seq)}")
-        past = None
-        if prefix:
-            prior = next((cache for tokens, cache in reversed(saved)
-                          if len(tokens) >= prefix and tokens[:prefix] == seq[:prefix]), None)
+        if not prefix:
+            out = call(seq)
+        elif full_kv:
+            # 快照保留产生这些页时的实际分段、矩阵形状和舍入。
+            prior = next(((tokens, past) for tokens, past in reversed(saved) if tokens[:prefix] == seq[:prefix]), None)
             if prior is None:
-                raise ValueError(f"HF 没有该请求前 {prefix} 个词元的独立缓存")
-            past = copy.deepcopy(prior)
-            past.crop(prefix)
-        out = model(input_ids=torch.tensor([seq[prefix:]], device="cuda"),
-                    past_key_values=past, use_cache=True, **output_options)
-        prefill.append(out.logits[0, -1].float().cpu())
-        saved.append((seq, out.past_key_values))
-    for token in generated[:decode_steps]:
-        out = model(input_ids=torch.tensor([[token]], device="cuda"),
-                    past_key_values=out.past_key_values, use_cache=True, **output_options)
-        decode.append(out.logits[0, -1].float().cpu())
+                raise ValueError(f"HF 缺少匹配前 {prefix} 个词元的完整 KV 快照")
+            tokens, past = prior
+            out = call(seq[prefix:], _kv_snapshot(past, len(tokens), prefix))
+        else:
+            out = call(seq[:prefix])
+            for token in seq[prefix:]:
+                out = call([token], out.past_key_values)
+        if full_kv:
+            saved.append((seq, out.past_key_values))
+        else:
+            check_history(out, seq)
+        prefill.append(score(out))
+    history = list(prompts[-1])
+    for token in continuation:
+        history.append(token)
+        out = call([token], out.past_key_values)
+        if not full_kv:
+            check_history(out, history)
+        decode.append(score(out))
     return prefill, decode
+
+
+def reference_steps(model_dir, sequences, prefix_lengths, generated, decode_steps, *, diagnostics=None):
+    from transformers import AutoModelForCausalLM
+
+    if len(generated) < decode_steps:
+        raise ValueError("生成历史短于要求验证的步数")
+    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, local_files_only=True).cuda().eval()
+    prompts = [*sequences, max(sequences, key=len)] if decode_steps else sequences
+    return reference_trace(model, prompts, prefix_lengths, generated[:decode_steps],
+                           {} if diagnostics is None else diagnostics)
+
+
+def engine_prefix_reuse(scheduler):
+    manager = scheduler.block_manager
+    enabled = manager is not None and getattr(manager, "reuse_prefix", True)
+    reason = getattr(scheduler, "prefix_cache_disabled_reason", None)
+    return {"enabled": enabled, "block_size": scheduler.block_size,
+            "reason": reason or ("完整 KV 页可按前缀复用" if enabled else "无可复用的 KV 页")}
+
+
+def check_prefix_hits(prompts, lengths, policy, *, require_kv_hits=False):
+    """检查串行请求的观测值。上一请求的共同完整页仍应可用。"""
+    if len(lengths) != len(prompts):
+        raise ValueError("引擎记录的前缀长度数量与请求数不同")
+    for i, (tokens, hit) in enumerate(zip(prompts, lengths)):
+        if not 0 <= hit < len(tokens):
+            raise ValueError(f"引擎报告非法命中长度 {hit}，提示长度 {len(tokens)}")
+        if not policy["enabled"]:
+            if hit:
+                raise ValueError(f"引擎已禁用前缀复用但报告命中 {hit} 个词元")
+            if not require_kv_hits:
+                continue
+        block = policy["block_size"]
+        if hit % block or (hit and not any(p[:hit] == tokens[:hit] for p in prompts[:i])):
+            raise ValueError(f"引擎报告的 {hit} 个已缓存词元没有匹配的完整页")
+        if i and hit + block < len(tokens):
+            end = hit + block
+            if prompts[i - 1][:end] == tokens[:end]:
+                raise ValueError(f"共同 KV 页仅命中 {hit} 个词元，至少应命中 {end}")
 
 
 def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
@@ -231,7 +382,8 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
                 decode["ids"] = list(seq) + generated
                 decode["generated"] = generated
                 decode["logits"] = [item[0] for item in captured[1:decode_steps + 1]]
-            return {"prefill": prefill, "decode": decode, "prefix_lengths": prefix_lengths}
+            return {"prefill": prefill, "decode": decode, "prefix_lengths": prefix_lengths,
+                    "prefix_reuse": engine_prefix_reuse(llm.scheduler)}
         finally:
             atexit.unregister(llm.exit)
             llm.exit()
@@ -275,11 +427,11 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
     # 它们读这个环境变量重放“候选登记”，否则只认 ARCH 里内置的 Qwen3。
     os.environ["NANOVLLM_MODEL_FILE"] = str(candidate)
 
-    report["stage"] = "run"
+    report["stage"] = "input"
     try:
         from transformers import AutoTokenizer
 
-        tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True, local_files_only=True)
         text = prompt_file.read_text(encoding="utf-8") if prompt_file is not None else FILLER_TEXT
         report["prompt_file"] = str(prompt_file) if prompt_file is not None else None
         report["prompt_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -296,21 +448,32 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
             if exact:
                 torch.use_deterministic_algorithms(True)
             report["deterministic_algorithms"] = torch.are_deterministic_algorithms_enabled()
+            report["stage"] = "run"
             eng = engine_run(cls, model_dir, sequences, arch or cls.__name__,
                              max_model_len=longest + decode_steps + 64, decode_steps=decode_steps, tp=tp)
+            report["prefix_reuse"] = eng["prefix_reuse"]
+            report["cached_prefix_tokens"] = eng["prefix_lengths"]
+            prompts = sequences + ([max(sequences, key=len)] if decode_steps else [])
+            check_prefix_hits(prompts, eng["prefix_lengths"], eng["prefix_reuse"])
+            decode_logits = eng["decode"]["logits"]
+            if len(eng["prefill"]) != len(lengths) or len(decode_logits) != decode_steps:
+                raise ValueError("引擎捕获的分数数量与请求的步数不同")
+            report["stage"] = "reference"
+            report["reference"] = {}
             expected_prefill, expected_decode = reference_steps(
-                model_dir, sequences, eng["prefix_lengths"], eng["decode"].get("generated", []), decode_steps
+                model_dir, sequences, eng["prefix_lengths"], eng["decode"].get("generated", []), decode_steps,
+                diagnostics=report["reference"],
             )
         finally:
             torch.set_deterministic_debug_mode(previous_mode)
-        decode_logits = eng["decode"]["logits"]
         actual_ids = eng["decode"]["ids"] or max(sequences, key=len)
         start = longest
-        report["cached_prefix_tokens"] = eng["prefix_lengths"]
         generation_reference = expected_prefill.pop() if decode_steps else None
-        if (len(eng["prefill"]) != len(lengths) or len(expected_prefill) != len(lengths)
-                or len(decode_logits) != decode_steps or len(expected_decode) != decode_steps):
-            raise ValueError("捕获或参照的分数数量与请求的步数不同")
+        if len(expected_prefill) != len(lengths) or len(expected_decode) != decode_steps:
+            raise ValueError("参照分数数量与请求的步数不同")
+        if report["reference"].get("prefix_strategy") == "full_kv_snapshot" and not eng["prefix_reuse"]["enabled"]:
+            report["stage"] = "run"
+            check_prefix_hits(prompts, eng["prefix_lengths"], eng["prefix_reuse"], require_kv_hits=True)
     except Exception:
         report["error"] = traceback.format_exc()[-6000:]
         return _finish(report, started)
@@ -393,6 +556,14 @@ def evaluate(model_dir: str, candidate: Path, arch: str | None = None,
 
 def _finish(report: dict, started: float) -> dict:
     report["elapsed"] = round(time.time() - started, 2)
+    if report["ok"]:
+        report["outcome"] = "passed"
+    elif report["stage"] == "reference":
+        report["outcome"] = "reference_unreliable"
+    elif report["stage"] in ("input", "save_logits"):
+        report["outcome"] = "evaluation_error"
+    else:
+        report["outcome"] = "candidate_failed"
     return report
 
 
