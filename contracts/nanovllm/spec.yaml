@@ -1,7 +1,8 @@
 # nano-vLLM 引擎规约
 #
 # 给"写 models/<model>.py 的 agent"的引擎侧材料。
-# 三段彼此独立，不互相索引：
+#
+#   capabilities —— 引擎能力和当前缺口
 #   must     —— 必须成立的条件（否定会被运行时揭穿）
 #   toolbox  —— 引擎提供的 SDK，可以用来满足 must，也可以不用
 #   context  —— 一次前向里能读到的批信息，源码里看不出来的部分
@@ -11,10 +12,28 @@
 meta:
   engine: nano-vLLM
   source_root: nano-vllm/nanovllm
-  commit: 04ea53a899650326fd1a3f90350d9fc83b8130e5
+  commit: 285e898ba4acc856182a1f82607cbcc3b8fe681e  # 工作区修改的基线
   scope: "models/<model>.py 与引擎之间的接口"
   note: >
-    每一条都带源码位置。与源码冲突时以源码为准，并回来改本文件。
+    基于上述子模块版本及工作区的请求状态接口。与源码冲突时以源码为准。
+
+capabilities:
+  - id: paged_kv
+    supported: true
+    detail: 同时暴露 k_cache、v_cache 的模块按实际个数分配分页 KV，沿用全模型统一的每 rank KV 头数、头维与模型 dtype。
+  - id: fixed_request_state
+    supported: true
+    detail: >-
+      每个模块可声明多个不同形状、dtype 的固定状态，可与分页 KV 共存，也可独立使用。
+      从 nanovllm.layers.request_state 导入 RequestStateSpec、read_request_state、write_request_state。
+      在模块构造时定义 self.request_state_specs，如 {"window": RequestStateSpec((width, 3)), "count": RequestStateSpec((), torch.int64)}。
+      在 forward 中按本轮请求顺序读取 rows = read_request_state(self, "window")，计算后调用 write_request_state(self, "window", rows)。
+  - id: fixed_state_prefix_snapshot
+    supported: false
+    detail: >-
+      引擎只保存各请求当前的固定状态，没有逐块快照。任一模块声明固定状态后，整个模型禁用跨请求前缀复用。
+      原因可读 runner.config.prefix_cache_disabled_reason 或 scheduler.prefix_cache_disabled_reason。
+      纯 KV 模型此值为 None，继续复用完整 KV 前缀块。
 
 # ---------------------------------------------------------------------------
 must:
@@ -29,8 +48,8 @@ must:
       没有 use_cache。返回的 hidden 是 [T, hidden]（T 是本轮所有请求的 token 总数），
       不含 logits；logits 由 compute_logits 单独算。
     evidence:
-      - engine/model_runner.py:207   # logits = self.model.compute_logits(self.model(input_ids, positions))
-      - engine/model_runner.py:221   # CUDA graph 路径同样是这两步
+      - engine/model_runner.py:273   # logits = self.model.compute_logits(self.model(input_ids, positions))
+      - engine/model_runner.py:299   # CUDA graph 路径同样是这两步
       - models/qwen3.py:205
       - models/qwen3.py:212
 
@@ -41,8 +60,8 @@ must:
       读取时的物理块号由 block_tables 给出。模型不得自己缓存 K/V，
       也不得假设 cache 是连续存放的。
     evidence:
-      - engine/model_runner.py:112   # allocate_kv_cache：一次性分配 (2, layers, blocks, block_size, kv_heads, head_dim)
-      - engine/model_runner.py:126   # 按 hasattr(module, "k_cache") 把每层切片挂到模块上
+      - engine/model_runner.py:141   # 实际 KV 模块数决定每块字节数与分配形状
+      - engine/model_runner.py:173   # 把每层切片挂到模块上
       - layers/attention.py:79       # Attention.forward 是唯一的读/写入口
       - layers/attention.py:47       # store_kvcache：按 slot_mapping 写入
 
@@ -55,8 +74,8 @@ must:
       （逐请求拆开的写法只允许作为兜底路径，如 Attention.forward_torch）。
       prefill 与 decode 共用同一个 forward，用 is_prefill 分流。
     evidence:
-      - engine/model_runner.py:138   # prepare_prefill：多个请求的 token 直接 extend 进一个 list
-      - engine/model_runner.py:181   # prepare_decode：每个请求恰好 1 个 token
+      - engine/model_runner.py:198   # prepare_prefill：多个请求的 token 直接 extend 进一个 list
+      - engine/model_runner.py:244   # prepare_decode：每个请求恰好 1 个 token
       - utils/context.py:6
 
   - id: M4
@@ -73,14 +92,19 @@ must:
       - layers/linear.py:26          # 构造时把 weight_loader 挂到参数上
 
   - id: M5
-    title: 除 KV cache 外不留跨 step 状态
-    statement: >
-      模型不能在两次 forward 之间保存随请求变化的东西——缓存的 mask、按请求的中间
-      结果、累计计数都不行。同一组模块会被连续调用，且 decode 阶段会被 CUDA graph
-      重放（捕获时只执行一次），任何 Python 侧的状态都会与真实步数脱节。
+    title: 跨步请求状态的所有权与恢复
+    statement: >-
+      分页 KV 和已声明的固定形状张量由引擎保存。每个固定状态属于一个模块实例和一个请求，首次预填读到全零。
+      read_request_state 返回本轮每个请求一行的副本，模型必须用 write_request_state 显式写回。
+      分段预填要按 cu_seqlens_q 切分输入，从各自的旧状态开始处理本段所有词元，写回各段末态。
+      decode 一行对应一个请求的一个新词元。批次可以重排，批内行号只在当前 forward 有效。
+      释放和抢占归还槽；被抢占请求从零状态重算其全部词元。模型不得在 Python 属性中暂存按请求变化的张量或计数。
+      图捕获与重放期间使用设备上的槽索引，decode 的状态计算须支持静态批形状和设备端索引。
     evidence:
-      - engine/model_runner.py:233   # capture_cudagraph：捕获一次，之后 replay
-      - engine/model_runner.py:206   # decode 且 batch 较小时走 graph 路径
+      - layers/request_state.py:26
+      - engine/scheduler.py:86
+      - engine/model_runner.py:181
+      - engine/model_runner.py:271
 
 # ---------------------------------------------------------------------------
 toolbox:
@@ -91,9 +115,38 @@ toolbox:
   - name: get_context
     kind: state
     signature: "get_context() -> Context"
-    source: utils/context.py:18
+    source: utils/context.py:25
     gives: 本轮批信息，字段见 context 段
     notes: 全局单例；prepare_prefill / prepare_decode 写入，一步结束后 reset_context
+
+  - name: RequestStateSpec
+    kind: memory
+    signature: "RequestStateSpec(shape: tuple[int, ...], dtype: torch.dtype | None = None)"
+    source: layers/request_state.py:13
+    gives: >-
+      在模块 __init__ 中设置 self.request_state_specs（非空字符串名到 RequestStateSpec 的 dict）。
+      单请求、本 rank 的 shape 使用正整数元组，标量为 ()，shape 不含批维。dtype 默认为模型 dtype。
+    notes: >-
+      从 nanovllm.layers.request_state 导入。状态名在模块实例内唯一。引擎按各声明的元素数和 dtype
+      为 max_num_seqs 个请求槽及图填充槽分配内存，warmup 后预留瞬时峰值，剩余预算分给分页 KV。
+
+  - name: read_request_state
+    kind: memory
+    signature: "read_request_state(module: nn.Module, name: str) -> Tensor[B, *shape]"
+    source: layers/request_state.py:26
+    gives: 从 nanovllm.layers.request_state 导入。在声明模块的 forward 中传 self，得到按当前批次请求顺序排列的副本。
+    notes: B 是请求行数，prefill 的输入共有 T 个词元。该副本上的原地修改需要显式写回才能跨步生效。
+
+  - name: write_request_state
+    kind: memory
+    signature: "write_request_state(module: nn.Module, name: str, value: Tensor[B, *shape]) -> None"
+    source: layers/request_state.py:31
+    gives: 从 nanovllm.layers.request_state 导入。在 forward 内将每个请求的新状态写回对应槽。
+    notes: >-
+      value 的 dtype、设备须与读出的状态相同。若 decode 输入 x 是每请求一个 [width] 采样，
+      可写 write_request_state(self, "window", torch.cat((rows[..., 1:], x.unsqueeze(-1)), dim=-1))。
+      图补齐的每行有独立的临时状态槽，引擎将虚拟请求的有效长度设为 1、位置设为 0。
+      带分页 KV 时，虚拟请求读预留的只读零页，写槽编号为 -1。
 
   - name: store_kvcache
     kind: memory
@@ -220,8 +273,8 @@ context:
 
   access: "from nanovllm.utils.context import get_context; ctx = get_context()"
   built_by:
-    - engine/model_runner.py:138   # prepare_prefill
-    - engine/model_runner.py:181   # prepare_decode
+    - engine/model_runner.py:198   # prepare_prefill
+    - engine/model_runner.py:244   # prepare_decode
   fields:
     - name: is_prefill
       type: bool
@@ -249,8 +302,8 @@ context:
       meaning: 本轮 k 的最大长度
 
     - name: slot_mapping
-      type: "int64[T]"
-      when: prefill / decode 都有
+      type: "int32[T]"
+      when: 使用分页 KV 的实际 prefill / decode；warmup 或纯固定状态模型可为空张量
       meaning: 第 i 个 token 写入 cache 的物理下标 = block_id * block_size + 块内偏移
 
     - name: context_lens
@@ -260,5 +313,12 @@ context:
 
     - name: block_tables
       type: "int32[N, 最大块数]"
-      when: decode 必有；prefill 只在分块或前缀命中时
+      when: 使用分页 KV 时 decode 必有，prefill 只在分块续算或前缀命中时存在
       meaning: 每个请求占用的物理块号列表
+
+    - name: request_slots
+      type: "int64[B] | None"
+      when: 声明固定请求状态的模型在 prefill、decode 和图捕获中可用，纯 KV 时为 None
+      meaning: >-
+        第 i 行请求的物理状态槽，与 slot_mapping 的每词元 KV 位置独立。
+        forward 通过 read_request_state / write_request_state 自动使用此映射。
