@@ -19,7 +19,7 @@ from .recorder import record_forward
 from .runtime_state import PreviousState, restore_buffers, written_buffers
 from .checks import check_invariants
 from .replay import replay_nodes
-from .reconcile import reconcile
+from .reconcile import reconcile, recorded_matmul_calls
 from .schema import Graph
 from .template import fold, layer_index, template_id_of
 
@@ -97,6 +97,7 @@ def _trace_model(model, config, *, dtype, device, batch_size, seq_len, phases, c
     active_buffers = set()
     phase_checks, phase_stats, problems, failures, skipped = [], {}, [], [], []
     replay_checked = dispatch_count = module_calls = offset = 0
+    matmul_calls_by_phase = {}
     past = None
     for step in range(counts):
         phase = "prefill" if step == 0 else ("decode" if step == 1 else f"decode_{step}")
@@ -109,6 +110,8 @@ def _trace_model(model, config, *, dtype, device, batch_size, seq_len, phases, c
         recording, output = record_forward(model, ids, past_key_values=past,
                                            cache_position=cache_position, seq_offset=offset)
         offset = recording._seq
+        if reconcile_graph:
+            matmul_calls_by_phase[phase] = recorded_matmul_calls(recording, config)
         builder = GraphBuilder(model, recording, config, dtype, prefix.lower().rstrip("."), prefix)
         nodes = builder.build(phase)
         past = getattr(output, "past_key_values", None)
@@ -180,7 +183,8 @@ def _trace_model(model, config, *, dtype, device, batch_size, seq_len, phases, c
         dispatch_count += len(recording.dispatches)
         module_calls += len(recording.calls)
 
-    report = (reconcile(instances, all_nodes, edges, model, config) if reconcile_graph
+    report = (reconcile(instances, all_nodes, edges, model, config,
+                        matmul_calls_by_phase=matmul_calls_by_phase) if reconcile_graph
               else {"ok": True, "checks": [], "stats": {}})
     structure = {}
     for node in instances:

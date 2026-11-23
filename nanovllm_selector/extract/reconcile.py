@@ -1,15 +1,24 @@
-"""对账：用"模块树的已知数字"去校验"执行轨迹重建出来的图"。
-
-这是整条流程里唯一能自动发现"漏了/连错了"的环节：
-如果图里 matmul 的个数和模块树里 Linear 的个数对不上，说明分解或建边有问题。
-"""
+"""用模块树、每次前向的调用和原语记录，独立核对图上的节点。"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from itertools import groupby, zip_longest
+
 import torch.nn as nn
 
+from .decompose import TRANSPARENT, classify_ops
 from .dispatch_program import PRIMITIVES
-from .schema import Edge, Graph, Node
+from .schema import Edge, Node
+
+_MATRIX_OPS = {"aten.mm.default", "aten.bmm.default", "aten.addmm.default",
+               "aten.baddbmm.default", "aten.matmul.default"}
+
+
+@dataclass
+class MatmulCalls:
+    projections: list[tuple[str, int, int]]
+    dispatches: list[tuple[int, str]]
 
 PLAN_EXPECT_QWEN3 = {
     "modules": 427,
@@ -35,6 +44,60 @@ def _count_class(model, pred) -> int:
     return sum(1 for _, m in model.named_modules() if pred(m))
 
 
+def _scoped_dispatches(rec):
+    """按 hook 的实际起止序号，把每条原语交给当时最内层的一次调用。"""
+    calls = iter(rec.calls)
+    upcoming = next(calls, None)
+    stack = []
+    for d in rec.dispatches:
+        while upcoming is not None and upcoming.seq_start < d.seq:
+            stack.append(upcoming)
+            upcoming = next(calls, None)
+        while stack and stack[-1].seq_end < d.seq:
+            stack.pop()
+        if stack:
+            yield stack[-1].seq_start, d
+
+
+def recorded_matmul_calls(rec, config) -> MatmulCalls:
+    """只保留投影所在的模块路径和执行区间，不跨阶段持有录制张量。"""
+    modules = dict(rec.model.named_modules())
+    expected = [(c.path or "R", c.seq_start, c.seq_end) for c in rec.calls
+                if isinstance(modules[c.path], nn.Linear)]
+    # 函数式投影没有 Linear hook。按连续的同一次调用核对其原语，
+    # 区分独立投影与 attention、旋转位置编码内部的矩阵乘。
+    for _, run in groupby(_scoped_dispatches(rec), key=lambda item: item[0]):
+        ops = [d for _, d in run if d.op not in TRANSPARENT]
+        if not ops:
+            continue
+        path = ops[0].inside
+        module = modules[path]
+        if not isinstance(module, nn.Linear) and classify_ops([d.op for d in ops], module, config)[0] == "matmul":
+            expected.append((path or "R", ops[0].seq, ops[-1].seq))
+    return MatmulCalls(sorted(expected), [(d.seq, d.op) for d in rec.dispatches if d.op in _MATRIX_OPS])
+
+
+def _matmul_checks(tag, recorded, members):
+    name = f"matmul{tag}"
+    actual = sorted((n.attrs.get("module_path", ""), n.start_seq) for n in members if n.op in ("matmul", "lm_head"))
+    note = "逐次核对 Linear 调用及函数式投影的模块路径与执行区间"
+    if recorded is None:
+        yield dict(name=name, expected=None, actual=len(actual), ok=False, note="缺少本阶段的独立前向调用记录")
+        return
+    check = dict(name=name, expected=len(recorded.projections), actual=len(actual), ok=True, note=note)
+    for call, node in zip_longest(recorded.projections, actual):
+        if call is None or node is None or call[0] != node[0] or not call[1] <= node[1] <= call[2]:
+            check.update(ok=False, note=f"{note}。首处不符：调用 {call}，节点 {node}")
+            break
+    yield check
+
+    # 复合节点可以有其他语义标签，其内部每一次矩阵乘仍须出现在节点配方里。
+    steps = sorted((s["seq"], s["op"]) for n in members for s in n.attrs.get("program", ())
+                   if s["op"] in _MATRIX_OPS)
+    yield dict(name=f"matmul_dispatch{tag}", expected=len(recorded.dispatches), actual=len(steps),
+               ok=recorded.dispatches == steps, note="核对原始矩阵乘与节点配方中的执行序号及重载")
+
+
 def reconcile(
     instance_nodes: list[Node],
     all_nodes: list[Node],
@@ -42,14 +105,18 @@ def reconcile(
     model,
     config,
     rec=None,
+    *,
+    matmul_calls_by_phase=None,
 ) -> dict:
     counts: dict[str, int] = {}
     for n in instance_nodes:
         counts[n.op] = counts.get(n.op, 0) + 1
 
-    # 每个阶段都是一次独立前向：模块树里的 Linear/RMSNorm 只对得上其中一次。
-    # 两个阶段混在一起数会正好翻倍，所以按阶段分开对账。
-    phases = sorted({n.phase for n in instance_nodes}) or ["prefill"]
+    phases = sorted({n.phase for n in instance_nodes}.union(matmul_calls_by_phase or {})) or ["prefill"]
+    if matmul_calls_by_phase is None:
+        matmul_calls_by_phase = {}
+        if rec is not None and len(phases) == 1:
+            matmul_calls_by_phase[phases[0]] = recorded_matmul_calls(rec, config)
     by_phase: dict[str, dict[str, int]] = {p: {} for p in phases}
     for n in instance_nodes:
         c = by_phase[n.phase]
@@ -70,7 +137,6 @@ def reconcile(
         add("modules(plan)", PLAN_EXPECT_QWEN3["modules"], n_modules, "计划 §8.1")
         add("params(plan)", PLAN_EXPECT_QWEN3["params"], n_params, "tied 权重被 dedupe")
 
-    linear = _count_class(model, lambda m: isinstance(m, nn.Linear))
     embedding = _count_class(model, lambda m: isinstance(m, nn.Embedding))
     rmsnorm = _count_class(model, lambda m: type(m).__name__.endswith("RMSNorm"))
 
@@ -78,11 +144,12 @@ def reconcile(
     for phase in phases:
         c = by_phase[phase]
         tag = f"[{phase}]" if multi else ""
-        add(f"matmul{tag}", linear, c.get("matmul", 0) + c.get("lm_head", 0),
-            "模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）")
+        members = [n for n in instance_nodes if n.phase == phase]
+        if phase in matmul_calls_by_phase or c.get("matmul") or c.get("lm_head") or any(
+                isinstance(m, nn.Linear) for m in model.modules()):
+            checks.extend(_matmul_checks(tag, matmul_calls_by_phase.get(phase), members))
         add(f"embedding{tag}", embedding, c.get("embedding", 0), "模块树 Embedding 数")
         add(f"rmsnorm{tag}", rmsnorm, c.get("rmsnorm", 0), "模块树 RMSNorm 数")
-        members = [n for n in instance_nodes if n.phase == phase]
         recorded = next((n._recorded_activations for n in members if hasattr(n, "_recorded_activations")), {})
         for activation in ("silu", "gelu"):
             op = f"aten.{activation}.default"
