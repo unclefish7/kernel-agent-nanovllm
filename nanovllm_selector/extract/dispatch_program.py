@@ -76,6 +76,23 @@ def _slice(x, dim=0, start=None, end=None, step=1):
     return x[tuple(slices)]
 
 
+def _index(x, indices):
+    # ATen 的 None 保留整条轴；Python 的 None 会新建一条轴。
+    return x[tuple(slice(None) if i is None else i for i in indices)]
+
+
+def _safe_softmax(x, dim, dtype=None):
+    result = torch.softmax(x, dim=dim, dtype=dtype)
+    return result.masked_fill(torch.isneginf(x).all(dim=dim, keepdim=True), 0)
+
+
+def _scalar_tensor(value, *, dtype=None, device=None, layout=None, pin_memory=None):
+    if layout not in (None, torch.strided):
+        raise ValueError("标量张量仅支持 strided 布局")
+    # 浮点掩码可用超出目标 dtype 范围的负数表示 -inf。
+    return torch.tensor(value, dtype=dtype or torch.get_default_dtype(), device=device, pin_memory=bool(pin_memory))
+
+
 def _cpu_attention(q, k, v, dropout_p=0., is_causal=False, *, attn_mask=None, scale=None):
     if dropout_p:
         raise ValueError("随机 dropout 需要 RNG 状态")
@@ -140,12 +157,30 @@ PRIMITIVES = {
     "aten.arange.start": torch.arange,
     "aten.arange.start_step": torch.arange,
     "aten.zeros.default": torch.zeros,
+    "aten.zeros_like.default": torch.zeros_like,
+    "aten.scalar_tensor.default": _scalar_tensor,
     "aten.ones.default": torch.ones,
     "aten.full.default": torch.full,
     "aten.convolution.default": _conv,
     "aten.roll.default": torch.roll,
     "aten.copy_.default": torch.Tensor.copy_,
     "aten.index_put_.default": _index_put,
+    "aten.index.Tensor": _index,
+    "aten.index_add_.default": torch.Tensor.index_add_,
+    "aten.scatter_.value": torch.Tensor.scatter_,
+    "aten.gather.default": torch.gather,
+    "aten.nonzero.default": torch.nonzero,
+    "aten.topk.default": torch.topk,
+    "aten.min.default": torch.min,
+    "aten.max.default": torch.max,
+    "aten.tril.default": torch.tril,
+    "aten.where.self": torch.where,
+    "aten.bitwise_not.default": torch.bitwise_not,
+    "aten.masked_fill.Scalar": torch.Tensor.masked_fill,
+    "aten.sigmoid.default": torch.sigmoid,
+    "aten._safe_softmax.default": _safe_softmax,
+    "aten.div_.Tensor": torch.Tensor.div_,
+    "aten.mul.Scalar": torch.mul,
     "aten.constant_pad_nd.default": lambda x, pad, value=0: F.pad(x, pad, value=value),
     "aten._local_scalar_dense.default": torch.Tensor.item,
     "aten.gt.Scalar": torch.gt,

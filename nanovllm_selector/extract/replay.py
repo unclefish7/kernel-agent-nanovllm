@@ -18,6 +18,7 @@ import torch
 import torch.nn.functional as F
 
 from .dispatch_program import call_arguments, replay_program
+from .decompose import TRANSPARENT
 
 RTOL = 1e-5
 ATOL = 1e-6
@@ -85,7 +86,60 @@ def _rotate_half(x):
     return torch.cat([-x2, x1], dim=-1)
 
 
+def _math_attention(attrs, ctx):
+    """从实际 QK、掩码和 PV 的操作数复算 SDPA，允许部分 RoPE、独立 V 宽度和显式缩放。"""
+    program, values = attrs["program"], ctx["values"]
+    qk, pv = [s for s in program if s["op"] == "aten.bmm.default"]
+    softmax, = [s for s in program if s["op"] == "aten._safe_softmax.default"]
+    (q, kt), _ = call_arguments(qk, values)
+    (prob, v), _ = call_arguments(pv, values)
+    soft_args, _ = call_arguments(softmax, values)
+    logits, axis = soft_args[:2]
+    if axis % logits.ndim != logits.ndim - 1:
+        raise ValueError("注意力 softmax 没有沿键序列轴归一化")
+    weights = values[softmax["result"]["tensor"]]
+    if not prob.is_set_to(weights.view_as(prob)):
+        raise ValueError("PV 的左操作数不是 softmax 权重视图")
+    producers = {s["result"]["tensor"]: s for s in program
+                 if isinstance(s["result"], dict) and "tensor" in s["result"]}
+    scores = values[qk["result"]["tensor"]].view_as(logits)
+    mask = None
+    if not logits.is_set_to(scores):
+        add = producers[softmax["args"][0]["tensor"]]
+        if add["op"] != "aten.add.Tensor":
+            raise ValueError("缺少 QK 到 softmax 之间的掩码加法")
+        (base, bias), options = call_arguments(add, values)
+        if not base.is_set_to(scores):
+            raise ValueError("掩码加法的输入不是 QK 分数视图")
+        mask = (bias * options.get("alpha", 1)).expand_as(scores).reshape(q.size(0), q.size(1), kt.size(-1))
+    # 两个乘数已包含各自的实测缩放，不能再按头宽缩放一次。
+    result = F.scaled_dot_product_attention(q, kt.transpose(-1, -2), v, attn_mask=mask, scale=1.)
+    outputs = {}
+    for role, tid in zip(ctx["output_roles"], attrs["observed_outputs"], strict=True):
+        if role == "out" and tid == pv["result"]["tensor"]:
+            outputs[role] = result
+        elif role in ("key", "value") and producers[tid]["op"] == "aten.cat.default":
+            # K 进入第一个 bmm 的右侧，V 进入第二个。沿布局变换和标量缩放反查，
+            # 防止只凭缓存名称就把形状相同的两个槽互换。
+            operand = (qk if role == "key" else pv)["args"][1]["tensor"]
+            visited = set()
+            while operand != tid:
+                step = producers.get(operand)
+                if (operand in visited or not step
+                        or (step["op"] not in TRANSPARENT and step["op"] != "aten.mul.Scalar")):
+                    raise ValueError(f"{role} 缓存没有进入对应的注意力矩阵乘")
+                visited.add(operand)
+                operand = step["args"][0]["tensor"]
+            args, kwargs = call_arguments(producers[tid], values)
+            outputs[role] = torch.cat(*args, **kwargs)
+        else:
+            raise ValueError(f"无法从数学注意力的实测生产者重建输出 {role} {tid}")
+    return outputs
+
+
 def _attention(inputs, state, attrs, ctx):
+    if "aten._safe_softmax.default" in attrs["dispatch_ops"]:
+        return _math_attention(attrs, ctx)
     q, cos, sin, k = inputs[0], inputs[1], inputs[2], inputs[3]
     rest = [t for t in inputs[4:] if t.numel() > 0]
     past_k = past_v = None
@@ -173,7 +227,9 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
             node.attrs["program_replay"]["ok"] = False
             failures.append({"node": node.id, "op": node.op, "why": str(exc)})
             continue
-        if node.op in {"unknown", "conv1d", "bmm", "view"}:
+        # 这些复合路由的多个输出和写入由上面的逐指令重算逐一核对。
+        if node.op in {"unknown", "conv1d", "bmm", "view", "safe_softmax",
+                       "topk_routing", "indexed_dispatch", "indexed_accumulate"}:
             checked += 1
             continue
         impl = IMPL.get(node.op)
@@ -200,7 +256,7 @@ def replay_nodes(nodes, builder, config, input_ids, tensors=None) -> dict:
             continue
 
         try:
-            local = dict(ctx, output_roles=node.attrs["observed_output_roles"])
+            local = dict(ctx, output_roles=node.attrs["observed_output_roles"], values=values)
             if node.op in {"add", "mul", "arange"}:
                 step = next(s for s in node.attrs["program"] if s["op"] in node.attrs["dispatch_ops"])
                 local["arguments"] = call_arguments(step, values)

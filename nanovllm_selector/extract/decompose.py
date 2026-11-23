@@ -66,7 +66,11 @@ FORMULAS = {
     "gelu": "y = x * Phi(x)",
     "rope": "(q, k) -> (q*cos + rotate_half(q)*sin, k*cos + rotate_half(k)*sin)",
     "rope_table": "cos, sin = cos_sin(position_ids; inv_freq)",
-    "attention": "y = softmax(q @ k^T / sqrt(d) + mask) @ v",
+    "attention": "y = softmax(scale * (q @ k^T) + mask) @ v; scale from dispatch",
+    "safe_softmax": "沿指定轴归一化；整行均为负无穷时输出零",
+    "topk_routing": "选择索引 = topk(选择分数).indices；按索引从路由分数取权重，见有序配方",
+    "indexed_dispatch": "由掩码的非零坐标索引输入行及其权重，索引保留在配方中",
+    "indexed_accumulate": "将加权行按索引累加回目标；后续选择按配方顺序执行",
     "mul": "y = a * b",
     "add": "y = a + alpha * b",
     "arange": "y = arange(start, end, step)",
@@ -723,8 +727,27 @@ def classify_ops(ops: list[str], module: nn.Module | None, config) -> tuple[str,
     o = set(ops)
     if not ops:
         return "view", "exact"
-    if any("scaled_dot_product" in x or "softmax" in x for x in o):
+    if {"aten.topk.default", "aten.gather.default"} <= o:
+        allowed = {"aten.mm.default", "aten.addmm.default", "aten.sigmoid.default", "aten.add.Tensor",
+                   "aten.topk.default", "aten.gather.default", "aten.sum.dim_IntList", "aten.zeros_like.default",
+                   "aten.scatter_.value", "aten.bitwise_not.default", "aten.masked_fill.Scalar",
+                   "aten.mul.Tensor", "aten.div_.Tensor"}
+        return ("topk_routing", "inferred") if o <= allowed else ("unknown", "unknown")
+    if {"aten.index_add_.default", "aten.mul.Tensor"} <= o:
+        allowed = {"aten.mul.Tensor", "aten.index_add_.default", "aten.nonzero.default", "aten.index.Tensor"}
+        return ("indexed_accumulate", "inferred") if o <= allowed else ("unknown", "unknown")
+    if {"aten.scatter_.value", "aten.nonzero.default", "aten.index.Tensor"} <= o:
+        allowed = {"aten.scatter_.value", "aten.nonzero.default", "aten.index.Tensor", "aten.zeros_like.default",
+                   "aten.zeros.default", "aten.min.default", "aten.max.default", "aten._local_scalar_dense.default"}
+        return ("indexed_dispatch", "inferred") if o <= allowed else ("unknown", "unknown")
+    if ops == ["aten._safe_softmax.default"]:
+        return "safe_softmax", "exact"
+    if any("scaled_dot_product" in x for x in o):
         return "attention", "exact"
+    if (ops.count("aten.bmm.default") == 2 and ops.count("aten._safe_softmax.default") == 1
+            and ops.index("aten.bmm.default") < ops.index("aten._safe_softmax.default")
+            and "aten.bmm.default" in ops[ops.index("aten._safe_softmax.default") + 1:]):
+        return "attention", "inferred"
     if "aten.embedding.default" in o:
         return "embedding", "exact"
     if o == {"aten.convolution.default"} and isinstance(module, nn.Conv1d):
