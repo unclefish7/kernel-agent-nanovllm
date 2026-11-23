@@ -35,6 +35,56 @@ def _signature(node):
             node.attrs.get("observed_inputs"), [ref.role for ref in node.outputs])
 
 
+def _topology(graph):
+    """按实际节点和槽位比较连线；录制内的 tensor id 不能跨样本比较。"""
+    incoming = defaultdict(set)
+    for edge in graph.edges:
+        incoming[edge.to_node].add((edge.target_slot, edge.from_node, edge.source_slot, edge.kind, edge.role))
+    returns = defaultdict(list)
+    for phase, outputs in graph.graph_outputs.items():
+        for index, ref in enumerate(outputs):
+            returns[ref["node"]].append((phase, index, ref["slot"]))
+    inputs = set(graph.graph_inputs)
+    return {n.id: (_signature(n), incoming[n.id], returns[n.id], n.id in inputs) for n in graph.nodes}
+
+
+def _topology_problem(change):
+    return (f"{tuple(change['case'])} 拓扑与基础样本不同，新增 {len(change['added'])}、"
+            f"缺少 {len(change['missing'])}、节点契约改变 {len(change['changed'])} 个")
+
+
+def _unobserved_routed_members(graph):
+    """用分发模块的参数清单核对本次配方实际读取的编号子模块。"""
+    scopes = set()
+    reads = defaultdict(set)
+    for node in graph.nodes:
+        reads[node.phase].update(node.attrs.get("program_state", {}).values())
+        # 旧图可能没有 indexed_dispatch 这个高层名称，直接识别记录的分发原语。
+        ops = {s["op"] for s in node.attrs.get("program", ())}
+        if {"aten.scatter_.value", "aten.nonzero.default", "aten.index.Tensor"} <= ops:
+            scopes.add((node.phase, node.impl.get("module_path") or ""))
+
+    problems = []
+    for phase, owner in sorted(scopes):
+        prefix = owner + "." if owner else ""
+        declared, observed = defaultdict(set), defaultdict(set)
+        for param in graph.params:
+            name = param["name"]
+            if not name.startswith(prefix):
+                continue
+            member = re.match(r"((?:[^.]+\.)*?)(\d+)\.", name[len(prefix):])
+            if member:
+                bank = (prefix + member[1]).rstrip(".")
+                declared[bank].add(member[2])
+                if name in reads[phase]:
+                    observed[bank].add(member[2])
+        for bank, used in observed.items():
+            if used != declared[bank]:
+                problems.append(f"{phase} {bank} 的分发轨迹只读取 {len(used)}/{len(declared[bank])} "
+                                "个编号子模块，当前拓扑无法验证其余分支")
+    return problems
+
+
 def _config_axes(config, node, ref, direction, rank):
     # 用缓存身份、来源模块与注意力计算所用的布局约束命名，避免仅凭数值猜轴。
     source = ""
@@ -319,8 +369,10 @@ def validate_profiles(graph):
     probes = graph.env.get("shape_probes")
     if not probes:
         return []
+    if probes.get("topology_differences"):
+        return [_topology_problem(change) for change in probes["topology_differences"]]
     cases = [*probes["fit"], probes["holdout"], probes["base"]]
-    problems = []
+    problems = _unobserved_routed_members(graph)
     observations = probes.get("program_observations", {})
     missing = set(observations) - {n.id for n in graph.nodes}
     problems.extend(f"{name} 的程序分支缺少节点" for name in sorted(missing))
@@ -379,23 +431,36 @@ def profile_shapes(graph, batch, length, trace):
     profiled.update(zip(cases, zip(samples, indexes)))
     observations = {}
     replayed = "replay" in graph.reconcile
-    program_samples = [(case, sample, index, _producer_index(sample))
-                       for case, (sample, index) in profiled.items()] if replayed else []
     problems = []
-    base_nodes = {node.id for node in graph.nodes}
-    for case, sample, index in zip(cases, samples, indexes):
+    differences = []
+    base_topology = _topology(graph)
+    for case, (sample, _) in profiled.items():
         if not sample.reconcile["ok"]:
             problems.append(f"{case} 样本的图检查失败")
-        if set(index) != base_nodes:
-            problems.append(f"{case} 路径不同，节点差异 {sorted(base_nodes ^ set(index))[:8]}")
+        if sample is graph:
+            continue
+        other = _topology(sample)
+        if other != base_topology:
+            change = dict(case=list(case), added=sorted(other.keys() - base_topology.keys()),
+                          missing=sorted(base_topology.keys() - other.keys()),
+                          changed=sorted(n for n in base_topology.keys() & other.keys()
+                                         if base_topology[n] != other[n]))
+            differences.append(change)
+            problems.append(_topology_problem(change))
+    if not differences:
+        problems.extend(_unobserved_routed_members(graph))
 
+    # 拓扑改变时保留基础轨迹和每次差异。共同节点也可能属于不同的动态调用，不能硬配。
+    if differences:
+        for node in graph.nodes:
+            node.attrs.pop("shape_profile", None)
+            node.attrs.pop("program_variants", None)
+    program_samples = [(case, sample, index, _producer_index(sample))
+                       for case, (sample, index) in profiled.items()] if replayed and not differences else []
     config = graph.model.get("config") or {}
     unknown = 0
-    for node in graph.nodes:
-        aligned = [index.get(node.id) for index in indexes]
-        if not all(other and _signature(other) == _signature(node) for other in aligned):
-            problems.append(f"{node.id} 不同样本的输入输出无法对齐")
-            continue
+    for node in ([] if differences else graph.nodes):
+        aligned = [index[node.id] for index in indexes]
         if replayed and node.origin != "input":
             try:
                 _profile_program(node, [(case, index[node.id], sample, sources)
@@ -455,11 +520,16 @@ def profile_shapes(graph, batch, length, trace):
                 profiles[direction].append({"axes": axes, "samples": shapes})
         node.attrs["shape_profile"] = profiles
     graph.env["shape_probes"] = {"fit": cases[:-1], "holdout": cases[-1], "base": (batch, length),
-                                 "unknown_axes": unknown, "problems": problems}
+                                 "unknown_axes": unknown, "problems": problems,
+                                 "topology_scope": "observed_inputs_only", "topology_differences": differences}
     if replayed:
         graph.env["shape_probes"]["program_observations"] = observations
+    note = f"仅适用于实测输入，保留 {unknown} 个未确定的轴"
+    if differences:
+        note = "采样拓扑不同，未合并尺寸与程序配方"
+    elif problems:
+        note = problems[0]
     graph.reconcile["checks"].append({"name": "S1 独立样本验证维度关系", "expected": 0,
-                                      "actual": len(problems), "ok": not problems,
-                                      "note": f"保留 {unknown} 个未确定的轴"})
+                                      "actual": len(problems), "ok": not problems, "note": note})
     graph.reconcile["validate_problems"] = graph.validate()
     graph.reconcile["ok"] = graph.reconcile["ok"] and not problems and not graph.reconcile["validate_problems"]
