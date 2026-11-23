@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/workspace/nanovllm_selector/port/prompt.py", line 1019, in build_sections
+    _check_agent_graph(graph_data)
+  File "/workspace/nanovllm_selector/port/prompt.py", line 873, in _check_agent_graph
+    raise ValueError(f"{check.get('name')}，期望 {check.get('expected')}，实测 {check.get('actual')} "
+ValueError: S1 独立样本验证维度关系，期望 0，实测 3 采样拓扑不同，未合并尺寸与程序配方
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/nanovllm_selector/port/cli.py", line 173, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/nanovllm_selector/port/cli.py", line 114, in main
+    sections = build_sections(
+               ^^^^^^^^^^^^^^^
+  File "/workspace/nanovllm_selector/port/prompt.py", line 1022, in build_sections
+    raise ValueError(f"参考图与实测记录不符：{exc}。请修复该项后重新抽取："
+ValueError: 参考图与实测记录不符：S1 独立样本验证维度关系，期望 0，实测 3 采样拓扑不同，未合并尺寸与程序配方。请修复该项后重新抽取：python -m nanovllm_selector.extract.cli --model <本地模型目录> --phases prefill,decode --decode-steps 2 --shape-probes --check --out <graph.json>

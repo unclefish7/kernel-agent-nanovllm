@@ -1,0 +1,163 @@
+{
+  "device": "_CudaDeviceProperties(name='AMD Instinct MI100', major=9, minor=0, gcnArchName='gfx908:sramecc+:xnack-', total_memory=32752MB, multi_processor_count=120, uuid=36656166-3331-3865-3938-666634373237, pci_bus_id=3, pci_device_id=0, pci_domain_id=0, L2_cache_size=8MB)",
+  "runs": [
+    {
+      "model": "tmp/models/deepseek-v3-tiny-random",
+      "dtype": "torch.float32",
+      "observations": [
+        {
+          "layer": 0,
+          "tokens": 255,
+          "visible": 255,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 9.313225746154785e-09,
+          "atol": 2e-06,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 255,
+          "visible": 255,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 1.4901161193847656e-08,
+          "atol": 2e-06,
+          "within_atol": true
+        },
+        {
+          "layer": 0,
+          "tokens": 1,
+          "visible": 256,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 9.313225746154785e-10,
+          "atol": 2e-06,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 1,
+          "visible": 256,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 9.313225746154785e-10,
+          "atol": 2e-06,
+          "within_atol": true
+        },
+        {
+          "layer": 0,
+          "tokens": 1,
+          "visible": 257,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 9.313225746154785e-10,
+          "atol": 2e-06,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 1,
+          "visible": 257,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 3.725290298461914e-09,
+          "atol": 2e-06,
+          "within_atol": true
+        }
+      ],
+      "ok": true
+    },
+    {
+      "model": "tmp/models/deepseek-v3-tiny-random",
+      "dtype": "torch.bfloat16",
+      "observations": [
+        {
+          "layer": 0,
+          "tokens": 255,
+          "visible": 255,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 0.00048828125,
+          "atol": 0.002,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 255,
+          "visible": 255,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 0.0009765625,
+          "atol": 0.002,
+          "within_atol": true
+        },
+        {
+          "layer": 0,
+          "tokens": 1,
+          "visible": 256,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 3.0517578125e-05,
+          "atol": 0.002,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 1,
+          "visible": 256,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 6.103515625e-05,
+          "atol": 0.002,
+          "within_atol": true
+        },
+        {
+          "layer": 0,
+          "tokens": 1,
+          "visible": 257,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 3.0517578125e-05,
+          "atol": 0.002,
+          "within_atol": true
+        },
+        {
+          "layer": 1,
+          "tokens": 1,
+          "visible": 257,
+          "qk_dim": 32,
+          "v_dim": 16,
+          "cache_exact": true,
+          "output_exact": false,
+          "max_abs": 3.0517578125e-05,
+          "atol": 0.002,
+          "within_atol": true
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

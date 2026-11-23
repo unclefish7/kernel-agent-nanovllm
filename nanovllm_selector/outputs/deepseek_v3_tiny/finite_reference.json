@@ -1,0 +1,601 @@
+{
+  "model_dir": "tmp/models/deepseek-v3-tiny-katuni4ka",
+  "weights_sha256": "cfbdbe3b14fae3948138aae5b254c9981826f84bd4069e5d688d8079ce437fc3",
+  "config_sha256": "72740d4c8910cf6ff2d30a9c5bc1ab75605278f17fb08e5119ecb37979ccc37c",
+  "transformers": "4.57.3",
+  "torch": "2.12.0+rocm10.0.0",
+  "device": "cpu",
+  "attention": "eager",
+  "threads": 4,
+  "runs": {
+    "F32": {
+      "precision": "original",
+      "model_dtype": "torch.float32",
+      "audit": {
+        "complete_and_matches_file": true,
+        "loading_info": {
+          "missing_keys": [],
+          "unexpected_keys": [],
+          "mismatched_keys": [],
+          "error_msgs": []
+        },
+        "file_keys": 509,
+        "state_dict_keys": 509,
+        "state_dict_minus_file": [],
+        "file_minus_state_dict": [],
+        "value_or_shape_mismatch": [],
+        "nonfinite_file_tensors": {}
+      },
+      "cache": {
+        "atol": 1e-05,
+        "rtol": 1e-05,
+        "steps": [
+          {
+            "ids": [
+              11,
+              23,
+              37,
+              41,
+              53
+            ],
+            "prefix_length": 5,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  5,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  5,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 5
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  5,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  5,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 5
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              5,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                54111,
+                53290,
+                444,
+                20217,
+                61122
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                54111,
+                53290,
+                444,
+                20217,
+                61122
+              ]
+            ],
+            "allclose": true
+          },
+          {
+            "ids": [
+              67
+            ],
+            "prefix_length": 6,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  6,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  6,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 6
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  6,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  6,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 6
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              1,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                88415
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                88415
+              ]
+            ],
+            "allclose": true
+          },
+          {
+            "ids": [
+              79
+            ],
+            "prefix_length": 7,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  7,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  7,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 7
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  7,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  7,
+                  2
+                ],
+                "dtype": "torch.float32",
+                "length": 7
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              1,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                64307
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                64307
+              ]
+            ],
+            "allclose": true
+          }
+        ],
+        "ok": true
+      },
+      "routing": {
+        "module": "model.layers.1.mlp",
+        "input_ids": [
+          [
+            11,
+            23,
+            37,
+            41,
+            53
+          ],
+          [
+            11,
+            23,
+            37,
+            41,
+            97
+          ],
+          [
+            11,
+            23,
+            37,
+            41,
+            53
+          ]
+        ],
+        "routed_experts": 160,
+        "k": 6,
+        "bias_numel": 160,
+        "bias_nan": 0,
+        "bias_zero": 160,
+        "sigmoid_finite": true,
+        "corrected_scores_numel": 2400,
+        "corrected_scores_nan": 0,
+        "last_token_expert_ids": [
+          [
+            90,
+            112,
+            68,
+            98,
+            101,
+            75
+          ],
+          [
+            19,
+            70,
+            150,
+            76,
+            74,
+            1
+          ]
+        ],
+        "changed_experts_symmetric_difference": [
+          1,
+          19,
+          68,
+          70,
+          74,
+          75,
+          76,
+          90,
+          98,
+          101,
+          112,
+          150
+        ],
+        "last_token_aligned_weight_max_abs_diff": 13.177680015563965,
+        "mix_weights_finite": true,
+        "mix_matches_uncorrected_scores": true,
+        "distinct_experts_executed": 31,
+        "actual_dispatch_matches_gate_counts": true,
+        "identical_input_control_ok": true,
+        "logits_finite": true
+      }
+    },
+    "BF16": {
+      "precision": "converted",
+      "model_dtype": "torch.bfloat16",
+      "audit": {
+        "complete_and_matches_file": true,
+        "loading_info": {
+          "missing_keys": [],
+          "unexpected_keys": [],
+          "mismatched_keys": [],
+          "error_msgs": []
+        },
+        "file_keys": 509,
+        "state_dict_keys": 509,
+        "state_dict_minus_file": [],
+        "file_minus_state_dict": [],
+        "value_or_shape_mismatch": [],
+        "nonfinite_file_tensors": {}
+      },
+      "cache": {
+        "atol": 0.002,
+        "rtol": 0.01,
+        "steps": [
+          {
+            "ids": [
+              11,
+              23,
+              37,
+              41,
+              53
+            ],
+            "prefix_length": 5,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  5,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  5,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 5
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  5,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  5,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 5
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              5,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                54111,
+                53290,
+                444,
+                20217,
+                61122
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                54111,
+                53290,
+                444,
+                20217,
+                61122
+              ]
+            ],
+            "allclose": true
+          },
+          {
+            "ids": [
+              67
+            ],
+            "prefix_length": 6,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  6,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  6,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 6
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  6,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  6,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 6
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              1,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                88415
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                88415
+              ]
+            ],
+            "allclose": true
+          },
+          {
+            "ids": [
+              79
+            ],
+            "prefix_length": 7,
+            "cache": "DynamicCache",
+            "layers": [
+              {
+                "k": [
+                  1,
+                  2,
+                  7,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  7,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 7
+              },
+              {
+                "k": [
+                  1,
+                  2,
+                  7,
+                  4
+                ],
+                "v": [
+                  1,
+                  2,
+                  7,
+                  2
+                ],
+                "dtype": "torch.bfloat16",
+                "length": 7
+              }
+            ],
+            "shapes_ok": true,
+            "logits_shape": [
+              1,
+              1,
+              102400
+            ],
+            "logits_finite": true,
+            "max_abs_diff": 0.0,
+            "actual_top1": [
+              [
+                64307
+              ]
+            ],
+            "full_prefix_top1": [
+              [
+                64307
+              ]
+            ],
+            "allclose": true
+          }
+        ],
+        "ok": true
+      },
+      "routing": {
+        "module": "model.layers.1.mlp",
+        "input_ids": [
+          [
+            11,
+            23,
+            37,
+            41,
+            53
+          ],
+          [
+            11,
+            23,
+            37,
+            41,
+            97
+          ],
+          [
+            11,
+            23,
+            37,
+            41,
+            53
+          ]
+        ],
+        "routed_experts": 160,
+        "k": 6,
+        "bias_numel": 160,
+        "bias_nan": 0,
+        "bias_zero": 160,
+        "sigmoid_finite": true,
+        "corrected_scores_numel": 2400,
+        "corrected_scores_nan": 0,
+        "last_token_expert_ids": [
+          [
+            90,
+            112,
+            68,
+            98,
+            101,
+            75
+          ],
+          [
+            19,
+            70,
+            150,
+            76,
+            74,
+            1
+          ]
+        ],
+        "changed_experts_symmetric_difference": [
+          1,
+          19,
+          68,
+          70,
+          74,
+          75,
+          76,
+          90,
+          98,
+          101,
+          112,
+          150
+        ],
+        "last_token_aligned_weight_max_abs_diff": 13.171759605407715,
+        "mix_weights_finite": true,
+        "mix_matches_uncorrected_scores": true,
+        "distinct_experts_executed": 31,
+        "actual_dispatch_matches_gate_counts": true,
+        "identical_input_control_ok": true,
+        "logits_finite": true
+      }
+    }
+  },
+  "file_dtype_counts": {
+    "F32": 509
+  },
+  "architecture": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM",
+  "cached_logits_match_full_prefix": true,
+  "routing_probe_consistent": true,
+  "suitable_as_finite_routing_reference": true
+}

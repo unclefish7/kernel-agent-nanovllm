@@ -1,0 +1,1489 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+==============================================================================================================
+计算图  deepseek_v3 · 2 层 · float32/cpu
+模板节点 375  边 715  图输入 5
+==============================================================================================================
+[00] D.input.cache_position       input                       — → 1                —
+[01] D.input.input_ids            input                       — → 1×1              —
+[02] D2.input.cache_position      input                       — → 1                —
+[03] D2.input.input_ids           input                       — → 1×1              —
+[04] input.input_ids              input                       — → 1×5              —
+[05] model.arange                 arange                      — → 5                —
+[06] D.embed_tokens               embedding                 1×1 → 1×1×8            w102400×8
+       ↑ in0 input ← D.input.input_ids  [args[0]]
+[07] D.rotary_emb                 rope_table              1×1×1 → 1×1×2 等2个        —
+       ↑ in0 aten:mat2 ← D.input.cache_position  [args[1]]
+[08] D2.embed_tokens              embedding                 1×1 → 1×1×8            w102400×8
+       ↑ in0 input ← D2.input.input_ids  [args[0]]
+[09] D2.rotary_emb                rope_table              1×1×1 → 1×1×2 等2个        —
+       ↑ in0 aten:mat2 ← D2.input.cache_position  [args[1]]
+[10] embed_tokens                 embedding                 1×5 → 1×5×8            w102400×8
+       ↑ in0 input ← input.input_ids  [args[0]]
+[11] rotary_emb                   rope_table              1×1×5 → 1×5×2 等2个        —
+       ↑ in0 aten:mat2 ← model.arange  [args[1]]
+[12] D.L0.input_layernorm         rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D.embed_tokens  [args[0]]
+[13] D2.L0.input_layernorm        rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.embed_tokens  [args[0]]
+[14] L0.input_layernorm           rmsnorm                 1×5×8 → 1×5×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← embed_tokens  [args[0]]
+[15] D.L0.self_attn.kv_a_proj_with_mqa matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L0.input_layernorm  [args[0]]
+[16] D.L0.self_attn.q_a_proj      matmul                    1×8 → 1×2              w2×8
+       ↑ in0 input ← D.L0.input_layernorm  [args[0]]
+[17] D2.L0.self_attn.kv_a_proj_with_mqa matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L0.input_layernorm  [args[0]]
+[18] D2.L0.self_attn.q_a_proj     matmul                    1×8 → 1×2              w2×8
+       ↑ in0 input ← D2.L0.input_layernorm  [args[0]]
+[19] L0.self_attn.kv_a_proj_with_mqa matmul                    5×8 → 5×4              w4×8
+       ↑ in0 input ← L0.input_layernorm  [args[0]]
+[20] L0.self_attn.q_a_proj        matmul                    5×8 → 5×2              w2×8
+       ↑ in0 input ← L0.input_layernorm  [args[0]]
+[21] D.L0.self_attn.kv_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+[22] D.L0.self_attn.q_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L0.self_attn.q_a_proj  [args[0]]
+[23] D2.L0.self_attn.kv_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+[24] D2.L0.self_attn.q_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L0.self_attn.q_a_proj  [args[0]]
+[25] L0.self_attn.kv_a_layernorm  rmsnorm                 1×5×2 → 1×5×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+[26] L0.self_attn.q_a_layernorm   rmsnorm                 1×5×2 → 1×5×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← L0.self_attn.q_a_proj  [args[0]]
+[27] D.L0.self_attn.kv_b_proj     matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D.L0.self_attn.kv_a_layernorm  [args[0]]
+[28] D.L0.self_attn.q_b_proj      matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D.L0.self_attn.q_a_layernorm  [args[0]]
+[29] D2.L0.self_attn.kv_b_proj    matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D2.L0.self_attn.kv_a_layernorm  [args[0]]
+[30] D2.L0.self_attn.q_b_proj     matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D2.L0.self_attn.q_a_layernorm  [args[0]]
+[31] L0.self_attn.kv_b_proj       matmul                    5×2 → 5×8              w8×2
+       ↑ in0 input ← L0.self_attn.kv_a_layernorm  [args[0]]
+[32] L0.self_attn.q_b_proj        matmul                    5×2 → 5×8              w8×2
+       ↑ in0 input ← L0.self_attn.q_a_layernorm  [args[0]]
+[33] L0.self_attn                 attention             1×2×5×2 → 1×2×5×4 等3个      —
+       ↑ in0 aten:self ← L0.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← L0.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:self ← 空张量（0 元素，prefill 时无内容）  [args[0]]
+       ↑ in6 aten:tensors ← L0.self_attn.kv_b_proj  [args[0][1]]
+[34] D.L0.self_attn               attention             1×2×1×2 → 1×2×6×4 等3个      —
+       ↑ in0 aten:self ← D.L0.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← D.rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← D.rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← D.L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← D.L0.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in6 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in7 aten:tensors ← D.L0.self_attn.kv_b_proj  [args[0][1]]
+       ↑ 状态来自 L0.self_attn
+       ↑ 状态来自 L0.self_attn
+[35] L0.self_attn.o_proj          matmul                    5×4 → 5×8              w8×4
+       ↑ in0 input ← L0.self_attn  [args[0]]
+[36] D.L0.self_attn.o_proj        matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L0.self_attn  [args[0]]
+[37] D2.L0.self_attn              attention             1×2×1×2 → 1×2×7×4 等3个      —
+       ↑ in0 aten:self ← D2.L0.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← D2.rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← D2.rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← D2.L0.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← D2.L0.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in6 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in7 aten:tensors ← D2.L0.self_attn.kv_b_proj  [args[0][1]]
+       ↑ 状态来自 D.L0.self_attn
+       ↑ 状态来自 D.L0.self_attn
+[38] L0.residual_add@0            add                     1×5×8 → 1×5×8            —
+       ↑ in0 hidden_states ← embed_tokens  [args[0]]
+       ↑ in1 aten:other ← L0.self_attn.o_proj  [args[1]]
+[39] D.L0.residual_add@0          add                     1×1×8 → 1×1×8            —
+       ↑ in0 hidden_states ← D.embed_tokens  [args[0]]
+       ↑ in1 aten:other ← D.L0.self_attn.o_proj  [args[1]]
+[40] D2.L0.self_attn.o_proj       matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L0.self_attn  [args[0]]
+[41] L0.post_attention_layernorm  rmsnorm                 1×5×8 → 1×5×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← L0.residual_add@0  [args[0]]
+[42] D.L0.post_attention_layernorm rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L0.residual_add@0  [args[0]]
+[43] D2.L0.residual_add@0         add                     1×1×8 → 1×1×8            —
+       ↑ in0 hidden_states ← D2.embed_tokens  [args[0]]
+       ↑ in1 aten:other ← D2.L0.self_attn.o_proj  [args[1]]
+[44] L0.mlp.gate_proj             matmul                    5×8 → 5×16             w16×8
+       ↑ in0 input ← L0.post_attention_layernorm  [args[0]]
+[45] L0.mlp.up_proj               matmul                    5×8 → 5×16             w16×8
+       ↑ in0 input ← L0.post_attention_layernorm  [args[0]]
+[46] D.L0.mlp.gate_proj           matmul                    1×8 → 1×16             w16×8
+       ↑ in0 input ← D.L0.post_attention_layernorm  [args[0]]
+[47] D.L0.mlp.up_proj             matmul                    1×8 → 1×16             w16×8
+       ↑ in0 input ← D.L0.post_attention_layernorm  [args[0]]
+[48] D2.L0.post_attention_layernorm rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L0.residual_add@0  [args[0]]
+[49] L0.mlp.act_fn                silu                   1×5×16 → 1×5×16           —
+       ↑ in0 input ← L0.mlp.gate_proj  [args[0]]
+[50] D.L0.mlp.act_fn              silu                   1×1×16 → 1×1×16           —
+       ↑ in0 input ← D.L0.mlp.gate_proj  [args[0]]
+[51] D2.L0.mlp.gate_proj          matmul                    1×8 → 1×16             w16×8
+       ↑ in0 input ← D2.L0.post_attention_layernorm  [args[0]]
+[52] D2.L0.mlp.up_proj            matmul                    1×8 → 1×16             w16×8
+       ↑ in0 input ← D2.L0.post_attention_layernorm  [args[0]]
+[53] L0.mlp.mul                   mul                    1×5×16 → 1×5×16           —
+       ↑ in0 aten:self ← L0.mlp.act_fn  [args[0]]
+       ↑ in1 aten:other ← L0.mlp.up_proj  [args[1]]
+[54] D.L0.mlp.mul                 mul                    1×1×16 → 1×1×16           —
+       ↑ in0 aten:self ← D.L0.mlp.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L0.mlp.up_proj  [args[1]]
+[55] D2.L0.mlp.act_fn             silu                   1×1×16 → 1×1×16           —
+       ↑ in0 input ← D2.L0.mlp.gate_proj  [args[0]]
+[56] L0.mlp.down_proj             matmul                   5×16 → 5×8              w8×16
+       ↑ in0 input ← L0.mlp.mul  [args[0]]
+[57] D.L0.mlp.down_proj           matmul                   1×16 → 1×8              w8×16
+       ↑ in0 input ← D.L0.mlp.mul  [args[0]]
+[58] D2.L0.mlp.mul                mul                    1×1×16 → 1×1×16           —
+       ↑ in0 aten:self ← D2.L0.mlp.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L0.mlp.up_proj  [args[1]]
+[59] L0.residual_add@1            add                     1×5×8 → 1×5×8            —
+       ↑ in0 aten:self ← L0.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← L0.mlp.down_proj  [args[1]]
+[60] D.L0.residual_add@1          add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D.L0.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← D.L0.mlp.down_proj  [args[1]]
+[61] D2.L0.mlp.down_proj          matmul                   1×16 → 1×8              w8×16
+       ↑ in0 input ← D2.L0.mlp.mul  [args[0]]
+[62] L1.input_layernorm           rmsnorm                 1×5×8 → 1×5×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← L0.residual_add@1  [args[0]]
+[63] D.L1.input_layernorm         rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L0.residual_add@1  [args[0]]
+[64] D2.L0.residual_add@1         add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D2.L0.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← D2.L0.mlp.down_proj  [args[1]]
+[65] L1.self_attn.kv_a_proj_with_mqa matmul                    5×8 → 5×4              w4×8
+       ↑ in0 input ← L1.input_layernorm  [args[0]]
+[66] L1.self_attn.q_a_proj        matmul                    5×8 → 5×2              w2×8
+       ↑ in0 input ← L1.input_layernorm  [args[0]]
+[67] D.L1.self_attn.kv_a_proj_with_mqa matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.input_layernorm  [args[0]]
+[68] D.L1.self_attn.q_a_proj      matmul                    1×8 → 1×2              w2×8
+       ↑ in0 input ← D.L1.input_layernorm  [args[0]]
+[69] D2.L1.input_layernorm        rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L0.residual_add@1  [args[0]]
+[70] L1.self_attn.kv_a_layernorm  rmsnorm                 1×5×2 → 1×5×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+[71] L1.self_attn.q_a_layernorm   rmsnorm                 1×5×2 → 1×5×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← L1.self_attn.q_a_proj  [args[0]]
+[72] D.L1.self_attn.kv_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+[73] D.L1.self_attn.q_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L1.self_attn.q_a_proj  [args[0]]
+[74] D2.L1.self_attn.kv_a_proj_with_mqa matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.input_layernorm  [args[0]]
+[75] D2.L1.self_attn.q_a_proj     matmul                    1×8 → 1×2              w2×8
+       ↑ in0 input ← D2.L1.input_layernorm  [args[0]]
+[76] L1.self_attn.kv_b_proj       matmul                    5×2 → 5×8              w8×2
+       ↑ in0 input ← L1.self_attn.kv_a_layernorm  [args[0]]
+[77] L1.self_attn.q_b_proj        matmul                    5×2 → 5×8              w8×2
+       ↑ in0 input ← L1.self_attn.q_a_layernorm  [args[0]]
+[78] D.L1.self_attn.kv_b_proj     matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D.L1.self_attn.kv_a_layernorm  [args[0]]
+[79] D.L1.self_attn.q_b_proj      matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D.L1.self_attn.q_a_layernorm  [args[0]]
+[80] D2.L1.self_attn.kv_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+[81] D2.L1.self_attn.q_a_layernorm rmsnorm                 1×1×2 → 1×1×2            w2,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L1.self_attn.q_a_proj  [args[0]]
+[82] L1.self_attn                 attention             1×2×5×2 → 1×2×5×4 等3个      —
+       ↑ in0 aten:self ← L1.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← L1.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:self ← 空张量（0 元素，prefill 时无内容）  [args[0]]
+       ↑ in6 aten:tensors ← L1.self_attn.kv_b_proj  [args[0][1]]
+[83] D.L1.self_attn               attention             1×2×1×2 → 1×2×6×4 等3个      —
+       ↑ in0 aten:self ← D.L1.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← D.rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← D.rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← D.L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← D.L1.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in6 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in7 aten:tensors ← D.L1.self_attn.kv_b_proj  [args[0][1]]
+       ↑ 状态来自 L1.self_attn
+       ↑ 状态来自 L1.self_attn
+[84] D2.L1.self_attn.kv_b_proj    matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D2.L1.self_attn.kv_a_layernorm  [args[0]]
+[85] D2.L1.self_attn.q_b_proj     matmul                    1×2 → 1×8              w8×2
+       ↑ in0 input ← D2.L1.self_attn.q_a_layernorm  [args[0]]
+[86] L1.self_attn.o_proj          matmul                    5×4 → 5×8              w8×4
+       ↑ in0 input ← L1.self_attn  [args[0]]
+[87] D.L1.self_attn.o_proj        matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.self_attn  [args[0]]
+[88] D2.L1.self_attn              attention             1×2×1×2 → 1×2×7×4 等3个      —
+       ↑ in0 aten:self ← D2.L1.self_attn.q_b_proj  [args[0]]
+       ↑ in1 position_embeddings ← D2.rotary_emb  [kwargs['position_embeddings'][0]]
+       ↑ in2 position_embeddings ← D2.rotary_emb  [kwargs['position_embeddings'][1]]
+       ↑ in3 aten:self ← D2.L1.self_attn.kv_a_proj_with_mqa  [args[0]]
+       ↑ in4 aten:tensors ← D2.L1.self_attn.kv_b_proj  [args[0][0]]
+       ↑ in5 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in6 aten:tensors ← （无生产者）  [args[0][0]]
+       ↑ in7 aten:tensors ← D2.L1.self_attn.kv_b_proj  [args[0][1]]
+       ↑ 状态来自 D.L1.self_attn
+       ↑ 状态来自 D.L1.self_attn
+[89] L1.residual_add@0            add                     1×5×8 → 1×5×8            —
+       ↑ in0 hidden_states ← L0.residual_add@1  [args[0]]
+       ↑ in1 aten:other ← L1.self_attn.o_proj  [args[1]]
+[90] D.L1.residual_add@0          add                     1×1×8 → 1×1×8            —
+       ↑ in0 hidden_states ← D.L0.residual_add@1  [args[0]]
+       ↑ in1 aten:other ← D.L1.self_attn.o_proj  [args[1]]
+[91] D2.L1.self_attn.o_proj       matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.self_attn  [args[0]]
+[92] L1.post_attention_layernorm  rmsnorm                 1×5×8 → 1×5×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← L1.residual_add@0  [args[0]]
+[93] D.L1.post_attention_layernorm rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L1.residual_add@0  [args[0]]
+[94] D2.L1.residual_add@0         add                     1×1×8 → 1×1×8            —
+       ↑ in0 hidden_states ← D2.L0.residual_add@1  [args[0]]
+       ↑ in1 aten:other ← D2.L1.self_attn.o_proj  [args[1]]
+[95] L1.mlp.gate                  matmul                    5×8 → 5×6 等2个          w160×8
+       ↑ in0 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[96] L1.mlp.shared_experts.gate_proj matmul                    5×8 → 5×8              w8×8
+       ↑ in0 input ← L1.post_attention_layernorm  [args[0]]
+[97] L1.mlp.shared_experts.up_proj matmul                    5×8 → 5×8              w8×8
+       ↑ in0 input ← L1.post_attention_layernorm  [args[0]]
+[98] D.L1.mlp.gate                matmul                    1×8 → 1×6 等2个          w160×8
+       ↑ in0 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[99] D.L1.mlp.shared_experts.gate_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D.L1.post_attention_layernorm  [args[0]]
+[100] D.L1.mlp.shared_experts.up_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D.L1.post_attention_layernorm  [args[0]]
+[101] D2.L1.post_attention_layernorm rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L1.residual_add@0  [args[0]]
+[102] L1.mlp.shared_experts.act_fn silu                    1×5×8 → 1×5×8            —
+       ↑ in0 input ← L1.mlp.shared_experts.gate_proj  [args[0]]
+[103] L1.mlp.unknown@0            unknown                   5×8 → 5×8 等5个          —
+       ↑ in0 hidden_states ← L1.post_attention_layernorm  [args[0]]
+       ↑ in1 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in2 aten:self ← L1.mlp.gate  [args[0]]
+[104] D.L1.mlp.shared_experts.act_fn silu                    1×1×8 → 1×1×8            —
+       ↑ in0 input ← D.L1.mlp.shared_experts.gate_proj  [args[0]]
+[105] D.L1.mlp.unknown@0          unknown                   1×8 → 1×8 等5个          —
+       ↑ in0 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+       ↑ in1 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in2 aten:self ← D.L1.mlp.gate  [args[0]]
+[106] D2.L1.mlp.gate              matmul                    1×8 → 1×6 等2个          w160×8
+       ↑ in0 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[107] D2.L1.mlp.shared_experts.gate_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D2.L1.post_attention_layernorm  [args[0]]
+[108] D2.L1.mlp.shared_experts.up_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D2.L1.post_attention_layernorm  [args[0]]
+[109] L1.mlp.experts.7.gate_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@0  [args[0]]
+[110] L1.mlp.experts.7.up_proj    matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@0  [args[0]]
+[111] L1.mlp.shared_experts.mul   mul                     1×5×8 → 1×5×8            —
+       ↑ in0 aten:self ← L1.mlp.shared_experts.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.shared_experts.up_proj  [args[1]]
+[112] D.L1.mlp.experts.65.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@0  [args[0]]
+[113] D.L1.mlp.experts.65.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@0  [args[0]]
+[114] D.L1.mlp.shared_experts.mul mul                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D.L1.mlp.shared_experts.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.shared_experts.up_proj  [args[1]]
+[115] D2.L1.mlp.shared_experts.act_fn silu                    1×1×8 → 1×1×8            —
+       ↑ in0 input ← D2.L1.mlp.shared_experts.gate_proj  [args[0]]
+[116] D2.L1.mlp.unknown@0         unknown                   1×8 → 1×8 等5个          —
+       ↑ in0 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+       ↑ in1 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in2 aten:self ← D2.L1.mlp.gate  [args[0]]
+[117] L1.mlp.experts.7.act_fn     silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.7.gate_proj  [args[0]]
+[118] L1.mlp.shared_experts.down_proj matmul                    5×8 → 5×8              w8×8
+       ↑ in0 input ← L1.mlp.shared_experts.mul  [args[0]]
+[119] D.L1.mlp.experts.65.act_fn  silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.65.gate_proj  [args[0]]
+[120] D.L1.mlp.shared_experts.down_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D.L1.mlp.shared_experts.mul  [args[0]]
+[121] D2.L1.mlp.experts.27.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@0  [args[0]]
+[122] D2.L1.mlp.experts.27.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@0  [args[0]]
+[123] D2.L1.mlp.shared_experts.mul mul                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D2.L1.mlp.shared_experts.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.shared_experts.up_proj  [args[1]]
+[124] L1.mlp.experts.7.mul        mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.7.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.7.up_proj  [args[1]]
+[125] D.L1.mlp.experts.65.mul     mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.65.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.65.up_proj  [args[1]]
+[126] D2.L1.mlp.experts.27.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.27.gate_proj  [args[0]]
+[127] D2.L1.mlp.shared_experts.down_proj matmul                    1×8 → 1×8              w8×8
+       ↑ in0 input ← D2.L1.mlp.shared_experts.mul  [args[0]]
+[128] L1.mlp.experts.7.down_proj  matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.7.mul  [args[0]]
+[129] D.L1.mlp.experts.65.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.65.mul  [args[0]]
+[130] D2.L1.mlp.experts.27.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.27.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.27.up_proj  [args[1]]
+[131] L1.mlp.unknown@1            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.7.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@0  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@0  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[132] D.L1.mlp.unknown@1          unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D.L1.mlp.experts.65.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@0  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@0  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[133] D2.L1.mlp.experts.27.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.27.mul  [args[0]]
+[134] L1.mlp.experts.12.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@1  [args[0]]
+[135] L1.mlp.experts.12.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@1  [args[0]]
+[136] D.L1.mlp.experts.71.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@1  [args[0]]
+[137] D.L1.mlp.experts.71.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@1  [args[0]]
+[138] D2.L1.mlp.unknown@1         unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.27.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@0  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@0  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[139] L1.mlp.experts.12.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.12.gate_proj  [args[0]]
+[140] D.L1.mlp.experts.71.act_fn  silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.71.gate_proj  [args[0]]
+[141] D2.L1.mlp.experts.29.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@1  [args[0]]
+[142] D2.L1.mlp.experts.29.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@1  [args[0]]
+[143] L1.mlp.experts.12.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.12.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.12.up_proj  [args[1]]
+[144] D.L1.mlp.experts.71.mul     mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.71.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.71.up_proj  [args[1]]
+[145] D2.L1.mlp.experts.29.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.29.gate_proj  [args[0]]
+[146] L1.mlp.experts.12.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.12.mul  [args[0]]
+[147] D.L1.mlp.experts.71.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.71.mul  [args[0]]
+[148] D2.L1.mlp.experts.29.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.29.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.29.up_proj  [args[1]]
+[149] L1.mlp.unknown@2            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.12.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@1  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@1  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@1  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[150] D.L1.mlp.unknown@2          unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D.L1.mlp.experts.71.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@1  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@1  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@1  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[151] D2.L1.mlp.experts.29.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.29.mul  [args[0]]
+[152] L1.mlp.experts.17.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@2  [args[0]]
+[153] L1.mlp.experts.17.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@2  [args[0]]
+[154] D.L1.mlp.experts.76.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@2  [args[0]]
+[155] D.L1.mlp.experts.76.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@2  [args[0]]
+[156] D2.L1.mlp.unknown@2         unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.29.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@1  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@1  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@1  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[157] L1.mlp.experts.17.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.17.gate_proj  [args[0]]
+[158] D.L1.mlp.experts.76.act_fn  silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.76.gate_proj  [args[0]]
+[159] D2.L1.mlp.experts.82.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@2  [args[0]]
+[160] D2.L1.mlp.experts.82.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@2  [args[0]]
+[161] L1.mlp.experts.17.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.17.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.17.up_proj  [args[1]]
+[162] D.L1.mlp.experts.76.mul     mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.76.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.76.up_proj  [args[1]]
+[163] D2.L1.mlp.experts.82.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.82.gate_proj  [args[0]]
+[164] L1.mlp.experts.17.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.17.mul  [args[0]]
+[165] D.L1.mlp.experts.76.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.76.mul  [args[0]]
+[166] D2.L1.mlp.experts.82.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.82.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.82.up_proj  [args[1]]
+[167] L1.mlp.unknown@3            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.17.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@2  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@2  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@2  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[168] D.L1.mlp.unknown@3          unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D.L1.mlp.experts.76.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@2  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@2  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@2  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[169] D2.L1.mlp.experts.82.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.82.mul  [args[0]]
+[170] L1.mlp.experts.24.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@3  [args[0]]
+[171] L1.mlp.experts.24.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@3  [args[0]]
+[172] D.L1.mlp.experts.101.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@3  [args[0]]
+[173] D.L1.mlp.experts.101.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@3  [args[0]]
+[174] D2.L1.mlp.unknown@3         unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.82.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@2  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@2  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@2  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[175] L1.mlp.experts.24.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.24.gate_proj  [args[0]]
+[176] D.L1.mlp.experts.101.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.101.gate_proj  [args[0]]
+[177] D2.L1.mlp.experts.87.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@3  [args[0]]
+[178] D2.L1.mlp.experts.87.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@3  [args[0]]
+[179] L1.mlp.experts.24.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.24.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.24.up_proj  [args[1]]
+[180] D.L1.mlp.experts.101.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.101.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.101.up_proj  [args[1]]
+[181] D2.L1.mlp.experts.87.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.87.gate_proj  [args[0]]
+[182] L1.mlp.experts.24.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.24.mul  [args[0]]
+[183] D.L1.mlp.experts.101.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.101.mul  [args[0]]
+[184] D2.L1.mlp.experts.87.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.87.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.87.up_proj  [args[1]]
+[185] L1.mlp.unknown@4            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.24.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@3  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@3  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@3  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[186] D.L1.mlp.unknown@4          unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D.L1.mlp.experts.101.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@3  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@3  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@3  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[187] D2.L1.mlp.experts.87.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.87.mul  [args[0]]
+[188] L1.mlp.experts.27.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@4  [args[0]]
+[189] L1.mlp.experts.27.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@4  [args[0]]
+[190] D.L1.mlp.experts.136.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@4  [args[0]]
+[191] D.L1.mlp.experts.136.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@4  [args[0]]
+[192] D2.L1.mlp.unknown@4         unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.87.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@3  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@3  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@3  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[193] L1.mlp.experts.27.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.27.gate_proj  [args[0]]
+[194] D.L1.mlp.experts.136.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.136.gate_proj  [args[0]]
+[195] D2.L1.mlp.experts.98.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@4  [args[0]]
+[196] D2.L1.mlp.experts.98.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@4  [args[0]]
+[197] L1.mlp.experts.27.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.27.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.27.up_proj  [args[1]]
+[198] D.L1.mlp.experts.136.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.136.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.136.up_proj  [args[1]]
+[199] D2.L1.mlp.experts.98.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.98.gate_proj  [args[0]]
+[200] L1.mlp.experts.27.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.27.mul  [args[0]]
+[201] D.L1.mlp.experts.136.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.136.mul  [args[0]]
+[202] D2.L1.mlp.experts.98.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.98.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.98.up_proj  [args[1]]
+[203] L1.mlp.unknown@5            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.27.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@4  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@4  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@4  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[204] D.L1.mlp.unknown@5          unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D.L1.mlp.experts.136.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@4  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@4  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@4  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D.L1.post_attention_layernorm  [args[0]]
+[205] D2.L1.mlp.experts.98.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.98.mul  [args[0]]
+[206] L1.mlp.experts.34.gate_proj matmul                    2×8 → 2×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@5  [args[0]]
+[207] L1.mlp.experts.34.up_proj   matmul                    2×8 → 2×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@5  [args[0]]
+[208] D.L1.mlp.experts.139.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@5  [args[0]]
+[209] D.L1.mlp.experts.139.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D.L1.mlp.unknown@5  [args[0]]
+[210] D2.L1.mlp.unknown@5         unknown                   1×8 → 1×8 等4个          —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.98.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@4  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@4  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@4  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← D2.L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← D2.L1.post_attention_layernorm  [args[0]]
+[211] L1.mlp.experts.34.act_fn    silu                      2×4 → 2×4              —
+       ↑ in0 input ← L1.mlp.experts.34.gate_proj  [args[0]]
+[212] D.L1.mlp.experts.139.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D.L1.mlp.experts.139.gate_proj  [args[0]]
+[213] D2.L1.mlp.experts.137.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@5  [args[0]]
+[214] D2.L1.mlp.experts.137.up_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← D2.L1.mlp.unknown@5  [args[0]]
+[215] L1.mlp.experts.34.mul       mul                       2×4 → 2×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.34.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.34.up_proj  [args[1]]
+[216] D.L1.mlp.experts.139.mul    mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.139.act_fn  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.experts.139.up_proj  [args[1]]
+[217] D2.L1.mlp.experts.137.act_fn silu                      1×4 → 1×4              —
+       ↑ in0 input ← D2.L1.mlp.experts.137.gate_proj  [args[0]]
+[218] L1.mlp.experts.34.down_proj matmul                    2×4 → 2×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.34.mul  [args[0]]
+[219] D.L1.mlp.experts.139.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D.L1.mlp.experts.139.mul  [args[0]]
+[220] D2.L1.mlp.experts.137.mul   mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.137.act_fn  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.experts.137.up_proj  [args[1]]
+[221] L1.mlp.unknown@6            unknown                   2×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.34.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@5  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@5  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@5  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[222] D.L1.mlp.unknown@6          unknown                   1×8 → 1×8              —
+       ↑ in0 aten:self ← D.L1.mlp.experts.139.down_proj  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.unknown@5  [args[1]]
+       ↑ in2 aten:self ← D.L1.mlp.unknown@5  [args[0]]
+       ↑ in3 aten:index ← D.L1.mlp.unknown@5  [args[2]]
+       ↑ in4 aten:self ← D.L1.mlp.unknown@0  [args[0]]
+[223] D2.L1.mlp.experts.137.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← D2.L1.mlp.experts.137.mul  [args[0]]
+[224] L1.mlp.experts.37.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@6  [args[0]]
+[225] L1.mlp.experts.37.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@6  [args[0]]
+[226] D.L1.mlp.residual_add@7     add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D.L1.mlp.unknown@6  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.shared_experts.down_proj  [args[1]]
+[227] D2.L1.mlp.unknown@6         unknown                   1×8 → 1×8              —
+       ↑ in0 aten:self ← D2.L1.mlp.experts.137.down_proj  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.unknown@5  [args[1]]
+       ↑ in2 aten:self ← D2.L1.mlp.unknown@5  [args[0]]
+       ↑ in3 aten:index ← D2.L1.mlp.unknown@5  [args[2]]
+       ↑ in4 aten:self ← D2.L1.mlp.unknown@0  [args[0]]
+[228] L1.mlp.experts.37.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.37.gate_proj  [args[0]]
+[229] D.L1.residual_add@1         add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D.L1.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← D.L1.mlp.residual_add@7  [args[1]]
+[230] D2.L1.mlp.residual_add@7    add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D2.L1.mlp.unknown@6  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.shared_experts.down_proj  [args[1]]
+[231] L1.mlp.experts.37.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.37.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.37.up_proj  [args[1]]
+[232] D.norm                      rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D.L1.residual_add@1  [args[0]]
+[233] D2.L1.residual_add@1        add                     1×1×8 → 1×1×8            —
+       ↑ in0 aten:self ← D2.L1.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← D2.L1.mlp.residual_add@7  [args[1]]
+[234] L1.mlp.experts.37.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.37.mul  [args[0]]
+[235] D.lm_head                   lm_head                   1×8 → 1×102400         w102400×8
+       ↑ in0 input ← D.norm  [args[0]]
+[236] D2.norm                     rmsnorm                 1×1×8 → 1×1×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← D2.L1.residual_add@1  [args[0]]
+[237] L1.mlp.unknown@7            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.37.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@6  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@6  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@6  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[238] D2.lm_head                  lm_head                   1×8 → 1×102400         w102400×8
+       ↑ in0 input ← D2.norm  [args[0]]
+[239] L1.mlp.experts.39.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@7  [args[0]]
+[240] L1.mlp.experts.39.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@7  [args[0]]
+[241] L1.mlp.experts.39.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.39.gate_proj  [args[0]]
+[242] L1.mlp.experts.39.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.39.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.39.up_proj  [args[1]]
+[243] L1.mlp.experts.39.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.39.mul  [args[0]]
+[244] L1.mlp.unknown@8            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.39.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@7  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@7  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@7  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[245] L1.mlp.experts.42.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@8  [args[0]]
+[246] L1.mlp.experts.42.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@8  [args[0]]
+[247] L1.mlp.experts.42.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.42.gate_proj  [args[0]]
+[248] L1.mlp.experts.42.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.42.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.42.up_proj  [args[1]]
+[249] L1.mlp.experts.42.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.42.mul  [args[0]]
+[250] L1.mlp.unknown@9            unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.42.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@8  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@8  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@8  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[251] L1.mlp.experts.52.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@9  [args[0]]
+[252] L1.mlp.experts.52.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@9  [args[0]]
+[253] L1.mlp.experts.52.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.52.gate_proj  [args[0]]
+[254] L1.mlp.experts.52.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.52.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.52.up_proj  [args[1]]
+[255] L1.mlp.experts.52.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.52.mul  [args[0]]
+[256] L1.mlp.unknown@10           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.52.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@9  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@9  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@9  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[257] L1.mlp.experts.62.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@10  [args[0]]
+[258] L1.mlp.experts.62.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@10  [args[0]]
+[259] L1.mlp.experts.62.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.62.gate_proj  [args[0]]
+[260] L1.mlp.experts.62.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.62.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.62.up_proj  [args[1]]
+[261] L1.mlp.experts.62.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.62.mul  [args[0]]
+[262] L1.mlp.unknown@11           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.62.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@10  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@10  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@10  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[263] L1.mlp.experts.66.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@11  [args[0]]
+[264] L1.mlp.experts.66.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@11  [args[0]]
+[265] L1.mlp.experts.66.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.66.gate_proj  [args[0]]
+[266] L1.mlp.experts.66.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.66.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.66.up_proj  [args[1]]
+[267] L1.mlp.experts.66.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.66.mul  [args[0]]
+[268] L1.mlp.unknown@12           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.66.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@11  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@11  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@11  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[269] L1.mlp.experts.68.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@12  [args[0]]
+[270] L1.mlp.experts.68.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@12  [args[0]]
+[271] L1.mlp.experts.68.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.68.gate_proj  [args[0]]
+[272] L1.mlp.experts.68.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.68.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.68.up_proj  [args[1]]
+[273] L1.mlp.experts.68.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.68.mul  [args[0]]
+[274] L1.mlp.unknown@13           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.68.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@12  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@12  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@12  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[275] L1.mlp.experts.73.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@13  [args[0]]
+[276] L1.mlp.experts.73.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@13  [args[0]]
+[277] L1.mlp.experts.73.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.73.gate_proj  [args[0]]
+[278] L1.mlp.experts.73.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.73.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.73.up_proj  [args[1]]
+[279] L1.mlp.experts.73.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.73.mul  [args[0]]
+[280] L1.mlp.unknown@14           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.73.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@13  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@13  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@13  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[281] L1.mlp.experts.75.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@14  [args[0]]
+[282] L1.mlp.experts.75.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@14  [args[0]]
+[283] L1.mlp.experts.75.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.75.gate_proj  [args[0]]
+[284] L1.mlp.experts.75.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.75.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.75.up_proj  [args[1]]
+[285] L1.mlp.experts.75.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.75.mul  [args[0]]
+[286] L1.mlp.unknown@15           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.75.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@14  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@14  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@14  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[287] L1.mlp.experts.79.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@15  [args[0]]
+[288] L1.mlp.experts.79.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@15  [args[0]]
+[289] L1.mlp.experts.79.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.79.gate_proj  [args[0]]
+[290] L1.mlp.experts.79.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.79.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.79.up_proj  [args[1]]
+[291] L1.mlp.experts.79.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.79.mul  [args[0]]
+[292] L1.mlp.unknown@16           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.79.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@15  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@15  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@15  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[293] L1.mlp.experts.98.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@16  [args[0]]
+[294] L1.mlp.experts.98.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@16  [args[0]]
+[295] L1.mlp.experts.98.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.98.gate_proj  [args[0]]
+[296] L1.mlp.experts.98.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.98.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.98.up_proj  [args[1]]
+[297] L1.mlp.experts.98.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.98.mul  [args[0]]
+[298] L1.mlp.unknown@17           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.98.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@16  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@16  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@16  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[299] L1.mlp.experts.99.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@17  [args[0]]
+[300] L1.mlp.experts.99.up_proj   matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@17  [args[0]]
+[301] L1.mlp.experts.99.act_fn    silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.99.gate_proj  [args[0]]
+[302] L1.mlp.experts.99.mul       mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.99.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.99.up_proj  [args[1]]
+[303] L1.mlp.experts.99.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.99.mul  [args[0]]
+[304] L1.mlp.unknown@18           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.99.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@17  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@17  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@17  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[305] L1.mlp.experts.103.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@18  [args[0]]
+[306] L1.mlp.experts.103.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@18  [args[0]]
+[307] L1.mlp.experts.103.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.103.gate_proj  [args[0]]
+[308] L1.mlp.experts.103.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.103.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.103.up_proj  [args[1]]
+[309] L1.mlp.experts.103.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.103.mul  [args[0]]
+[310] L1.mlp.unknown@19           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.103.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@18  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@18  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@18  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[311] L1.mlp.experts.104.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@19  [args[0]]
+[312] L1.mlp.experts.104.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@19  [args[0]]
+[313] L1.mlp.experts.104.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.104.gate_proj  [args[0]]
+[314] L1.mlp.experts.104.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.104.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.104.up_proj  [args[1]]
+[315] L1.mlp.experts.104.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.104.mul  [args[0]]
+[316] L1.mlp.unknown@20           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.104.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@19  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@19  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@19  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[317] L1.mlp.experts.107.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@20  [args[0]]
+[318] L1.mlp.experts.107.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@20  [args[0]]
+[319] L1.mlp.experts.107.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.107.gate_proj  [args[0]]
+[320] L1.mlp.experts.107.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.107.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.107.up_proj  [args[1]]
+[321] L1.mlp.experts.107.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.107.mul  [args[0]]
+[322] L1.mlp.unknown@21           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.107.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@20  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@20  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@20  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[323] L1.mlp.experts.114.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@21  [args[0]]
+[324] L1.mlp.experts.114.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@21  [args[0]]
+[325] L1.mlp.experts.114.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.114.gate_proj  [args[0]]
+[326] L1.mlp.experts.114.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.114.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.114.up_proj  [args[1]]
+[327] L1.mlp.experts.114.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.114.mul  [args[0]]
+[328] L1.mlp.unknown@22           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.114.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@21  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@21  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@21  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[329] L1.mlp.experts.116.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@22  [args[0]]
+[330] L1.mlp.experts.116.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@22  [args[0]]
+[331] L1.mlp.experts.116.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.116.gate_proj  [args[0]]
+[332] L1.mlp.experts.116.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.116.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.116.up_proj  [args[1]]
+[333] L1.mlp.experts.116.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.116.mul  [args[0]]
+[334] L1.mlp.unknown@23           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.116.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@22  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@22  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@22  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[335] L1.mlp.experts.122.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@23  [args[0]]
+[336] L1.mlp.experts.122.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@23  [args[0]]
+[337] L1.mlp.experts.122.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.122.gate_proj  [args[0]]
+[338] L1.mlp.experts.122.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.122.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.122.up_proj  [args[1]]
+[339] L1.mlp.experts.122.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.122.mul  [args[0]]
+[340] L1.mlp.unknown@24           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.122.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@23  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@23  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@23  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[341] L1.mlp.experts.126.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@24  [args[0]]
+[342] L1.mlp.experts.126.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@24  [args[0]]
+[343] L1.mlp.experts.126.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.126.gate_proj  [args[0]]
+[344] L1.mlp.experts.126.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.126.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.126.up_proj  [args[1]]
+[345] L1.mlp.experts.126.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.126.mul  [args[0]]
+[346] L1.mlp.unknown@25           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.126.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@24  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@24  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@24  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[347] L1.mlp.experts.136.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@25  [args[0]]
+[348] L1.mlp.experts.136.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@25  [args[0]]
+[349] L1.mlp.experts.136.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.136.gate_proj  [args[0]]
+[350] L1.mlp.experts.136.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.136.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.136.up_proj  [args[1]]
+[351] L1.mlp.experts.136.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.136.mul  [args[0]]
+[352] L1.mlp.unknown@26           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.136.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@25  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@25  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@25  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[353] L1.mlp.experts.139.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@26  [args[0]]
+[354] L1.mlp.experts.139.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@26  [args[0]]
+[355] L1.mlp.experts.139.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.139.gate_proj  [args[0]]
+[356] L1.mlp.experts.139.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.139.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.139.up_proj  [args[1]]
+[357] L1.mlp.experts.139.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.139.mul  [args[0]]
+[358] L1.mlp.unknown@27           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.139.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@26  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@26  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@26  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[359] L1.mlp.experts.141.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@27  [args[0]]
+[360] L1.mlp.experts.141.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@27  [args[0]]
+[361] L1.mlp.experts.141.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.141.gate_proj  [args[0]]
+[362] L1.mlp.experts.141.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.141.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.141.up_proj  [args[1]]
+[363] L1.mlp.experts.141.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.141.mul  [args[0]]
+[364] L1.mlp.unknown@28           unknown                   1×8 → 5×8 等4个          —
+       ↑ in0 aten:self ← L1.mlp.experts.141.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@27  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@27  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@27  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+       ↑ in5 aten:self ← L1.mlp.gate  [args[0]]
+       ↑ in6 hidden_states ← L1.post_attention_layernorm  [args[0]]
+[365] L1.mlp.experts.152.gate_proj matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@28  [args[0]]
+[366] L1.mlp.experts.152.up_proj  matmul                    1×8 → 1×4              w4×8
+       ↑ in0 input ← L1.mlp.unknown@28  [args[0]]
+[367] L1.mlp.experts.152.act_fn   silu                      1×4 → 1×4              —
+       ↑ in0 input ← L1.mlp.experts.152.gate_proj  [args[0]]
+[368] L1.mlp.experts.152.mul      mul                       1×4 → 1×4              —
+       ↑ in0 aten:self ← L1.mlp.experts.152.act_fn  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.experts.152.up_proj  [args[1]]
+[369] L1.mlp.experts.152.down_proj matmul                    1×4 → 1×8              w8×4
+       ↑ in0 input ← L1.mlp.experts.152.mul  [args[0]]
+[370] L1.mlp.unknown@29           unknown                   1×8 → 5×8              —
+       ↑ in0 aten:self ← L1.mlp.experts.152.down_proj  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.unknown@28  [args[1]]
+       ↑ in2 aten:self ← L1.mlp.unknown@28  [args[0]]
+       ↑ in3 aten:index ← L1.mlp.unknown@28  [args[2]]
+       ↑ in4 aten:self ← L1.mlp.unknown@0  [args[0]]
+[371] L1.mlp.residual_add@30      add                     1×5×8 → 1×5×8            —
+       ↑ in0 aten:self ← L1.mlp.unknown@29  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.shared_experts.down_proj  [args[1]]
+[372] L1.residual_add@1           add                     1×5×8 → 1×5×8            —
+       ↑ in0 aten:self ← L1.residual_add@0  [args[0]]
+       ↑ in1 aten:other ← L1.mlp.residual_add@30  [args[1]]
+[373] norm                        rmsnorm                 1×5×8 → 1×5×8            w8,variance_epsilon=float
+       ↑ in0 hidden_states ← L1.residual_add@1  [args[0]]
+[374] lm_head                     lm_head                   5×8 → 5×102400         w102400×8
+       ↑ in0 input ← norm  [args[0]]
+--------------------------------------------------------------------------------------------------------------
+
+检查项                                     期望        实际  说明
+----------------------------------------------------------------------------------------
+✅ modules                              842       842  模块树规模（自洽检查）
+❌ matmul[decode]                       497        36  模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）
+✅ embedding[decode]                      1         1  模块树 Embedding 数
+✅ rmsnorm[decode]                        9         9  模块树 RMSNorm 数
+✅ silu[decode]                           8         8  原始 dispatch 次数与节点配方出现次数
+✅ gelu[decode]                           0         0  原始 dispatch 次数与节点配方出现次数
+❌ matmul[decode_2]                     497        36  模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）
+✅ embedding[decode_2]                    1         1  模块树 Embedding 数
+✅ rmsnorm[decode_2]                      9         9  模块树 RMSNorm 数
+✅ silu[decode_2]                         8         8  原始 dispatch 次数与节点配方出现次数
+✅ gelu[decode_2]                         0         0  原始 dispatch 次数与节点配方出现次数
+❌ matmul[prefill]                      497       105  模块树 Linear 数 vs 图上 matmul+lm_head（单次前向）
+✅ embedding[prefill]                     1         1  模块树 Embedding 数
+✅ rmsnorm[prefill]                       9         9  模块树 RMSNorm 数
+✅ silu[prefill]                         31        31  原始 dispatch 次数与节点配方出现次数
+✅ gelu[prefill]                          0         0  原始 dispatch 次数与节点配方出现次数
+✅ edges_endpoints                        0         0  每条边两端都必须存在
+✅ evidence_coverage                      0         0  每个节点至少 1 条证据
+❌ primitive_coverage                     0       668  aten._safe_softmax.default, aten.bitwise_not.default, aten.gather.default, aten.index.Tensor, aten.index_add_.default, aten.masked_fill.Scalar, aten.max.default, aten.min.default, aten.mul.Scalar, aten.nonzero.default, aten.scalar_tensor.default, aten.scatter_.value, aten.sigmoid.default, aten.topk.default, aten.tril.default, aten.where.self, aten.zeros_like.default
+❌ unknown_ops                            0        44  L1.mlp.unknown@0,L1.mlp.unknown@1,L1.mlp.unknown@2,L1.mlp.unknown@3,L1.mlp.unknown@4
+✅ I1 dispatch 全覆盖[prefill]               0         0  1170 个 aten 算子：579 个进节点，195 个只属透明算子，396 个两者都算；三部分相加 = 1170
+✅ I2 张量有主[prefill]                       0         0  每个输入都有边连到它的来源
+✅ I3 入参有槽[prefill]                       0         0  每个输入都记着参数位置
+✅ I1 dispatch 全覆盖[decode]                0         0  851 个 aten 算子：359 个进节点，104 个只属透明算子，388 个两者都算；三部分相加 = 851
+✅ I2 张量有主[decode]                        0         0  每个输入都有边连到它的来源
+✅ I3 入参有槽[decode]                        0         0  每个输入都记着参数位置
+✅ I1 dispatch 全覆盖[decode_2]              0         0  851 个 aten 算子：359 个进节点，104 个只属透明算子，388 个两者都算；三部分相加 = 851
+✅ I2 张量有主[decode_2]                      0         0  每个输入都有边连到它的来源
+✅ I3 入参有槽[decode_2]                      0         0  每个输入都记着参数位置
+❌ R1 逐节点各输出重放                            0        53  317 个节点通过
+❌ S1 独立样本验证维度关系                          0       195  保留 118 个未确定的轴
+----------------------------------------------------------------------------------------
+❌ 结构自检：L1.residual_add@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.residual_add@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@2 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@2 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@3 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@3 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@4 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@4 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@5 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@5 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@6 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@6 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@7 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@7 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@8 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@8 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@9 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@9 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@10 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@10 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@11 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@11 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@12 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@12 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@13 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@13 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@14 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@14 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@15 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@15 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@16 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@16 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@17 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@17 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@18 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@18 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@19 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@19 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@20 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@20 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@21 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@21 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@22 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@22 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@23 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@23 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@24 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@24 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@25 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@25 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@26 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@26 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@27 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@27 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@28 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@28 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@29 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.unknown@29 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.residual_add@30 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.residual_add@30 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.7.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.7.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.7.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.7.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.12.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.12.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.12.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.12.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.17.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.17.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.17.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.17.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.24.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.24.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.24.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.24.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.27.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.27.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.27.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.27.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.34.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.34.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.34.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.34.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.37.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.37.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.37.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.37.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.39.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.39.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.39.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.39.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.42.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.42.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.42.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.42.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.52.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.52.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.52.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.52.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.62.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.62.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.62.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.62.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.66.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.66.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.66.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.66.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.68.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.68.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.68.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.68.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.73.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.73.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.73.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.73.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.75.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.75.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.75.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.75.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.79.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.79.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.79.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.79.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.98.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.98.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.98.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.98.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.99.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.99.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.99.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.99.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.103.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.103.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.103.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.103.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.104.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.104.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.104.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.104.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.107.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.107.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.107.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.107.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.114.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.114.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.114.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.114.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.116.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.116.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.116.act_fn inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.act_fn outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.116.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.116.mul inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.mul inputs[1] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.mul outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.down_proj inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.116.down_proj outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.122.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.122.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.122.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.122.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.126.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.126.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.126.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.126.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.136.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.136.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.136.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.136.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.139.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.139.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.139.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.139.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.141.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.141.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.141.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.141.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.152.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.152.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.152.act_fn inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.act_fn outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.152.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：L1.mlp.experts.152.mul inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.mul inputs[1] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.mul outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.down_proj inputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：L1.mlp.experts.152.down_proj outputs[0] 轴 0 的 1 与实测不符
+❌ 结构自检：D.L1.residual_add@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.residual_add@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@2 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@2 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@3 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@3 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@4 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@4 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@5 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@5 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@6 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.unknown@6 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.residual_add@7 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.residual_add@7 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.65.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.71.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.76.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.101.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.136.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D.L1.mlp.experts.139.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.residual_add@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.residual_add@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@1 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@1 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@2 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@2 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@3 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@3 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@4 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@4 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@5 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@5 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@6 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.unknown@6 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.residual_add@7 inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.residual_add@7 outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.27.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.29.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.82.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.87.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.98.down_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.gate_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.gate_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.act_fn inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.act_fn outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.up_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.up_proj outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.mul inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.mul outputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.down_proj inputs 尺寸样本数量与槽位不符
+❌ 结构自检：D2.L1.mlp.experts.137.down_proj outputs 尺寸样本数量与槽位不符
+----------------------------------------------------------------------------------------
+结论：未通过（24/31 项对账通过，344 处结构问题）
+
+JSON 已写入 nanovllm_selector/outputs/deepseek_v3_tiny/finite_graph.json
