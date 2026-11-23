@@ -346,7 +346,8 @@ def _reference_methods(nodes: list[dict]) -> list[str]:
     root = Path(package.origin).parent if package and package.origin else None
     files, shown, lines = {}, set(), []
     for (qualname, digest), ops in classes.items():
-        if not ops.intersection({"rmsnorm", "attention", "rope_table", "rsqrt", "roll", "sum"}):
+        if not ops.intersection({"rmsnorm", "attention", "rope_table", "rsqrt", "roll", "sum",
+                                 "topk", "index_add_", "index_add"}):
             continue
         parts = qualname.split(".")
         if not all(p.isidentifier() for p in parts):
@@ -488,7 +489,8 @@ def _render_program_graph(graph: dict) -> list[str]:
     if source:
         lines += ["", "## 2.9 实测模块的本地源码与舍入位置",
                   "FP32 抽图时，同类型转换可能消失。用以下源码确认 BF16 运行时的升精度、回转、归约和乘法顺序。"
-                  "源码列出了可能分支，使用对应阶段配方确认实际路径。Q/K 的归一化位置、旋转维度、配对及顺序均以目标图和源码为准。",
+                  "源码列出了可能分支，使用对应阶段配方确认实际路径。由输入算出的位置或模块编号须在每次运行时重新计算。"
+                  "Q/K 的归一化位置、旋转维度、配对及顺序均以目标图和源码为准。",
                   *source]
     return lines
 

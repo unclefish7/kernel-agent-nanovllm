@@ -216,6 +216,24 @@ class PromptContractsTest(unittest.TestCase):
         source["sha256"] = "0" * 64
         self.assertNotIn(expected, _render_graph(graph))
 
+    def test_dynamic_selection_exposes_index_computation_and_conditional_dispatch(self):
+        from nanovllm_selector.port.prompt import _reference_methods
+
+        package = find_spec("transformers")
+        if not package:
+            self.skipTest("需要本地 Transformers 源码")
+        module = "transformers.models.deepseek_v3.modeling_deepseek_v3"
+        path = Path(package.origin).parent / "models/deepseek_v3/modeling_deepseek_v3.py"
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        nodes = []
+        for cls, op in (("DeepseekV3TopkRouter", "aten.topk.default"),
+                        ("DeepseekV3MoE", "aten.index_add_.default")):
+            nodes.append({"impl": {"source": {"qualname": f"{module}.{cls}", "sha256": digest}},
+                          "op": "unknown", "attrs": {"program": [{"op": op}]}})
+        methods = "\n".join(_reference_methods(nodes))
+        for name in ("DeepseekV3TopkRouter.get_topk_indices", "DeepseekV3MoE.moe"):
+            self.assertIn(name, methods)
+
     def test_incomplete_verified_artifact_is_rejected_before_call(self):
         path = Path(__file__).parents[1] / "outputs/lfm25_1_2b/graph_final.json"
         if not path.is_file():
