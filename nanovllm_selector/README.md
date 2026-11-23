@@ -24,7 +24,17 @@ nano-vLLM 源码 ──② 引擎规约──> spec.yaml ┤──③ 交给 age
 | ② | 读引擎源码，写成"引擎对模型的要求"（must / toolbox / context） | `contracts/nanovllm/spec.yaml` | 完成 |
 | ③ | 把图、规约、算子库、模板喂给 agent，生成模型文件，并在真实引擎里反复验证到数值对齐 | `outputs/iter_llama4/attempt_4.py` | Llama 单卡通过逐项相等验收 |
 
-引擎侧不需要再改：注册表、契约检查、权重装载核对、KV cache 绑定核对都已补进 `nano-vllm/`（见第 7 节）。
+引擎已提供注册表、模型契约检查、权重装载核对和缓存绑定。新模型的计算若超出现有接口，在该模型的报告中记录可复现的缺口。
+
+### 三种新注意力模型
+
+| 顺序 | 模型 | 本轮关注的行为 | 进度 |
+| --- | --- | --- | --- |
+| 1 | DeepSeek-V3 tiny-random | MLA 的内容键与位置键、宽度不同的 K/V、MoE 专家路由 | 两份权重已做原生对照，物理 GPU 0 已测两层分页注意力。动态专家路由的跨样本图仍在适配。[进度与复现](outputs/deepseek_v3_tiny/README.md) |
+| 2 | Qwen3.5-0.8B-Base | Gated DeltaNet 跨步读写矩阵状态，完整注意力的输出门控 | 待执行，先用纯文本 tiny，再验官方 0.8B 文本路径 |
+| 3 | GLM-5 架构 tiny-random | DSA 索引器按当前输入筛选历史位置 | 待执行，覆盖 64 个可见位置前后 |
+
+每个模型独立经过计算图、引擎能力、agent 生成与单卡数值验收。[分阶段计划与用例](../docs/superpowers/plans/2026-11-23-attention-models.md)
 
 ---
 
@@ -256,7 +266,7 @@ HIP_VISIBLE_DEVICES=0 python -B -m nanovllm_selector.port.evaluate \
 | 找到它 | `nanovllm/models/__init__.py` | `ARCH` 按 `config.architectures` 查表；查不到时列出"config 要的"和"已注册的" |
 | 验它 | 同上 `check_model_contract()` | 构造前检查 `forward(input_ids, positions)`、`compute_logits`、`packed_modules_mapping` |
 | 装它 | `nanovllm/utils/loader.py` | 装完核对：checkpoint 有模型没有 → 报键名；模型参数没被填 → 报参数名；支持 `ignored_weight_keys` |
-| 绑它 | `nanovllm/engine/model_runner.py` | KV cache 切片数量必须等于 `num_hidden_layers`，多了少了都报 |
+| 绑它 | `nanovllm/engine/model_runner.py` | 按实际持有 K/V 的模块数分配分页缓存并逐层绑定；具有固定请求状态的层由请求状态池管理 |
 
 `model_runner.py` 里原本写死 `Qwen3ForCausalLM` 的两行，改为 `resolve_model_class(hf_config)` + `self.model_cls(hf_config)`。
 
