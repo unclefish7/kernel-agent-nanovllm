@@ -12,15 +12,22 @@
 meta:
   engine: nano-vLLM
   source_root: nano-vllm/nanovllm
-  commit: 285e898ba4acc856182a1f82607cbcc3b8fe681e  # 工作区修改的基线
+  commit: def3937e1c48bb7b5788ea07abe8898b766cfd07
   scope: "models/<model>.py 与引擎之间的接口"
   note: >
-    基于上述子模块版本及工作区的请求状态接口。与源码冲突时以源码为准。
+    分页 KV 分配和请求状态接口对应上述子模块版本。与源码冲突时以源码为准。
 
 capabilities:
   - id: paged_kv
     supported: true
-    detail: 同时暴露 k_cache、v_cache 的模块按实际个数分配分页 KV，沿用全模型统一的每 rank KV 头数、头维与模型 dtype。
+    detail: >-
+      引擎为同时暴露 k_cache、v_cache 的模块分配分页 KV。模块的 num_kv_heads 和 head_dim
+      分别给出本 rank 的物理 KV 头数和每头存储宽度。缺省的头数取配置的 num_key_value_heads / TP，
+      缺省的头宽取配置的 head_dim 或 hidden_size / num_attention_heads，均按整数除法计算比值。
+      共享页池要求所有 KV 模块的这两个尺寸一致。预算按实际模块数、两份等宽 K/V 和模型 dtype 计算。
+  - id: compressed_latent_kv
+    supported: false
+    detail: 当前分页 KV 保存展开后的 K 和 V。对 V 补零时，补齐的列也占用缓存空间。
   - id: fixed_request_state
     supported: true
     detail: >-
@@ -60,8 +67,9 @@ must:
       读取时的物理块号由 block_tables 给出。模型不得自己缓存 K/V，
       也不得假设 cache 是连续存放的。
     evidence:
-      - engine/model_runner.py:141   # 实际 KV 模块数决定每块字节数与分配形状
-      - engine/model_runner.py:173   # 把每层切片挂到模块上
+      - engine/model_runner.py:159   # 从模块解析本地 KV 头数和物理头宽
+      - engine/model_runner.py:172   # 计算每块字节数
+      - engine/model_runner.py:186   # 按相同尺寸分配并绑定每层的 K/V
       - layers/attention.py:79       # Attention.forward 是唯一的读/写入口
       - layers/attention.py:47       # store_kvcache：按 slot_mapping 写入
 
@@ -160,7 +168,10 @@ toolbox:
     signature: "Attention(num_heads, head_dim, scale, num_kv_heads).forward(q, k, v) -> o"
     source: layers/attention.py:63
     gives: 写 cache + 读 cache + 算 attention，内部处理 prefill/decode 与 flash/兜底两条路径
-    notes: k_cache/v_cache 由引擎在 allocate_kv_cache 时挂上来；模块自己分配会被覆盖
+    notes: >-
+      引擎在 allocate_kv_cache 时绑定 k_cache 和 v_cache。展开后的 Q/K 头宽为 D、V 头宽小于 D 时，
+      调用方可将每头 V 在末维右侧补零到 D，保留原注意力的 scale。输出在合并各头前按原 V 宽度裁切。
+      补零不改变 Q/K 得分，有效列仍是原 V 的加权和。K 和补齐的 V 都按 D 列存储。
 
   - name: Attention.forward_torch
     kind: memory
