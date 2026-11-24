@@ -274,6 +274,12 @@ HIP_VISIBLE_DEVICES=0 python -B -m nanovllm_selector.port.evaluate \
 
 ## 8. 实测结果
 
+### Qwen3-0.6B 单卡严格验收
+
+在同一张 MI100 上，旧候选的 12 个位置均选中与 Transformers 相同的首选词，但每个位置的完整词表分数都有差异。第一次差异出现在第 0 层输入归一化。用同一份输入复算，归一化结果先转回 BF16 再乘权重时逐项相等，延后舍入则逐项复现旧实现。
+
+本地修订候选在 128、256、768 词提示与连续生成共 12 个位置通过严格比较，另一段 255 词提示与生成共 10 个位置也通过。每个位置比较全部 151,936 项，最大绝对差均为 0。后续单卡严格回归使用 `outputs/qwen3_exact/model_qwen3.py` 和 `--exact`。该候选由本地修订得到，agent 自动生成的历史记录另存于 `outputs/iter_qwen3/`。[对照实验与复现命令](outputs/qwen3_exact/README.md)
+
 ### Llama 单卡严格验收
 
 当前 Llama 图含 60 个节点模板、85 条边和 685 次实际计算，覆盖提示阶段与两次连续生成。长度 128、256、768 的三个提示、连续生成首步及后续八步，共比较 12 对完整词表分数，每对 128,256 项，最大绝对差为 0。长度 255 的独立提示跨缓存块生成八步也全部逐项相等。各步数据及产物路径见第 12 节。
@@ -358,7 +364,8 @@ python -B -m unittest discover -s nano-vllm/tests -v          # 引擎 16 项
 | 同目录的 `faults.json`、`without_history.py`、`without_history.json`、`regression.log` | 计算图破坏检查、故意跳过历史的反例及其报告、回归测试记录 |
 | `nanovllm_selector/outputs/iter_llama4/experiments/` | 前期试验的原始文件与当时的记录，需要清理中间产物时可单独移除此目录 |
 | `nanovllm_selector/outputs/iter_llama2/` | 三轮生成的 `attempt_N.py` + `trace.json` |
-| `nanovllm_selector/outputs/iter_qwen3/` | Qwen3 冒烟 |
+| `nanovllm_selector/outputs/iter_qwen3/` | Qwen3 早期近似验收候选与报告 |
+| `nanovllm_selector/outputs/qwen3_exact/` | Qwen3 单卡严格验收候选、逐层诊断和独立文本复验 |
 | `tmp/models/llama-3.2-1B/` | 下载的权重，2.48GB |
 
 仓库收录了 `outputs/iter_llama4/` 中通过单卡验收的 `attempt_4.py`、`verified.json` 和 `cold_255.json`。运行生成的其他候选、日志、完整分数及本机缓存默认由 Git 忽略。完整分数文件可用第 6 节的命令重新生成。
