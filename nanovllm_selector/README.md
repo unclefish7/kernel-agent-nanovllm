@@ -224,7 +224,7 @@ python -B -m nanovllm_selector.port.iterate \
     --max-iters 3
 ```
 
-上例使用宿主仓库的引擎规约和算子索引。在现有容器内，两份输入材料分别位于 `tmp/port-deps/contracts/nanovllm/spec.yaml` 和 `tmp/port-deps/kernels/index.md`。本次已验收的四个候选按生成顺序保存在 `outputs/iter_llama4/`，其中第四个根据第三个的评测反馈续跑生成。
+项目 Compose 将宿主仓库的引擎规约和算子索引只读挂载到容器的 `/workspace/contracts` 与 `/workspace/kernels`。早期已启动的容器仍从 `tmp/port-deps/` 读取副本，使用前须与仓库版本核对。本次已验收的四个候选按生成顺序保存在 `outputs/iter_llama4/`，其中第四个根据第三个的评测反馈续跑生成。
 
 每轮写 `attempt_N.py`，并在**子进程**里跑真实引擎：
 
@@ -317,7 +317,7 @@ Llama 每层 14 个节点（没有 q/k norm），16 × 14 + 5 = 229；重放全�
 - Python 3.12.3，PyTorch `2.12.0+rocm10.0.0`，transformers `4.57.3`，Triton `3.8.0`。
 - 模型：`tmp/models/Qwen3-0.6B/`（有权重）、`tmp/models/llama-3.2-1B/`（有权重，2.48GB，来自 modelscope）。
 - API key 放 `nanovllm_selector/.env`，运行前 export。
-- `nano-vllm/` 是 git submodule，改动要先在子模块提交，再在父仓库更新引用。
+- 父仓库和 `nano-vllm/` 子仓库都在 `main` 开发和运行。更新引擎时，先把子仓库提交推送到 fork 的 `main`，再在父仓库 `main` 记录相同的引擎提交。新环境的初始化及运行前检查见[贡献指南](../AGENTS.md)。
 
 ---
 

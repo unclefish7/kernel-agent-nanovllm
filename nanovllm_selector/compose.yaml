@@ -43,6 +43,14 @@ services:
         target: /workspace/nano-vllm
         read_only: true
       - type: bind
+        source: ../contracts
+        target: /workspace/contracts
+        read_only: true
+      - type: bind
+        source: ../kernels
+        target: /workspace/kernels
+        read_only: true
+      - type: bind
         source: ../tmp
         target: /workspace/tmp
     working_dir: /workspace/nanovllm_selector

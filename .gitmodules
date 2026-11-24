@@ -1,3 +1,5 @@
 [submodule "nano-vllm"]
 	path = nano-vllm
 	url = git@github.com:unclefish7/nano-vllm.git
+	branch = main
+	update = merge

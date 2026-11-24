@@ -36,7 +36,11 @@
 除特别说明外，从仓库根目录执行：
 
 ```bash
-git submodule update --init --recursive
+git switch main
+git pull --ff-only origin main
+git submodule update --init -- nano-vllm
+git -C nano-vllm switch main
+git -C nano-vllm pull --ff-only origin main
 python -m pip install -e ./nano-vllm --no-build-isolation
 cd nano-vllm
 python example.py
@@ -44,7 +48,7 @@ python -m unittest discover -s tests -v
 python bench.py
 ```
 
-前两条命令分别初始化指定版本的子模块、以可编辑模式安装本地包。使用 Python 3.10–3.12，以及兼容 PyTorch 的 CUDA 环境。FlashAttention 是可选的 `flash` 扩展依赖；旧 GPU 使用 README 中说明的 PyTorch 兼容路径。
+首次检出后按上面的顺序初始化。后续工作开始前，在父、子仓库各自的 `main` 执行 `git pull --ff-only origin main`。运行模型、测试和基准前，在宿主机确认 `git branch --show-current` 和 `git -C nano-vllm branch --show-current` 都输出 `main`，容器使用这份子仓库的绑定挂载。使用 Python 3.10–3.12，以及兼容 PyTorch 的 CUDA 环境。FlashAttention 是可选的 `flash` 扩展依赖；旧 GPU 使用 README 中说明的 PyTorch 兼容路径。
 
 示例和基准脚本默认从 `~/huggingface/Qwen3-0.6B/` 加载模型。下载方法见 `nano-vllm/README.md`，也可在本地调整脚本的 `path`。
 
@@ -60,7 +64,7 @@ python bench.py
 
 ## 提交与合并请求规范
 
-历史提交使用简短的动作描述，例如 `fix cache hit`，也有 `fix(model_runner): ...` 形式的模块前缀。沿用这种简洁风格。实现修改先在子模块内提交，再在父仓库提交更新后的子模块引用，并确保对应提交已存在于 fork 中。
+父仓库和 `nano-vllm/` 子仓库直接在各自现有的 `main` 开发、运行、测试和提交。按功能拆分 Conventional Commits，例如 `fix(engine): 按实际头宽分配缓存`。引擎修改先在子仓库 `main` 提交并推送到 fork 的 `origin/main`；再在父仓库 `main` 提交对应的子模块引用及引擎规约更新。提交前用 `git rev-parse :nano-vllm` 对照 `git -C nano-vllm rev-parse HEAD`，确认父仓库暂存的是经过验证的引擎版本。若远端有独立提交导致无法快进，先核对两端改动，保留已有历史。
 
 合并请求应说明问题、修改后的行为、相关 issue 和验证结果。性能修改需附基准对比，未执行的 GPU 验证需明确说明。不要提交下载的模型权重、安装包或本地环境文件。
 
