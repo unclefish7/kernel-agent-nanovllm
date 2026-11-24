@@ -1,0 +1,77 @@
+{
+  "purpose": "prefill_diagnostic",
+  "candidate": "nanovllm_selector/outputs/iter_qwen3/attempt_1.py",
+  "candidate_sha256": "66fac0463cc8eabfc5fd9382d7f3d42d9dac45a58f44dc933f89a75341f76536",
+  "length": 128,
+  "token_ids_sha256": "6ef04bb1d5375a90667cdceb81b10483914fd0a65a78d9805fd5588db3d9721e",
+  "compared": 905,
+  "first_difference": {
+    "engine_path": "model.layers.0.input_layernorm",
+    "engine_phase": "output",
+    "hf_path": "model.layers.0.input_layernorm",
+    "hf_phase": "output",
+    "call_index": 0,
+    "engine_shape": [
+      128,
+      1024
+    ],
+    "hf_shape": [
+      1,
+      128,
+      1024
+    ],
+    "engine_dtype": "torch.bfloat16",
+    "hf_dtype": "torch.bfloat16",
+    "engine": {
+      "class": "RMSNorm",
+      "raw_shapes": [
+        128,
+        1024
+      ],
+      "view": "原始输出"
+    },
+    "hf": {
+      "class": "Qwen3RMSNorm",
+      "raw_shapes": [
+        1,
+        128,
+        1024
+      ],
+      "view": "原始输出"
+    },
+    "previous_match": [
+      "model.layers.0.input_layernorm",
+      "input",
+      "model.layers.0.input_layernorm"
+    ],
+    "different_elements": 34962,
+    "elements": 131072,
+    "max_abs_diff": 0.015625,
+    "first_flat_index": 3,
+    "engine_value": 0.486328125,
+    "hf_value": 0.484375
+  },
+  "logits": {
+    "different_elements": 129989,
+    "elements": 151936,
+    "max_abs_diff": 0.2890625,
+    "first_flat_index": 0,
+    "engine_value": 7.6875,
+    "hf_value": 7.75
+  },
+  "unpaired": {
+    "engine_paths": 29,
+    "hf_paths": 1,
+    "engine_examples": [
+      "model.layers.0.self_attn.attn",
+      "model.layers.0.self_attn.rotary_emb",
+      "model.layers.1.self_attn.attn",
+      "model.layers.10.self_attn.attn",
+      "model.layers.11.self_attn.attn",
+      "model.layers.12.self_attn.attn"
+    ],
+    "hf_examples": [
+      "model.rotary_emb"
+    ]
+  }
+}

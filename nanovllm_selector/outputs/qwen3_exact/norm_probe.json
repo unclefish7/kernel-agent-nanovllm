@@ -1,0 +1,23 @@
+{
+  "shape": [
+    128,
+    1024
+  ],
+  "device": "_CudaDeviceProperties(name='AMD Instinct MI100', major=9, minor=0, gcnArchName='gfx908:sramecc+:xnack-', total_memory=32752MB, multi_processor_count=120, uuid=36656166-3331-3865-3938-666634373237, pci_bus_id=3, pci_device_id=0, pci_domain_id=0, L2_cache_size=8MB)",
+  "compiled_vs_reference": {
+    "different_elements": 34962,
+    "max_abs_diff": 0.015625
+  },
+  "eager_vs_reference": {
+    "different_elements": 0,
+    "max_abs_diff": 0.0
+  },
+  "late_rounding_vs_reference": {
+    "different_elements": 34962,
+    "max_abs_diff": 0.015625
+  },
+  "compiled_vs_late_rounding": {
+    "different_elements": 0,
+    "max_abs_diff": 0.0
+  }
+}

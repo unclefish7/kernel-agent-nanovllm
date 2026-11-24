@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "attempt": 1,
+  "path": "/workspace/nanovllm_selector/outputs/iter_qwen3/attempt_1.py",
+  "report": {
+    "ok": true,
+    "stage": "compare",
+    "candidate": "/workspace/nanovllm_selector/outputs/iter_qwen3/attempt_1.py",
+    "comparison": {
+      "argmax_actual": 12095,
+      "argmax_expected": 12095,
+      "argmax_match": true,
+      "max_abs_diff": 0.4375,
+      "cosine": 0.9998109340667725,
+      "top5_actual": [
+        12095,
+        7407,
+        279,
+        1112,
+        30743
+      ],
+      "top5_expected": [
+        12095,
+        7407,
+        279,
+        1112,
+        220
+      ],
+      "ok": true
+    },
+    "elapsed": 13.37
+  },
+  "history": [
+    {
+      "attempt": 1,
+      "path": "/workspace/nanovllm_selector/outputs/iter_qwen3/attempt_1.py",
+      "ok": true,
+      "stage": "compare",
+      "elapsed": 24.56,
+      "error": null
+    }
+  ]
+}
