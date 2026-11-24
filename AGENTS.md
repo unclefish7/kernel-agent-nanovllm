@@ -64,7 +64,7 @@ python bench.py
 
 ## 提交与合并请求规范
 
-父仓库和 `nano-vllm/` 子仓库直接在各自现有的 `main` 开发、运行、测试和提交。按功能拆分 Conventional Commits，例如 `fix(engine): 按实际头宽分配缓存`。引擎修改先在子仓库 `main` 提交并推送到 fork 的 `origin/main`；再在父仓库 `main` 提交对应的子模块引用及引擎规约更新。提交前用 `git rev-parse :nano-vllm` 对照 `git -C nano-vllm rev-parse HEAD`，确认父仓库暂存的是经过验证的引擎版本。若远端有独立提交导致无法快进，先核对两端改动，保留已有历史。
+父仓库和 `nano-vllm/` 子仓库直接在各自现有的 `main` 开发、运行、测试和提交。按功能拆分 Conventional Commits，例如 `fix(engine): 按实际头宽分配缓存`。引擎修改先在子仓库 `main` 提交并推送到 fork 的 `origin/main`。再在父仓库 `main` 提交对应的子模块引用及引擎规约更新，并推送到父仓库的 GitHub `main`。仅涉及父仓库的改动也在验证后推送到该仓库的 `main`。提交前用 `git rev-parse :nano-vllm` 对照 `git -C nano-vllm rev-parse HEAD`，确认父仓库暂存的是经过验证的引擎版本。若远端有独立提交导致无法快进，先核对两端改动，保留已有历史。
 
 合并请求应说明问题、修改后的行为、相关 issue 和验证结果。性能修改需附基准对比，未执行的 GPU 验证需明确说明。不要提交下载的模型权重、安装包或本地环境文件。
 
