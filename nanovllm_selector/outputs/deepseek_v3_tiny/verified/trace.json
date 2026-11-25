@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "history": [
+    {
+      "path": "attempt_1.py",
+      "turn": 0,
+      "sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d",
+      "stage": "compare",
+      "ok": true
+    }
+  ],
+  "tool_calls": 0,
+  "turns": 0,
+  "path": "attempt_1.py",
+  "stage": "holdout",
+  "candidate_sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d",
+  "accepted_model": "model_deepseek_v3.py"
+}

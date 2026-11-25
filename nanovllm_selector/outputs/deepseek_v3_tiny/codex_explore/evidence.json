@@ -1,0 +1,1821 @@
+{
+  "raw_ledger_sha256": "ac450179de1dab0e7ed87bb701af4463de99f3cf3d602aa59a730c4305c66eca",
+  "calls": [
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "tree",
+        "limit": 55
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm",
+        "resolution": "static_definition",
+        "provenance": "installed_source",
+        "total": 23
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "tree",
+        "limit": 30
+      },
+      "result": {
+        "ok": true,
+        "provenance": "meta_from_config",
+        "total": 842
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.0.self_attn",
+        "limit": 220
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3Attention",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 327,
+        "end_line": 446,
+        "provenance": "installed_source",
+        "total": 120
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.rotary_emb",
+        "limit": 220
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3RotaryEmbedding",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 56,
+        "end_line": 89,
+        "provenance": "installed_source",
+        "total": 34
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.1.mlp",
+        "limit": 220
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3MoE",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 156,
+        "end_line": 208,
+        "provenance": "installed_source",
+        "total": 53
+      }
+    },
+    {
+      "tool": "run_model",
+      "arguments": {
+        "target": "hf",
+        "prompt_ids": [
+          101,
+          113,
+          7,
+          23
+        ],
+        "decode_ids": [
+          31,
+          19
+        ],
+        "watch": [
+          "model.layers.0.self_attn",
+          "model.layers.1.mlp",
+          "model.layers.0.input_layernorm"
+        ]
+      },
+      "result": {
+        "ok": true,
+        "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+        "steps": 3,
+        "item_count": 201,
+        "provenance": {
+          "target": "hf",
+          "model_dir": "/model",
+          "checkpoint_files": {
+            "config.json": "72740d4c8910cf6ff2d30a9c5bc1ab75605278f17fb08e5119ecb37979ccc37c",
+            "model.safetensors": "cfbdbe3b14fae3948138aae5b254c9981826f84bd4069e5d688d8079ce437fc3",
+            "generation_config.json": "75b60ff86f7c60bf17d6d8d789f17dbd367fbcfe0036ad1f1b00603eb70615a4"
+          },
+          "prompt_ids": [
+            101,
+            113,
+            7,
+            23
+          ],
+          "decode_ids": [
+            31,
+            19
+          ],
+          "watch": [
+            "model.layers.0.self_attn",
+            "model.layers.1.mlp",
+            "model.layers.0.input_layernorm"
+          ],
+          "hf_reliable": true,
+          "seed": 0,
+          "state_scope": "input 与 post_input 为调用前后实参；state 为直接 buffer 和张量属性；未公开的内部状态未知",
+          "probe_sha256": null,
+          "tensor_limit_bytes": 67108864,
+          "run_limit_bytes": 268435456,
+          "model_class": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM",
+          "model_type": "deepseek_v3",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "parameter_dtypes": [
+            "torch.float32"
+          ],
+          "device_backend": "rocm",
+          "attn_implementation": "sdpa",
+          "torch_version": "2.12.0+rocm10.0.0",
+          "transformers_version": "4.57.3",
+          "device_name": "AMD Instinct MI100",
+          "module_aliases": {
+            "model.layers.0.self_attn": [
+              "model.layers.0.self_attn"
+            ],
+            "model.layers.1.mlp": [
+              "model.layers.1.mlp"
+            ],
+            "model.layers.0.input_layernorm": [
+              "model.layers.0.input_layernorm"
+            ]
+          }
+        },
+        "calibration": {
+          "status": "match",
+          "steps": [
+            {
+              "step": 0,
+              "finite": true,
+              "dtype_match": true,
+              "shape_match": true,
+              "exact": true,
+              "logits": {
+                "status": "match",
+                "reason": "equal",
+                "finite": true,
+                "mismatch_count": 0,
+                "mismatches": []
+              },
+              "state": {
+                "status": "match",
+                "tensors": 7,
+                "fields": 19,
+                "changed_count": 0,
+                "changed_paths": [],
+                "unknown_count": 0,
+                "unknown_paths": []
+              }
+            },
+            {
+              "step": 1,
+              "finite": true,
+              "dtype_match": true,
+              "shape_match": true,
+              "exact": true,
+              "logits": {
+                "status": "match",
+                "reason": "equal",
+                "finite": true,
+                "mismatch_count": 0,
+                "mismatches": []
+              },
+              "state": {
+                "status": "match",
+                "tensors": 7,
+                "fields": 19,
+                "changed_count": 0,
+                "changed_paths": [],
+                "unknown_count": 0,
+                "unknown_paths": []
+              }
+            },
+            {
+              "step": 2,
+              "finite": true,
+              "dtype_match": true,
+              "shape_match": true,
+              "exact": true,
+              "logits": {
+                "status": "match",
+                "reason": "equal",
+                "finite": true,
+                "mismatch_count": 0,
+                "mismatches": []
+              },
+              "state": {
+                "status": "match",
+                "tensors": 7,
+                "fields": 19,
+                "changed_count": 0,
+                "changed_paths": [],
+                "unknown_count": 0,
+                "unknown_paths": []
+              }
+            }
+          ],
+          "state_scope": "返回的非 logits 字段、已注册 buffer 和模块直接张量属性；其他内部状态未知"
+        }
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "source",
+        "ref": "nanovllm.layers.attention.Attention",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm.layers.attention.Attention",
+        "resolution": "static_definition",
+        "file": "/workspace/nano-vllm/nanovllm/layers/attention.py",
+        "sha256": "e6234b5b392a9bc5524a56a9ea5c52b11599bc7a121760bf0e7e5cd10a7508a6",
+        "start_line": 63,
+        "end_line": 141,
+        "provenance": "installed_source",
+        "total": 79
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "selector": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 0,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output"
+        },
+        "view": "values",
+        "limit": 8
+      },
+      "result": {
+        "ok": false,
+        "status": "error",
+        "error": "observe 的可选 view 为 selectors 或 aliases"
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "transformers.models.deepseek_v3.modeling_deepseek_v3.apply_rotary_pos_emb_interleave",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.apply_rotary_pos_emb_interleave",
+        "resolution": "static_definition",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 283,
+        "end_line": 318,
+        "provenance": "installed_source",
+        "total": 36
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.1.mlp.gate",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3TopkRouter",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 109,
+        "end_line": 153,
+        "provenance": "installed_source",
+        "total": 45
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.0.input_layernorm",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3RMSNorm",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 35,
+        "end_line": 53,
+        "provenance": "installed_source",
+        "total": 19
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "transformers.integrations.sdpa_attention.sdpa_attention_forward",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.integrations.sdpa_attention.sdpa_attention_forward",
+        "resolution": "static_definition",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py",
+        "sha256": "dc5abe49a98dec3b9026739dfbf2e9a8f3e5272b2916b3c2d404727ac931a013",
+        "start_line": 48,
+        "end_line": 108,
+        "provenance": "installed_source",
+        "total": 61
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "source",
+        "ref": "nanovllm.utils.loader.load_model",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm.utils.loader.load_model",
+        "resolution": "static_definition",
+        "file": "/workspace/nano-vllm/nanovllm/utils/loader.py",
+        "sha256": "decdab5c56734d91c54a0cd17e6b22032a2aa5e2135474cc2e7fb35b725fc2e5",
+        "start_line": 35,
+        "end_line": 82,
+        "provenance": "installed_source",
+        "total": 48
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "source",
+        "ref": "nanovllm.layers.attention.store_kvcache",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm.layers.attention.store_kvcache",
+        "resolution": "static_definition",
+        "file": "/workspace/nano-vllm/nanovllm/layers/attention.py",
+        "sha256": "e6234b5b392a9bc5524a56a9ea5c52b11599bc7a121760bf0e7e5cd10a7508a6",
+        "start_line": 47,
+        "end_line": 60,
+        "provenance": "installed_source",
+        "total": 14
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "selector": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 0,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output"
+        },
+        "limit": 8
+      },
+      "result": {
+        "ok": false,
+        "status": "error",
+        "error": "证据键含有未知字段"
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "transformers.models.deepseek_v3.modeling_deepseek_v3.yarn_get_mscale",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.yarn_get_mscale",
+        "resolution": "static_definition",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 321,
+        "end_line": 324,
+        "provenance": "installed_source",
+        "total": 4
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.0.mlp",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3MLP",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 92,
+        "end_line": 106,
+        "provenance": "installed_source",
+        "total": 15
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "model.layers.0",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3DecoderLayer",
+        "resolution": "runtime_binding",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 449,
+        "end_line": 496,
+        "provenance": "installed_source",
+        "total": 48
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+        "step": 0,
+        "module": "model.layers.1.mlp",
+        "call": 0,
+        "port": "output",
+        "limit": 8
+      },
+      "result": {
+        "status": "ok",
+        "item": {
+          "step": 0,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.1.mlp",
+          "aliases": [
+            "model.layers.1.mlp"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 0,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "offset": 0,
+        "total": 32,
+        "values": [
+          -0.00023053481709212065,
+          0.0017504743300378323,
+          0.0024727231357246637,
+          0.0006121381302364171,
+          -0.0009703945252113044,
+          -0.0005771514261141419,
+          -0.0005957277026027441,
+          0.00017533965001348406
+        ]
+      }
+    },
+    {
+      "tool": "run_model",
+      "arguments": {
+        "target": "probe",
+        "prompt_ids": [
+          101,
+          113,
+          7,
+          23
+        ],
+        "decode_ids": [
+          31,
+          19
+        ],
+        "watch": [],
+        "probe_file": "probe.py"
+      },
+      "result": {
+        "ok": true,
+        "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+        "steps": 3,
+        "item_count": 18,
+        "provenance": {
+          "target": "probe",
+          "model_dir": "/model",
+          "checkpoint_files": {
+            "config.json": "72740d4c8910cf6ff2d30a9c5bc1ab75605278f17fb08e5119ecb37979ccc37c",
+            "model.safetensors": "cfbdbe3b14fae3948138aae5b254c9981826f84bd4069e5d688d8079ce437fc3",
+            "generation_config.json": "75b60ff86f7c60bf17d6d8d789f17dbd367fbcfe0036ad1f1b00603eb70615a4"
+          },
+          "prompt_ids": [
+            101,
+            113,
+            7,
+            23
+          ],
+          "decode_ids": [
+            31,
+            19
+          ],
+          "watch": [],
+          "hf_reliable": null,
+          "seed": 0,
+          "state_scope": "input 与 post_input 为调用前后实参；state 为直接 buffer 和张量属性；未公开的内部状态未知",
+          "probe_sha256": "62cc95ce07177ebbc3864c6552b59fc79176eeda6a07a1e28cee76bb25e9e14d",
+          "tensor_limit_bytes": 67108864,
+          "run_limit_bytes": 268435456,
+          "model_class": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM",
+          "model_type": "deepseek_v3",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "parameter_dtypes": [
+            "torch.float32"
+          ],
+          "device_backend": "rocm",
+          "attn_implementation": "sdpa",
+          "torch_version": "2.12.0+rocm10.0.0",
+          "transformers_version": "4.57.3",
+          "device_name": "AMD Instinct MI100",
+          "module_aliases": {}
+        },
+        "calibration": {
+          "status": "probe_derived"
+        }
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+        "view": "selectors",
+        "step": 2,
+        "limit": 64
+      },
+      "result": {
+        "status": "ok",
+        "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+        "selectors": [
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "output"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "output.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "output"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "input.args.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "post_input.args.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.hidden_states"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.position_ids"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.past_key_values.layers.0.keys"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.past_key_values.layers.0.values"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.past_key_values.layers.1.keys"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.past_key_values.layers.1.values"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.cache_position"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.position_embeddings.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "input.kwargs.position_embeddings.1"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.hidden_states"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.position_ids"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.past_key_values.layers.0.keys"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.past_key_values.layers.0.values"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.past_key_values.layers.1.keys"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.past_key_values.layers.1.values"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.cache_position"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.position_embeddings.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "post_input.kwargs.position_embeddings.1"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "input.args.0"
+          },
+          {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "post_input.args.0"
+          }
+        ],
+        "selector_page": {
+          "offset": 0,
+          "total": 25,
+          "next_observe": null,
+          "provenance": {
+            "target": "hf",
+            "probe_derived": false,
+            "hf_reliable": true,
+            "probe_sha256": null,
+            "module_paths": "canonical_registration",
+            "caller_status": "unknown"
+          }
+        }
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+        "view": "selectors",
+        "step": 2,
+        "limit": 64
+      },
+      "result": {
+        "status": "ok",
+        "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+        "selectors": [
+          {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.rms"
+          },
+          {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.mla"
+          },
+          {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.experts"
+          },
+          {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.selected"
+          },
+          {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.weights"
+          }
+        ],
+        "selector_page": {
+          "offset": 0,
+          "total": 5,
+          "next_observe": null,
+          "provenance": {
+            "target": "probe",
+            "probe_derived": true,
+            "hf_reliable": null,
+            "probe_sha256": "62cc95ce07177ebbc3864c6552b59fc79176eeda6a07a1e28cee76bb25e9e14d",
+            "module_paths": "canonical_registration",
+            "caller_status": "unknown"
+          }
+        }
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+        "step": 0,
+        "module": "@probe",
+        "call": 0,
+        "port": "output.selected",
+        "limit": 6
+      },
+      "result": {
+        "status": "ok",
+        "item": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.selected",
+          "kind": "tensor",
+          "shape": [
+            4,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 192,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 0,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.selected"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        },
+        "offset": 0,
+        "total": 24,
+        "values": [
+          27,
+          118,
+          110,
+          55,
+          29,
+          107
+        ]
+      }
+    },
+    {
+      "tool": "observe",
+      "arguments": {
+        "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+        "step": 0,
+        "module": "@probe",
+        "call": 0,
+        "port": "output.weights",
+        "limit": 6
+      },
+      "result": {
+        "status": "ok",
+        "item": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.weights",
+          "kind": "tensor",
+          "shape": [
+            4,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 96,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 0,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.weights"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        },
+        "offset": 0,
+        "total": 24,
+        "values": [
+          12.711213111877441,
+          12.278959274291992,
+          12.11186695098877,
+          12.012725830078125,
+          11.67357349395752,
+          11.551125526428223
+        ]
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 0,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.input_layernorm",
+          "aliases": [
+            "model.layers.0.input_layernorm"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 0,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 0,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.rms"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 0,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.1.mlp",
+          "aliases": [
+            "model.layers.1.mlp"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 0,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 0,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.experts"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 0,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.self_attn",
+          "aliases": [
+            "model.layers.0.self_attn"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 0,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "output.0"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla",
+          "kind": "tensor",
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 128,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 0,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.mla"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 1,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.input_layernorm",
+          "aliases": [
+            "model.layers.0.input_layernorm"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 1,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 1,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.rms"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 1,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.self_attn",
+          "aliases": [
+            "model.layers.0.self_attn"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 1,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "output.0"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 1,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.mla"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 1,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.1.mlp",
+          "aliases": [
+            "model.layers.1.mlp"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 1,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 1,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.experts"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 2,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.0.input_layernorm",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.input_layernorm",
+          "aliases": [
+            "model.layers.0.input_layernorm"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.input_layernorm",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.rms",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.rms"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 2,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.0.self_attn",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.0.self_attn",
+          "aliases": [
+            "model.layers.0.self_attn"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.0.self_attn",
+            "call": 0,
+            "port": "output.0"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.mla",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.mla"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "compare",
+      "arguments": {
+        "reference": {
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "step": 2,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output"
+        },
+        "actual": {
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts"
+        }
+      },
+      "result": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.1.mlp",
+          "call": 0,
+          "port": "output",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "forward_hook",
+          "canonical_module": "model.layers.1.mlp",
+          "aliases": [
+            "model.layers.1.mlp"
+          ],
+          "caller_path": null,
+          "caller_status": "unknown",
+          "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+          "selector": {
+            "run_id": "hf-f920b2d432d1463082b7625d81d4b9bc",
+            "step": 2,
+            "module": "model.layers.1.mlp",
+            "call": 0,
+            "port": "output"
+          },
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.experts",
+          "kind": "tensor",
+          "shape": [
+            1,
+            1,
+            8
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 32,
+          "origin": "probe_callback",
+          "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+          "selector": {
+            "run_id": "probe-74aa6a20b83948b093fea2ff9799610a",
+            "step": 2,
+            "module": "@probe",
+            "call": 0,
+            "port": "output.experts"
+          },
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "source",
+        "ref": "nanovllm.engine.model_runner.ModelRunner",
+        "limit": 160,
+        "method": "allocate_kv_cache"
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm.engine.model_runner.ModelRunner.allocate_kv_cache",
+        "resolution": "static_definition",
+        "file": "/workspace/nano-vllm/nanovllm/engine/model_runner.py",
+        "sha256": "ced611f58e0e20900d276709aeb7d59387edc2b39defa8686c367b1d59f8790f",
+        "start_line": 141,
+        "end_line": 192,
+        "provenance": "installed_source",
+        "total": 52
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "engine",
+        "view": "source",
+        "ref": "nanovllm.layers.embed_head.ParallelLMHead",
+        "limit": 160
+      },
+      "result": {
+        "ok": true,
+        "source_name": "nanovllm.layers.embed_head.ParallelLMHead",
+        "resolution": "static_definition",
+        "file": "/workspace/nano-vllm/nanovllm/layers/embed_head.py",
+        "sha256": "e823fbd0a1eb9d64a90e93ade7d32f32235f0039bafc97d367d92a8ee06b3d0f",
+        "start_line": 45,
+        "end_line": 66,
+        "provenance": "installed_source",
+        "total": 22
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM",
+        "limit": 160,
+        "method": "forward"
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM.forward",
+        "resolution": "static_definition",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "sha256": "6ccc6379a1d931746ec156e67dd2a78a8c102a9c12af12e968028a03f8a00689",
+        "start_line": 618,
+        "end_line": 676,
+        "provenance": "installed_source",
+        "total": 59
+      }
+    },
+    {
+      "tool": "read_code",
+      "arguments": {
+        "target": "hf",
+        "view": "source",
+        "ref": "transformers.models.deepseek_v3.configuration_deepseek_v3.DeepseekV3Config",
+        "limit": 160,
+        "method": "__init__"
+      },
+      "result": {
+        "ok": true,
+        "source_name": "transformers.models.deepseek_v3.configuration_deepseek_v3.DeepseekV3Config.__init__",
+        "resolution": "static_definition",
+        "file": "/opt/pytorch-venv/lib/python3.12/site-packages/transformers/models/deepseek_v3/configuration_deepseek_v3.py",
+        "sha256": "54472b0090ce5019f83663c3a805c3678ee00911868d939a2ac18bd2a487e711",
+        "start_line": 155,
+        "end_line": 250,
+        "provenance": "installed_source",
+        "total": 96
+      }
+    },
+    {
+      "tool": "evaluate",
+      "arguments": {
+        "candidate": "attempt_1.py",
+        "candidate_sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d"
+      },
+      "result": {
+        "ok": true,
+        "stage": "compare",
+        "matched": 12,
+        "total": 12,
+        "candidate_sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d",
+        "outcome": "passed"
+      }
+    },
+    {
+      "tool": "holdout",
+      "arguments": {
+        "candidate": "attempt_1.py",
+        "candidate_sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d"
+      },
+      "result": {
+        "ok": true,
+        "stage": "compare",
+        "matched": 10,
+        "total": 10,
+        "candidate_sha256": "195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d",
+        "outcome": "passed"
+      }
+    }
+  ]
+}

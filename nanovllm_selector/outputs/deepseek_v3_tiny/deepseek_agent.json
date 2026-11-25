@@ -1,0 +1,313 @@
+{
+  "provider": "DeepSeek",
+  "model_checkpoint": "katuni4ka/tiny-random-deepseek-v3",
+  "device": "GPU0",
+  "workflows": [
+    {
+      "directory": "active_verified",
+      "tools": {
+        "read_code": 44,
+        "run_model": 7,
+        "observe": 15
+      },
+      "value_windows": 0,
+      "attempts": [
+        {
+          "file": "attempt_1.py",
+          "candidate_sha256": "4de9fd763451ce48c6a56c24b658d6baad17ebbebcc4c1047ec6706223bb9273",
+          "stage": "engine",
+          "ok": false
+        },
+        {
+          "file": "attempt_2.py",
+          "candidate_sha256": "8d1780fb046c01504faad3666f6f05df2c0de0e85d27de74b1cd7cd52ceaa4eb",
+          "stage": "engine",
+          "ok": false
+        },
+        {
+          "file": "attempt_3.py",
+          "candidate_sha256": "dca8d9ab8281cf2201505568328ab8abfac782f65140ea57743cdf4a430107e0",
+          "stage": "class",
+          "ok": false
+        },
+        {
+          "file": "attempt_4.py",
+          "candidate_sha256": "dca8d9ab8281cf2201505568328ab8abfac782f65140ea57743cdf4a430107e0",
+          "stage": "class",
+          "ok": false
+        },
+        {
+          "file": "attempt_5.py",
+          "candidate_sha256": "6754006e35f18db41a3f3338f9d3ad4e2ed742d4fecf10dd8a56dbf99d906e24",
+          "stage": "engine",
+          "ok": false
+        },
+        {
+          "file": "attempt_6.py",
+          "candidate_sha256": "52b2a74d803f72c31b3711880963f14c5b4077683a167f9331c900b52ba1e86b",
+          "stage": "class",
+          "ok": false
+        },
+        {
+          "file": "attempt_7.py",
+          "candidate_sha256": "6754006e35f18db41a3f3338f9d3ad4e2ed742d4fecf10dd8a56dbf99d906e24",
+          "stage": "engine",
+          "ok": false
+        }
+      ],
+      "raw_ledger_sha256": "36a458134afdf7251aa52dda19a6c67fef9ac9a4322bf731b60c15d302953c64"
+    },
+    {
+      "directory": "active_main",
+      "tools": {
+        "read_code": 38
+      },
+      "value_windows": 0,
+      "attempts": [
+        {
+          "file": "attempt_1.py",
+          "candidate_sha256": "db408db1cd0ed24ec657da0abf6b55cc80d049c43371385dece5de2bd534cca7",
+          "stage": "class",
+          "ok": false
+        },
+        {
+          "file": "attempt_2.py",
+          "candidate_sha256": "066f8fdf4b76643d94c0b651ae2814588950fb68ce11df753b9b72f0c4a9465f",
+          "stage": "engine",
+          "ok": false
+        },
+        {
+          "file": "attempt_3.py",
+          "candidate_sha256": "cc93d882dba1eef12a0959ad19bd7d92f83590a012ff92c081967963e9b94b01",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12
+        },
+        {
+          "file": "attempt_4.py",
+          "candidate_sha256": "8fad0908daf7fb71403a7d26f1681c1604ea9faca1fca5e59a1df0d43fd3ba4d",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12
+        },
+        {
+          "file": "attempt_5.py",
+          "candidate_sha256": "8fad0908daf7fb71403a7d26f1681c1604ea9faca1fca5e59a1df0d43fd3ba4d",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12
+        },
+        {
+          "file": "attempt_6.py",
+          "candidate_sha256": "8fad0908daf7fb71403a7d26f1681c1604ea9faca1fca5e59a1df0d43fd3ba4d",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12
+        },
+        {
+          "file": "attempt_7.py",
+          "candidate_sha256": "8fad0908daf7fb71403a7d26f1681c1604ea9faca1fca5e59a1df0d43fd3ba4d",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12
+        }
+      ],
+      "raw_ledger_sha256": "651bd3812afe67c87ef49dcfe0c94e02dacaa775195d38021180ea5321a5183b"
+    },
+    {
+      "directory": "active_repair",
+      "tools": {
+        "read_code": 18,
+        "run_model": 5
+      },
+      "value_windows": 0,
+      "attempts": [
+        {
+          "file": "attempt_1.py",
+          "candidate_sha256": "cc93d882dba1eef12a0959ad19bd7d92f83590a012ff92c081967963e9b94b01",
+          "stage": "compare",
+          "ok": false,
+          "matched": 5,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.q_a_layernorm",
+            "engine_phase": "output",
+            "max_abs_diff": 1.1920928955078125e-07
+          }
+        },
+        {
+          "file": "attempt_2.py",
+          "candidate_sha256": "f752bf6891dc8daf6f2ca93c87513c5c21b7b489097c6ffc555890c235760802",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_3.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_4.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_5.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_6.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_7.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_8.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_9.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_10.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        },
+        {
+          "file": "attempt_11.py",
+          "candidate_sha256": "ba1edf62b8fc30f94862a96cb9a571f3f2e75fe4a01a56428da39e1fb20ab04f",
+          "stage": "compare",
+          "ok": false,
+          "matched": 7,
+          "total": 12,
+          "max_abs_diff": 5.960464477539063e-08,
+          "same_top1": 12,
+          "first_difference": {
+            "engine_path": "model.layers.0.self_attn.o_proj",
+            "engine_phase": "input",
+            "max_abs_diff": 1.3737007975578308e-08
+          }
+        }
+      ],
+      "raw_ledger_sha256": "1909d3b9b114bc9883503154225821c3b270f7fbcc37f5adcd1cbddddb74f715"
+    }
+  ],
+  "outcome": "candidate_failed",
+  "best_public": 7,
+  "public_total": 12,
+  "holdout_attempted": false
+}

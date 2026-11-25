@@ -1,0 +1,86 @@
+{
+  "purpose": "prefill_diagnostic",
+  "length": 768,
+  "trusted_for_acceptance": false,
+  "candidate_sha256": "f752bf6891dc8daf6f2ca93c87513c5c21b7b489097c6ffc555890c235760802",
+  "candidate": "/candidate.py",
+  "token_ids_sha256": "cded48ef964260ced27339c3f7e328f37409a7063a4b62fa6e942dbc2d9ee6fb",
+  "compared": 576,
+  "first_difference": {
+    "engine_path": "model.layers.0.self_attn.o_proj",
+    "engine_phase": "input",
+    "hf_path": "model.layers.0.self_attn.o_proj",
+    "hf_phase": "input",
+    "call_index": 0,
+    "engine_shape": [
+      768,
+      4
+    ],
+    "hf_shape": [
+      1,
+      768,
+      4
+    ],
+    "engine_dtype": "torch.float32",
+    "hf_dtype": "torch.float32",
+    "engine": {
+      "class": "RowParallelLinear",
+      "raw_shapes": {
+        "x": [
+          768,
+          4
+        ]
+      },
+      "view": "主输入"
+    },
+    "hf": {
+      "class": "Linear",
+      "raw_shapes": {
+        "input": [
+          1,
+          768,
+          4
+        ]
+      },
+      "view": "主输入"
+    },
+    "previous_match": [
+      "model.layers.0.self_attn.kv_b_proj",
+      "output",
+      "model.layers.0.self_attn.kv_b_proj"
+    ],
+    "different_elements": 2719,
+    "elements": 3072,
+    "max_abs_diff": 1.3737007975578308e-08,
+    "first_flat_index": 4,
+    "engine_value": -0.008391770534217358,
+    "hf_value": -0.008391771465539932
+  },
+  "unpaired": {
+    "engine_paths": 5,
+    "hf_paths": 66,
+    "engine_examples": [
+      "model.layers.0.self_attn.attn",
+      "model.layers.0.self_attn.rotary_emb",
+      "model.layers.1.mlp.gate",
+      "model.layers.1.self_attn.attn",
+      "model.layers.1.self_attn.rotary_emb"
+    ],
+    "hf_examples": [
+      "model.layers.0.mlp.act_fn",
+      "model.layers.1.mlp.experts.1.act_fn",
+      "model.layers.1.mlp.experts.10.act_fn",
+      "model.layers.1.mlp.experts.100.act_fn",
+      "model.layers.1.mlp.experts.103.act_fn",
+      "model.layers.1.mlp.experts.104.act_fn"
+    ]
+  },
+  "logits": {
+    "different_elements": 87743,
+    "elements": 102400,
+    "max_abs_diff": 5.960464477539063e-08,
+    "first_flat_index": 0,
+    "engine_value": 0.03682241216301918,
+    "hf_value": 0.03682240843772888
+  }
+}
