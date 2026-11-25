@@ -38,10 +38,11 @@ TOOLS = [
           _params({"target": {"enum": ["hf", "engine"], "type": "string"},
                    "ref": STR, "view": {"enum": ["tree", "source", "config", "weights"], "type": "string"},
                    "method": STR, "offset": INT, "limit": INT}, ["target"])),
-    _tool("run_model", "运行真实模型，prompt_ids 一次预填充，decode_ids 逐个作为下一步的输入，"
-          "每步沿用返回的状态。watch 精确填写 tree 给出的模块路径，根模块是空字符串。"
+    _tool("run_model", "运行当前 checkpoint 对应的 Transformers 原生模型。prompt_ids 一次预填充，"
+          "decode_ids 逐个输入，每步沿用返回的状态。watch 精确填写 hf 模块树中的路径，根模块是空字符串。"
           "probe 模式可提交 Python，定义 probe(model, step, inputs, output) 返回字典中的张量，"
-          "可选 setup(model) 在运行前安装观测。probe 返回的 NAME 位于 module='@probe'、call=0、"
+          "setup 和 probe 的 model 都是该原生模型。可选 setup(model) 在运行前安装观测。"
+          "probe 返回的 NAME 位于 module='@probe'、call=0、"
           "port='output.NAME'。可把返回的张量地址直接用于 observe 和 compare。",
           _params({"target": {"type": "string", "enum": ["hf", "probe"]}, "prompt_ids": IDS,
                    "decode_ids": IDS, "watch": {"type": "array", "items": STR}, "probe": STR},
@@ -229,6 +230,21 @@ def _invalid_report(reason):
     return {"ok": False, "stage": "report", "outcome": "evaluation_error", "error": reason}
 
 
+def _publish_accepted(directory, model_dir, original):
+    model_type = ""
+    if model_dir is not None:
+        model_type = json.loads((Path(model_dir) / "config.json").read_bytes()).get("model_type")
+    suffix = model_type.replace("-", "_") if isinstance(model_type, str) else ""
+    name = f"model_{suffix}.py" if suffix.isidentifier() and len(suffix) <= 100 else "model.py"
+    destination = directory / name
+    try:
+        _publish(destination, original)
+    except FileExistsError:
+        if destination.is_symlink() or not destination.is_file() or destination.read_bytes() != original:
+            raise ValueError(f"{name} 已存在且无法与通过验收的候选对应")
+    return name
+
+
 def _diagnostic_length(report):
     """优先重现失败的预填充；只有生成失败时用其原始提示的长度。"""
     if report.get("stage") != "compare" or report.get("ok") is not False:
@@ -307,6 +323,11 @@ def _judge_candidate(candidate, turn, runtime, summary, messages, log, *, diagno
         summary.update(ok=holdout.get("ok") is True, stage="holdout")
         if holdout.get("outcome") == "evaluation_error":
             summary.update(outcome="evaluation_error", error=holdout.get("error"))
+        if summary["ok"]:
+            try:
+                summary["accepted_model"] = _publish_accepted(candidate.parent, getattr(runtime, "model_dir", None), original)
+            except (OSError, ValueError) as exc:
+                summary.update(_invalid_report(str(exc)))
         return True
     if report.get("outcome") in ("reference_unreliable", "evaluation_error"):
         summary.update(outcome=report["outcome"], error=report.get("error"))
@@ -323,6 +344,8 @@ def _judge_candidate(candidate, turn, runtime, summary, messages, log, *, diagno
                 return True
             summary["history"][-1]["diagnosis_file"] = candidate.with_suffix(".diagnosis.json").name
             feedback += "\n附加的单请求预填充诊断：\n" + json.dumps(diagnosis, ensure_ascii=False)[:6000]
+            feedback += ("\n若首次分歧在模块输入，请查调用它的上游代码与实际后端。可用 run_model 的探针"
+                         "记录函数实参，在相同输入上用 compare 核对形状、步幅、遮罩或运算顺序不同的写法。")
     messages.append({"role": "user", "content": feedback})
     return False
 

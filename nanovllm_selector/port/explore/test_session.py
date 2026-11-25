@@ -36,6 +36,27 @@ class Runtime:
 
 
 class SessionTests(unittest.TestCase):
+    def test_publication_preserves_frozen_bytes_and_requires_both_cases(self):
+        with TemporaryDirectory() as root:
+            root = Path(root)
+            model = root / "checkpoint"
+            model.mkdir()
+            (model / "config.json").write_text('{"model_type":"fixture-lm"}')
+            original = b"\xef\xbb\xbf" + CODE.replace("\n", "\r\n").encode()
+            seed = root / "original.py"
+            seed.write_bytes(original)
+            for passed in (False, True):
+                runtime = Runtime([{"ok": True}, {"ok": passed}])
+                runtime.model_dir = model
+                out = root / str(passed)
+                result = run_session(messages=[], chat=None, runtime=runtime, out_dir=out,
+                                     from_candidate=seed, max_turns=1, max_attempts=2)
+                published = out / "model_fixture_lm.py"
+                self.assertEqual(published.exists(), passed)
+                if passed:
+                    self.assertEqual(result["accepted_model"], published.name)
+                    self.assertEqual(published.read_bytes(), original)
+
     def test_public_numeric_mismatch_writes_focused_diagnosis_and_reuses_it_on_resume(self):
         for prefill_error, length in ((True, 256), (False, 768)):
             with self.subTest(prefill=prefill_error), TemporaryDirectory() as root:
