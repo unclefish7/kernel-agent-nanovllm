@@ -31,6 +31,7 @@ from nanovllm_selector.port.prompt import (
     build_prompt,
     build_sections,
     load_graph,
+    load_spec,
     prompt_stats,
 )
 
@@ -214,9 +215,12 @@ class PromptTest(unittest.TestCase):
         self.assertEqual(stats["chars"], len(self.prompt))
         self.assertEqual(stats["nodes"], 22)
         self.assertEqual(stats["instance_nodes"], 453)
-        self.assertEqual(stats["must"], 5)
-        self.assertEqual(stats["toolbox"], 18)
-        self.assertEqual(stats["context_fields"], 8)
+        spec = load_spec(self.spec)
+        self.assertEqual(stats["must"], len(spec["must"]))
+        for field, entries in (("toolbox", spec["toolbox"]), ("context_fields", spec["context"]["fields"])):
+            self.assertEqual(stats[field], len(entries))
+            for entry in entries:
+                self.assertIn(f"`{entry['name']}`", self.sections["spec"])
 
     def test_messages_shape(self) -> None:
         messages = build_messages(GRAPH_PATH, self.spec, self.kernels, self.template)
