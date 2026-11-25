@@ -1,0 +1,467 @@
+{
+  "run": {
+    "ok": true,
+    "status": "ok",
+    "hf_reliable": null,
+    "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+    "steps": 3,
+    "item_count": 12,
+    "provenance": {
+      "target": "probe",
+      "model_dir": "/model",
+      "checkpoint_files": {
+        "config.json": "72740d4c8910cf6ff2d30a9c5bc1ab75605278f17fb08e5119ecb37979ccc37c",
+        "model.safetensors": "cfbdbe3b14fae3948138aae5b254c9981826f84bd4069e5d688d8079ce437fc3",
+        "generation_config.json": "75b60ff86f7c60bf17d6d8d789f17dbd367fbcfe0036ad1f1b00603eb70615a4"
+      },
+      "prompt_ids": [
+        2,
+        7,
+        9
+      ],
+      "decode_ids": [
+        3,
+        11
+      ],
+      "watch": [],
+      "hf_reliable": null,
+      "seed": 0,
+      "state_scope": "input 与 post_input 为调用前后实参；state 为直接 buffer 和张量属性；未公开的内部状态未知",
+      "probe_sha256": "da36deba16ac105ea534f6be2ec64b91fdc06bc60178eb8332939f91cb9dcbd2",
+      "tensor_limit_bytes": 67108864,
+      "run_limit_bytes": 268435456,
+      "model_class": "transformers.models.deepseek_v3.modeling_deepseek_v3.DeepseekV3ForCausalLM",
+      "model_type": "deepseek_v3",
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "parameter_dtypes": [
+        "torch.float32"
+      ],
+      "device_backend": "rocm",
+      "attn_implementation": "sdpa",
+      "torch_version": "2.12.0+rocm10.0.0",
+      "transformers_version": "4.57.3",
+      "device_name": "AMD Instinct MI100"
+    },
+    "calibration": {
+      "status": "probe_derived"
+    },
+    "target": "probe"
+  },
+  "pairs": [
+    {
+      "step": 0,
+      "field": "ids",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 144,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.ids",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 144,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 0,
+      "field": "weights",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.1",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 72,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.weights",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 72,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 0,
+      "field": "changed",
+      "comparison": {
+        "status": "mismatch",
+        "reason": "values",
+        "finite": true,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "index": [
+              0,
+              0
+            ],
+            "reference": 82,
+            "actual": 83
+          }
+        ],
+        "reference": {
+          "step": 0,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 144,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 0,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.changed",
+          "kind": "tensor",
+          "shape": [
+            3,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 144,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 1,
+      "field": "ids",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.ids",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 1,
+      "field": "weights",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.1",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 24,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.weights",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 24,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 1,
+      "field": "changed",
+      "comparison": {
+        "status": "mismatch",
+        "reason": "values",
+        "finite": true,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "index": [
+              0,
+              0
+            ],
+            "reference": 106,
+            "actual": 107
+          }
+        ],
+        "reference": {
+          "step": 1,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 1,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.changed",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 2,
+      "field": "ids",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.ids",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 2,
+      "field": "weights",
+      "comparison": {
+        "status": "match",
+        "reason": "equal",
+        "finite": true,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.1",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 24,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.weights",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.float32",
+          "nbytes": 24,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    },
+    {
+      "step": 2,
+      "field": "changed",
+      "comparison": {
+        "status": "mismatch",
+        "reason": "values",
+        "finite": true,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "index": [
+              0,
+              0
+            ],
+            "reference": 29,
+            "actual": 30
+          }
+        ],
+        "reference": {
+          "step": 2,
+          "module": "model.layers.1.mlp.gate",
+          "call": 0,
+          "port": "output.0",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "hf-8cf1d7ca338a4ff583f11793735bb212",
+          "probe_derived": false,
+          "hf_reliable": true
+        },
+        "actual": {
+          "step": 2,
+          "module": "@probe",
+          "call": 0,
+          "port": "output.changed",
+          "kind": "tensor",
+          "shape": [
+            1,
+            6
+          ],
+          "dtype": "torch.int64",
+          "nbytes": 48,
+          "run_id": "probe-9a47f9f8e18644a38ef4a5717ab9d1b2",
+          "probe_derived": true,
+          "hf_reliable": null
+        }
+      }
+    }
+  ]
+}
