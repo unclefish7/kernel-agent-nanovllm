@@ -7,15 +7,15 @@
 #   toolbox  —— 引擎提供的 SDK，可以用来满足 must，也可以不用
 #   context  —— 一次前向里能读到的批信息，源码里看不出来的部分
 #
-# 这里只写引擎的事实。模型该算什么，看参考图；两者怎么拼，交给 agent。
+# 模型的计算由原生源码、真实运行记录或已验证的参考图给出。
 
 meta:
   engine: nano-vLLM
   source_root: nano-vllm/nanovllm
-  commit: def3937e1c48bb7b5788ea07abe8898b766cfd07
+  commit: db396bd0276b797bd491282e4f1fb5aaa9cbde55
   scope: "models/<model>.py 与引擎之间的接口"
   note: >
-    分页 KV 分配和请求状态接口对应上述子模块版本。与源码冲突时以源码为准。
+    分页 KV、请求状态和权重装载接口对应上述子模块版本。与源码冲突时以源码为准。
 
 capabilities:
   - id: paged_kv
@@ -87,15 +87,17 @@ must:
       - utils/context.py:6
 
   - id: M4
-    title: 权重名与切分
+    title: 参数、持久缓冲区与权重切分
     statement: >
-      每个参数的名字必须能被 model.get_parameter(name) 找到，其中 name 来自
-      checkpoint 里的张量名。名字对不上时必须用 packed_modules_mapping 声明映射
-      （旧名 -> (新名, shard_id)）。需要按 tp 切分的参数必须自带 weight_loader，
-      否则只能整体拷贝。
+      checkpoint 中需要加载的张量必须对应同名参数，或通过 register_buffer 注册的持久缓冲区。
+      默认装载要求源和目标形状相同。共享参数或缓冲区允许使用同一对象的任一注册名。
+      persistent=False 的派生张量由模型自身初始化。需要合并权重时，在 packed_modules_mapping
+      声明旧名到 (新名, shard_id) 的映射，目标的 weight_loader 接收目标张量、源张量和 shard_id。
+      单独按 TP 切分的目标提供接收目标张量和源张量的 weight_loader。
     evidence:
-      - utils/loader.py:12           # load_model 的两条路径：mapping 命中 / 否则默认拷贝
-      - utils/loader.py:22           # weight_loader = getattr(param, "weight_loader")
+      - utils/loader.py:10           # 同形张量的整体拷贝
+      - utils/loader.py:26           # 所有参数和持久缓冲区，包括共享对象的注册名
+      - utils/loader.py:65           # 同名张量与合并权重的装载调用
       - models/qwen3.py:187          # packed_modules_mapping 的写法
       - layers/linear.py:26          # 构造时把 weight_loader 挂到参数上
 
