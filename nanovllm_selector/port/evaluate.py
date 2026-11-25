@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import inspect
 import json
+import math
 import os
 import sys
 import time
@@ -75,6 +76,11 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
         return {"ok": False, "exact": False, "reason": "词表分数含 NaN 或无穷大"}
     cosine = torch.nn.functional.cosine_similarity(a, b, dim=0).item()
     max_abs = (a - b).abs().max().item()
+    if not math.isfinite(max_abs) or not math.isfinite(cosine):
+        # 两个有限 FP32 的差也可能超出 FP32 范围。仅为诊断统计扩大精度。
+        wide_a, wide_b = a.double(), b.double()
+        max_abs = (wide_a - wide_b).abs().max().item()
+        cosine = torch.nn.functional.cosine_similarity(wide_a, wide_b, dim=0).item()
     argmax_match = int(a.argmax()) == int(b.argmax())
     report = {
         "argmax_actual": int(a.argmax()),
@@ -83,7 +89,9 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
         "max_abs_diff": max_abs,
         "cosine": cosine,
         "vocab_size": a.numel(),
-        "exact": torch.equal(a, b),
+        "exact": actual.dtype == expected.dtype and torch.equal(actual, expected),
+        "dtype_actual": str(actual.dtype),
+        "dtype_expected": str(expected.dtype),
         "top5_actual": a.topk(min(5, a.numel())).indices.tolist(),
         "top5_expected": b.topk(min(5, b.numel())).indices.tolist(),
     }
@@ -94,17 +102,25 @@ def compare_logits(actual: torch.Tensor, expected: torch.Tensor,
     return report
 
 
+def load_reference_model(model_dir):
+    """与 ModelRunner 使用相同的检查点精度与旧卡 FP32 回退，只装载本地原生模型。"""
+    from transformers import AutoConfig, AutoModelForCausalLM
+
+    config = AutoConfig.from_pretrained(model_dir, local_files_only=True, trust_remote_code=False)
+    dtype = torch.float32 if torch.cuda.get_device_capability(0)[0] < 8 else config.dtype or "auto"
+    return AutoModelForCausalLM.from_pretrained(
+        model_dir, config=config, dtype=dtype, local_files_only=True, trust_remote_code=False
+    ).cuda().eval()
+
+
 def reference_logits(model_dir: str, ids: list[int],
                      positions: list[int]) -> list[torch.Tensor]:
     """一次前向取多个位置的 logits（因果掩码保证：位置 p 的 logits 只取决于它之前的内容）。"""
-    from transformers import AutoModelForCausalLM
-
-    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16)
-    model = model.cuda().eval()
+    model = load_reference_model(model_dir)
     try:
         with torch.inference_mode():
-            logits = model(input_ids=torch.tensor([ids], device="cuda")).logits[0]
-        return [logits[p].detach().float().cpu().clone() for p in positions]
+            logits = model(input_ids=torch.tensor([ids], device=model.device)).logits[0]
+        return [logits[p].detach().to(device="cpu", copy=True) for p in positions]
     finally:
         del model
         torch.cuda.empty_cache()
@@ -196,6 +212,8 @@ def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
         raise ValueError("前缀长度记录与实际请求数不符")
     supports_keep = "logits_to_keep" in inspect.signature(model.forward).parameters
     model_dtype = getattr(model, "dtype", None)
+    diagnostics["dtype"] = str(model_dtype) if model_dtype is not None else None
+    diagnostics["attention_backend"] = getattr(getattr(model, "config", None), "_attn_implementation", None)
 
     def call(ids, past=None, *, keep=1, use_cache=True):
         options = {"logits_to_keep": keep} if supports_keep else {}
@@ -206,7 +224,7 @@ def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
         row = output.logits[0, -1]
         if row.ndim != 1 or not row.numel() or not torch.isfinite(row).all():
             raise ValueError("HF 未返回有限的完整词表分数")
-        return row.detach().float().cpu().clone()
+        return row.detach().to(device="cpu", copy=True)
 
     def check_history(out, history):
         full = call(history, use_cache=False)
@@ -260,11 +278,9 @@ def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
 
 
 def reference_steps(model_dir, sequences, prefix_lengths, generated, decode_steps, *, diagnostics=None):
-    from transformers import AutoModelForCausalLM
-
     if len(generated) < decode_steps:
         raise ValueError("生成历史短于要求验证的步数")
-    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, local_files_only=True).cuda().eval()
+    model = load_reference_model(model_dir)
     prompts = [*sequences, max(sequences, key=len)] if decode_steps else sequences
     return reference_trace(model, prompts, prefix_lengths, generated[:decode_steps],
                            {} if diagnostics is None else diagnostics)
@@ -327,7 +343,7 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
         ctx = get_context()
         if ctx.is_prefill:
             prefix_lengths.append(ctx.cu_seqlens_k_list[-1] - ctx.cu_seqlens_q_list[-1])
-        captured.append(out.detach().float().cpu().clone())
+        captured.append(out.detach().to(device="cpu", copy=True))
         return out
 
     cls.compute_logits = patched
@@ -344,18 +360,22 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
             if type(llm.model_runner.model) is not cls:
                 raise RuntimeError("引擎实际装载的模型类与指定的候选不同")
             prefill: list[torch.Tensor] = []
+            prefill_generated: list[int] = []
             prefix_lengths.clear()
             for ids in sequences:
                 # 构造时的 warmup、上一条请求都会调 compute_logits，先清空；
                 # 清空后取到的第一份，就是这条输入 prefill 阶段的输出。
                 captured.clear()
-                llm.generate(
+                out = llm.generate(
                     [ids],
                     SamplingParams(temperature=GREEDY_TEMPERATURE, max_tokens=1),
                     use_tqdm=False,
                 )
                 if len(captured) != 1:
                     raise RuntimeError(f"长度 {len(ids)} 的 prefill 捕获了 {len(captured)} 份 logits")
+                if len(out) != 1 or len(out[0]["token_ids"]) != 1:
+                    raise RuntimeError("单步 prefill 应返回一个采样词元")
+                prefill_generated.append(out[0]["token_ids"][0])
                 prefill.append(captured[0][0])
 
             decode: dict[str, Any] = {"logits": [], "ids": []}
@@ -382,7 +402,8 @@ def engine_run(cls, model_dir: str, sequences: list[list[int]], arch: str,
                 decode["ids"] = list(seq) + generated
                 decode["generated"] = generated
                 decode["logits"] = [item[0] for item in captured[1:decode_steps + 1]]
-            return {"prefill": prefill, "decode": decode, "prefix_lengths": prefix_lengths,
+            return {"prefill": prefill, "prefill_generated": prefill_generated,
+                    "decode": decode, "prefix_lengths": prefix_lengths,
                     "prefix_reuse": engine_prefix_reuse(llm.scheduler)}
         finally:
             atexit.unregister(llm.exit)

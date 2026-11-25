@@ -18,7 +18,7 @@ from pathlib import Path
 
 import torch
 
-from .evaluate import load_candidate, pick_model_class
+from .evaluate import load_candidate, load_reference_model, pick_model_class
 
 
 def _free_gpu() -> None:
@@ -72,12 +72,11 @@ def run_engine(cls, model_dir: str, arch: str, prompt: str,
 
 
 def run_hf(model_dir: str, prompt: str, max_tokens: int) -> dict:
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16)
-    model = model.cuda().eval()
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+    tokenizer = AutoTokenizer.from_pretrained(model_dir, local_files_only=True)
+    model = load_reference_model(model_dir)
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     with torch.inference_mode():
         out = model.generate(
             **inputs, max_new_tokens=max_tokens, do_sample=False,

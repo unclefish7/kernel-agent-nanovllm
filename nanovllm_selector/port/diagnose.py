@@ -13,7 +13,7 @@ from unittest.mock import patch
 import torch
 
 from nanovllm_selector.port.evaluate import (
-    FILLER_TEXT, GREEDY_TEMPERATURE, load_candidate, pick_model_class,
+    FILLER_TEXT, GREEDY_TEMPERATURE, load_candidate, load_reference_model, pick_model_class,
 )
 
 
@@ -213,7 +213,7 @@ def diagnose(model_dir, candidate, length=128, prompt_file=None, *, arch=None):
     from nanovllm import LLM
     from nanovllm.models import ARCH
     from nanovllm.sampling_params import SamplingParams
-    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoConfig, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model_dir, local_files_only=True)
     text = Path(prompt_file).read_text(encoding="utf-8") if prompt_file else FILLER_TEXT
@@ -224,7 +224,7 @@ def diagnose(model_dir, candidate, length=128, prompt_file=None, *, arch=None):
     cls = pick_model_class(load_candidate(Path(candidate)), arch)
 
     def hf(sink):
-        model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, local_files_only=True).cuda().eval()
+        model = load_reference_model(model_dir)
         tokens = torch.tensor([ids], device=model.device)
         options = {"logits_to_keep": 1} if "logits_to_keep" in inspect.signature(model.forward).parameters else {}
         trace(model, lambda: model(input_ids=tokens, use_cache=True, **options).logits[:, -1:], "hf", sink)
