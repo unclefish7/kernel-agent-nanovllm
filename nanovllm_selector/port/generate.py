@@ -51,20 +51,19 @@ def strip_code_fence(text: str) -> str:
     """剥掉 markdown 围栏，只留代码；没有围栏时原样返回去空白后的文本。"""
     if not isinstance(text, str):
         raise TypeError(f"llm 必须返回字符串，收到 {type(text).__name__}")
-    if "```" not in text:
-        return text.strip()
-
-    blocks = [(lang.lower(), body) for lang, body in _FENCE_RE.findall(text)]
-    if blocks:
-        python_blocks = [body for lang, body in blocks if lang in ("python", "py")]
-        if python_blocks:
-            chosen = max(python_blocks, key=len)
+    if "```" in text:
+        blocks = [(lang.lower(), body) for lang, body in _FENCE_RE.findall(text)]
+        if blocks:
+            python_blocks = [body for lang, body in blocks if lang in ("python", "py")]
+            text = max(python_blocks or [body for _, body in blocks], key=len)
         else:
-            chosen = max((body for _, body in blocks), key=len)
-        return chosen.strip()
-
-    # 只有一行围栏，例如 “```Qwen3ForCausalLM```”，去掉围栏标记本身。
-    return text.replace("```", "").strip()
+            text = text.replace("```", "")
+    lines = text.strip().splitlines(keepends=True)
+    if lines and lines[0].strip() == "<final_answer>":
+        lines.pop(0)
+    if lines and lines[-1].strip() == "</final_answer>":
+        lines.pop()
+    return "".join(lines).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +109,7 @@ def _imports_get_context(tree: ast.Module) -> bool:
     return False
 
 
-def validate_model_code(code: str) -> list[str]:
+def validate_model_code(code: str, *, require_template: bool = True) -> list[str]:
     """返回全部不满足项；空列表表示通过。"""
     reasons: list[str] = []
     if not code.strip():
@@ -120,7 +119,11 @@ def validate_model_code(code: str) -> list[str]:
         tree = ast.parse(code)
     except SyntaxError as exc:
         line = exc.lineno if exc.lineno is not None else "?"
-        return [f"不是合法 Python：第 {line} 行 {exc.msg}（offset={exc.offset}）"]
+        return [f"不是合法 Python：第 {line} 行 {exc.msg}（offset={exc.offset}） {(exc.text or '').strip()[:160]}"]
+
+    if not require_template:
+        # 主动探索在实际引擎中按 checkpoint.architectures 选择本地类并检查接口。
+        return [] if any(isinstance(node, ast.ClassDef) for node in tree.body) else ["候选缺少顶层模型类"]
 
     model_class = _for_causal_lm_class(tree)
     if model_class is None:
@@ -248,8 +251,10 @@ def make_chat(
 
     def call(messages: list[dict], tools: list[dict] | None = None) -> dict:
         body = {"model": model_id, "messages": messages, "temperature": 0.0, "stream": False}
-        if tools:
-            body.update(tools=tools, thinking={"type": "disabled"}, max_tokens=16384)
+        if tools is not None:
+            body.update(thinking={"type": "disabled"}, max_tokens=16384)
+            if tools:
+                body["tools"] = tools
         payload = json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             url,

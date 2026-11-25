@@ -83,6 +83,12 @@ def _materials() -> tuple[Path, Path, Path]:
 
 
 class FenceTest(unittest.TestCase):
+    def test_trailing_provider_answer_marker_is_not_python(self) -> None:
+        code = "text = '</final_answer>'"
+        for raw in (code + "\n</final_answer>", "<final_answer>\n" + code + "\n</final_answer>",
+                    "```python\n" + code + "\n</final_answer>\n```"):
+            self.assertEqual(strip_code_fence(raw), code)
+
     def test_python_fence_with_prose(self) -> None:
         raw = "先说明\n```python\nx = 1\n```\n后记"
         self.assertEqual(strip_code_fence(raw), "x = 1")
@@ -107,6 +113,16 @@ class FenceTest(unittest.TestCase):
 
 
 class ValidateTest(unittest.TestCase):
+    def test_exploration_accepts_declared_class_without_template_naming_or_packing(self):
+        from nanovllm_selector.port.explore.session import _candidate_errors
+
+        code = """from torch import nn
+class ExampleLMHeadModel(nn.Module):
+    def forward(self, input_ids, positions): return input_ids
+    def compute_logits(self, hidden_states): return hidden_states
+"""
+        self.assertEqual(_candidate_errors(code), [])
+
     def test_good_code_passes(self) -> None:
         self.assertEqual(validate_model_code(GOOD_CODE), [])
 

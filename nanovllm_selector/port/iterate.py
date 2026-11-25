@@ -304,12 +304,18 @@ def subprocess_evaluate(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="迭代式：生成模型文件并在引擎里验证")
     parser.add_argument("--model", required=True, help="HF 模型目录（必须有权重）")
-    parser.add_argument("--graph", type=Path, required=True, help="参考图 JSON")
-    parser.add_argument("--spec", type=Path, required=True, help="引擎规约 spec.yaml")
-    parser.add_argument("--kernels", type=Path, required=True, help="算子库索引 index.md")
-    parser.add_argument("--template", type=Path, required=True, help="同构模板 qwen3.py")
+    parser.add_argument("--explore", action="store_true", help="从宿主机运行主动探索工具和独立容器验收")
+    parser.add_argument("--resume", action="store_true", help="从同一输出目录继续主动探索，预算为累计上限")
+    parser.add_argument("--from-candidate", type=Path, help="原样冻结此 Python 文件作为首个候选，先验收再按需修订")
+    parser.add_argument("--graph", type=Path, help="参考图 JSON；主动探索时可省略")
+    parser.add_argument("--spec", type=Path, default=REPO_ROOT / "contracts/nanovllm/spec.yaml", help="引擎规约")
+    parser.add_argument("--kernels", type=Path, default=REPO_ROOT / "kernels/index.md", help="算子库索引")
+    parser.add_argument("--template", type=Path, default=REPO_ROOT / "nano-vllm/nanovllm/models/qwen3.py", help="引擎模型模板")
     parser.add_argument("--out-dir", type=Path, required=True, help="每轮生成的文件放这里")
     parser.add_argument("--max-iters", type=int, default=3)
+    parser.add_argument("--max-turns", type=int, default=40, help="探索模式最多调用 agent 的轮数")
+    parser.add_argument("--worker-image", default="nanovllm-explore-worker:local", help="本机的隔离执行镜像")
+    parser.add_argument("--device", default="0", help="探索模式使用的物理 GPU 编号")
     parser.add_argument("--diagnose-length", type=int, help="严格数值验收失败后，追加指定词元长度的单请求 prefill 诊断")
     parser.add_argument("--exact", action=argparse.BooleanOptionalAction, default=True,
                         help="默认要求各步整个词表逐项相等，--no-exact 使用原有容差")
@@ -320,12 +326,42 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--llm-model", default=None)
     parser.add_argument("--timeout", type=float, default=180.0, help="单次 API 请求超时秒数")
     args = parser.parse_args(argv)
+    if args.resume and not args.explore:
+        parser.error("--resume 需要 --explore")
+    if args.from_candidate is not None and not args.explore:
+        parser.error("--from-candidate 需要 --explore")
     if args.diagnose_length is not None and args.diagnose_length < 1:
         parser.error("--diagnose-length 必须为正")
+    if not args.explore and args.graph is None:
+        parser.error("图驱动模式需要 --graph，主动探索请使用 --explore")
+    if args.explore and (not args.exact or args.arch or args.no_toolbox or args.diagnose_length is not None):
+        parser.error("探索模式按真实 checkpoint 选择类并做严格验收；定制图和旧单进程诊断参数用于图驱动模式")
 
     loaded = load_dotenv()
     if loaded:
-        print(f"从 .env 读了 {len(loaded)} 个键：{', '.join(loaded)}")
+        print(f"从 .env 读取了 {len(loaded)} 项配置")
+
+    if args.explore:
+        from .explore.runtime import DockerRuntime
+        from .explore.session import initial_messages, run_session
+        from .generate import make_chat
+
+        model = Path(args.model).resolve()
+        messages = initial_messages(model, args.spec, args.kernels, args.template, args.graph)
+        client = None
+
+        def call(turn_messages, tools):
+            nonlocal client
+            if client is None:
+                client = make_chat(api_key_env=args.api_key_env, api_base=args.api_base,
+                                   model=args.llm_model, timeout=args.timeout)
+            return client(turn_messages, tools)
+        runtime = DockerRuntime(model, args.out_dir, image=args.worker_image, device=args.device)
+        result = run_session(messages=messages, chat=call, runtime=runtime, out_dir=args.out_dir,
+                             max_attempts=args.max_iters, max_turns=args.max_turns, resume=args.resume,
+                             from_candidate=args.from_candidate, log=print)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result["ok"] else 1
 
     graph = load_graph(args.graph)
     arch = args.arch or (graph.get("model", {}).get("architectures") or [None])[0]
