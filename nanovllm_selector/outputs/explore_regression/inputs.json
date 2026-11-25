@@ -1,0 +1,410 @@
+{
+  "Qwen3-0.6B": {
+    "model_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/Qwen3-0.6B",
+    "candidate_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/model_qwen3.py",
+    "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+    "candidate_is_symlink": false,
+    "model_dir_is_symlink": false,
+    "model_tree_symlinks": {},
+    "files": {
+      "config.json": {
+        "bytes": 726,
+        "sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd"
+      },
+      "generation_config.json": {
+        "bytes": 239,
+        "sha256": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2"
+      },
+      "merges.txt": {
+        "bytes": 1671853,
+        "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+      },
+      "model.safetensors": {
+        "bytes": 1503300328,
+        "sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+      },
+      "tokenizer.json": {
+        "bytes": 11422654,
+        "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+      },
+      "tokenizer_config.json": {
+        "bytes": 9732,
+        "sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+      },
+      "vocab.json": {
+        "bytes": 2776833,
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    },
+    "historical_public": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/strict.json",
+      "report_sha256": "4b08f060c05412db4424454c3132866eff5384fd129323b6620889f79f986883",
+      "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+      "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+      "lengths": [
+        128,
+        256,
+        768
+      ],
+      "matched_positions": 12,
+      "positions": 12,
+      "vocab_size": 151936,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "generated_argmax": [
+        5562,
+        279,
+        5562,
+        5562,
+        13,
+        576,
+        3974,
+        13876,
+        38835,
+        34208,
+        916,
+        279
+      ]
+    },
+    "historical_holdout": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/holdout.json",
+      "report_sha256": "88facd2bba5aa6a7b800a792dfe093f471c8c11da0f96781e637ddd5a4ee8dfa",
+      "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+      "prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+      "lengths": [
+        255
+      ],
+      "matched_positions": 10,
+      "positions": 10,
+      "vocab_size": 151936,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0
+      ],
+      "generated_argmax": [
+        103930,
+        103930,
+        18493,
+        102296,
+        107964,
+        64689,
+        3837,
+        23031,
+        103944,
+        52510
+      ]
+    }
+  },
+  "llama-3.2-1B": {
+    "model_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/llama-3.2-1B",
+    "candidate_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+    "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+    "candidate_is_symlink": false,
+    "model_dir_is_symlink": false,
+    "model_tree_symlinks": {},
+    "files": {
+      "config.json": {
+        "bytes": 843,
+        "sha256": "bfb5d39c327ee5c3a65e3574596ff30b052a445cfc59a25bdf3b4c0c5a44f4d2"
+      },
+      "generation_config.json": {
+        "bytes": 185,
+        "sha256": "da81b0dd4001a8e19fb5840d2b524f6957f44ddde6f5c3fe32b1f36cef5205bf"
+      },
+      "model.safetensors": {
+        "bytes": 2471645608,
+        "sha256": "68a2e4be76fa709455a60272fba8e512c02d81c46e6c671cc9449e374fd6809a"
+      },
+      "special_tokens_map.json": {
+        "bytes": 301,
+        "sha256": "cc2e013b7545f183ef03e079a3c91c6f364fa37e4068c512d7dd843e59024535"
+      },
+      "tokenizer.json": {
+        "bytes": 9085657,
+        "sha256": "79e3e522635f3171300913bb421464a87de6222182a0570b9b2ccba2a964b2b4"
+      },
+      "tokenizer_config.json": {
+        "bytes": 50500,
+        "sha256": "8004530facf809ac432114de2a4dcc65fcb632da5ec16d666091aeb6a2ee444a"
+      }
+    },
+    "historical_public": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/llama_regression.json",
+      "report_sha256": "449ccb4de72d084467261e2a797cccb8b41c7aeaf2404be87cdf2405539b927e",
+      "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+      "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+      "lengths": [
+        128,
+        256,
+        768
+      ],
+      "matched_positions": 12,
+      "positions": 12,
+      "vocab_size": 128256,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "generated_argmax": [
+        16053,
+        927,
+        16053,
+        16053,
+        5679,
+        13,
+        578,
+        4062,
+        14198,
+        39935,
+        35308,
+        927
+      ]
+    },
+    "historical_holdout": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/iter_llama4/cold_255.json",
+      "report_sha256": "9f3bab70f2cac2b8664ebde88db7f962d77f7833ac9181247e67a356c8b33ebc",
+      "candidate_sha256": null,
+      "prompt_sha256": null,
+      "lengths": [
+        255
+      ],
+      "matched_positions": 10,
+      "positions": 10,
+      "vocab_size": 128256,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0
+      ],
+      "generated_argmax": [
+        35308,
+        35308,
+        927,
+        279,
+        16053,
+        5679,
+        13,
+        578,
+        4062,
+        14198
+      ]
+    }
+  },
+  "MiniCPM5-1B": {
+    "model_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/MiniCPM5-1B",
+    "candidate_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+    "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+    "candidate_is_symlink": false,
+    "model_dir_is_symlink": false,
+    "model_tree_symlinks": {},
+    "files": {
+      "chat_template.jinja": {
+        "bytes": 9062,
+        "sha256": "7451a05cf1e28a79d97d7c0bc951028c0b1915119bf9046acd06a0e3d931f47c"
+      },
+      "config.json": {
+        "bytes": 726,
+        "sha256": "6a6509b646cb3169616c5ffc3196e7ccaf9d4d6bc17b266581d241a31c217714"
+      },
+      "generation_config.json": {
+        "bytes": 213,
+        "sha256": "92afd6424501426eddcf7e1542f013d19e5987544977b4ee7bd26359bd5fd2ab"
+      },
+      "model-00000-of-00001.safetensors": {
+        "bytes": 2161290912,
+        "sha256": "7ab8fd86563125929be78aeec8cb3969c7ed2ead3be1ab9d3ec0a9fa69c8660d"
+      },
+      "model.safetensors.index.json": {
+        "bytes": 18004,
+        "sha256": "162add042e75abc3d571c4a8679523fa4f1ffc55d1fea25fc6658a19d6e957ee"
+      },
+      "special_tokens_map.json": {
+        "bytes": 551,
+        "sha256": "82d96d7a9e6ced037f12394b7ea6a5b02e6ca87e0d11edaa8d60d9be857ce7db"
+      },
+      "tokenizer.json": {
+        "bytes": 9894271,
+        "sha256": "3e065a558a034185fe299917b398685c1facd0169a9eea1e629eb30c171fed81"
+      },
+      "tokenizer_config.json": {
+        "bytes": 94416,
+        "sha256": "094efb3cf1ff412284cc5945fc99dff58673a912760d04483a04aa1c716f66fd"
+      }
+    },
+    "historical_public": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/minicpm_regression.json",
+      "report_sha256": "5a4c2435e782374723ae04c5040b782f893af48279ec94ea9f11740a5e71c4b2",
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+      "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+      "lengths": [
+        128,
+        256,
+        768
+      ],
+      "matched_positions": 12,
+      "positions": 12,
+      "vocab_size": 130560,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        256,
+        512
+      ],
+      "generated_argmax": [
+        37123,
+        871,
+        37123,
+        37123,
+        5570,
+        35,
+        416,
+        4052,
+        9987,
+        37484,
+        37154,
+        871
+      ]
+    },
+    "historical_holdout": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/minicpm5_1b/holdout.json",
+      "report_sha256": "a771845d1a01c7a2aa734ff2a0c51dac0b1fd323d3665e7d12dea9743df59ebf",
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+      "prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+      "lengths": [
+        255
+      ],
+      "matched_positions": 10,
+      "positions": 10,
+      "vocab_size": 130560,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0
+      ],
+      "generated_argmax": [
+        3587,
+        3587,
+        32686,
+        7397,
+        541,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "LFM2.5-1.2B-Base": {
+    "model_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/LFM2.5-1.2B-Base",
+    "candidate_path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+    "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+    "candidate_is_symlink": false,
+    "model_dir_is_symlink": false,
+    "model_tree_symlinks": {},
+    "files": {
+      "chat_template.jinja": {
+        "bytes": 1296,
+        "sha256": "89e790f027916b5a2bca145a6a8454e06ffc7a5043bf3b6d97829aff86bb543f"
+      },
+      "config.json": {
+        "bytes": 1224,
+        "sha256": "15d6157fb6df3f8272e2fe90e18f57727ccf02a125c94469198b0f3281510185"
+      },
+      "generation_config.json": {
+        "bytes": 132,
+        "sha256": "5ffd97da1dec4308543894569662d96e923ed01f7a9d8c7ff5aea7f800738cbd"
+      },
+      "model.safetensors": {
+        "bytes": 2340697936,
+        "sha256": "7678ab9546a0c51c1fca161876b1efc4f0906277f170b5822045f40fdaf9eeff"
+      },
+      "special_tokens_map.json": {
+        "bytes": 434,
+        "sha256": "742aefe2b7dec496e8caffdba03a75d0c1a9925d53bd3f3e0d388c96b591b6f4"
+      },
+      "tokenizer.json": {
+        "bytes": 4733020,
+        "sha256": "d7a0ab0fc22e41ec8c6d7450a9ff9ce40e196ec5e5a2fa6a2105e064e0514ed7"
+      },
+      "tokenizer_config.json": {
+        "bytes": 91876,
+        "sha256": "8cba5b0c7acab23a0d4cc9ac587346c9220a1b6d288fc5346fe118202fd6f43e"
+      }
+    },
+    "historical_public": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/lfm_regression.json",
+      "report_sha256": "98c9d4622898afbc145e760e8a2cd73d040bbfb0769a3b525ecac14efc42e581",
+      "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+      "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+      "lengths": [
+        128,
+        256,
+        768
+      ],
+      "matched_positions": 12,
+      "positions": 12,
+      "vocab_size": 65536,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_argmax": [
+        46199,
+        1391,
+        46199,
+        46199,
+        4949,
+        523,
+        941,
+        4605,
+        10800,
+        36387,
+        56586,
+        1391
+      ]
+    },
+    "historical_holdout": {
+      "path": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/lfm25_1_2b/holdout.json",
+      "report_sha256": "8ea8cb16108a06465d87a0b8d9a08fd6d801bd8d9de3f67e64f3398d4df20093",
+      "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+      "prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+      "lengths": [
+        255
+      ],
+      "matched_positions": 10,
+      "positions": 10,
+      "vocab_size": 65536,
+      "max_abs_diff": 0.0,
+      "cached_prefix_tokens": [
+        0,
+        0
+      ],
+      "generated_argmax": [
+        1317,
+        1317,
+        4767,
+        3696,
+        15080,
+        6172,
+        2109,
+        21658,
+        14159,
+        3767
+      ]
+    }
+  }
+}

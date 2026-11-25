@@ -1,0 +1,175 @@
+test_buffer_only_forward_accepts_optional_cache_position (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_buffer_only_forward_accepts_optional_cache_position) ... ok
+test_convolution_parameters_and_transparent_split (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_convolution_parameters_and_transparent_split) ... ok
+test_corrupt_scalar_or_result_cannot_pass (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_corrupt_scalar_or_result_cannot_pass) ... ok
+test_functional_activations_count_occurrences (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_functional_activations_count_occurrences) ... ok
+test_integer_results_are_exact (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_integer_results_are_exact) ... ok
+test_lfm_attention_validates_each_owned_output (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_lfm_attention_validates_each_owned_output) ... ok
+test_only_views_preserve_input_and_every_dispatch (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_only_views_preserve_input_and_every_dispatch) ... ok
+test_program_boundary_identifies_prior_producer_constant_and_weight_view (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_program_boundary_identifies_prior_producer_constant_and_weight_view) ... ok
+test_same_values_do_not_hide_broken_view_alias (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_same_values_do_not_hide_broken_view_alias) ... ok
+test_scalar_repeated_and_nondefault_arange_operands (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_scalar_repeated_and_nondefault_arange_operands) ... ok
+test_unsupported_real_op_remains_a_failure_inside_known_cluster (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_unsupported_real_op_remains_a_failure_inside_known_cluster) ... ok
+test_write_before_image_and_executable_branch (nanovllm_selector.test_dispatch_program.TestDispatchProgram.test_write_before_image_and_executable_branch) ... ok
+test_decode_nodes_exist (nanovllm_selector.test_extract.TestDecode.test_decode_nodes_exist) ... ok
+test_decode_replays (nanovllm_selector.test_extract.TestDecode.test_decode_replays) ... ok
+test_kv_cache_is_cross_step_state (nanovllm_selector.test_extract.TestDecode.test_kv_cache_is_cross_step_state)
+KV cache 不是普通输入：它是节点自己的、跨 step 活着的状态。 ... ok
+test_reconcile_per_phase (nanovllm_selector.test_extract.TestDecode.test_reconcile_per_phase)
+模块树只对得上一次前向：两个阶段混在一起数会翻倍。 ... ok
+test_all_checks_pass (nanovllm_selector.test_extract.TestExtractLlama.test_all_checks_pass) ... ok
+test_eps_comes_from_module (nanovllm_selector.test_extract.TestExtractLlama.test_eps_comes_from_module) ... ok
+test_rope_uses_recorded_frequency_table (nanovllm_selector.test_extract.TestExtractLlama.test_rope_uses_recorded_frequency_table)
+llama3 缩放改了 inv_freq；只按 rope_theta 重算会对不上。 ... ok
+test_shape_of_graph (nanovllm_selector.test_extract.TestExtractLlama.test_shape_of_graph) ... ok
+test_dispatch_accounting_is_closed (nanovllm_selector.test_extract.TestExtractQwen3.test_dispatch_accounting_is_closed) ... ok
+test_edges_resolve (nanovllm_selector.test_extract.TestExtractQwen3.test_edges_resolve) ... ok
+test_every_node_has_evidence (nanovllm_selector.test_extract.TestExtractQwen3.test_every_node_has_evidence) ... ok
+test_input_slots (nanovllm_selector.test_extract.TestExtractQwen3.test_input_slots)
+每个输入都要说清"摆在第几个参数位"（导师指出的缺口）。 ... ok
+test_invariants_pass (nanovllm_selector.test_extract.TestExtractQwen3.test_invariants_pass)
+三条机械不变量：dispatch 全覆盖、张量有主、入参有槽。 ... ok
+test_layer_edges_are_marked (nanovllm_selector.test_extract.TestExtractQwen3.test_layer_edges_are_marked) ... ok
+test_mul_input_order_is_recoverable (nanovllm_selector.test_extract.TestExtractQwen3.test_mul_input_order_is_recoverable)
+SwiGLU 的两路必须能区分先后，否则换成 SiluAndMul 的 chunk 就错。 ... ok
+test_no_cycle (nanovllm_selector.test_extract.TestExtractQwen3.test_no_cycle) ... ok
+test_op_counts (nanovllm_selector.test_extract.TestExtractQwen3.test_op_counts) ... ok
+test_reconcile_passes (nanovllm_selector.test_extract.TestExtractQwen3.test_reconcile_passes) ... ok
+test_replay_passes (nanovllm_selector.test_extract.TestExtractQwen3.test_replay_passes)
+逐节点重放：用独立实现复算每个节点，必须和原模型一致。 ... ok
+test_rope_split_and_config_are_present (nanovllm_selector.test_extract.TestExtractQwen3.test_rope_split_and_config_are_present)
+cos/sin 是两张表、rope 只在 attention 里做、eps 与 config 不能缺。 ... ok
+test_template_folding (nanovllm_selector.test_extract.TestExtractQwen3.test_template_folding) ... ok
+test_weights_are_state_not_inputs (nanovllm_selector.test_extract.TestExtractQwen3.test_weights_are_state_not_inputs) ... ok
+test_dot (nanovllm_selector.test_extract.TestRender.test_dot) ... ok
+test_html_embeds_svg (nanovllm_selector.test_extract.TestRender.test_html_embeds_svg) ... ok
+test_markdown (nanovllm_selector.test_extract.TestRender.test_markdown) ... ok
+test_mermaid (nanovllm_selector.test_extract.TestRender.test_mermaid) ... ok
+test_svg_is_valid_xml (nanovllm_selector.test_extract.TestRender.test_svg_is_valid_xml) ... ok
+test_text (nanovllm_selector.test_extract.TestRender.test_text) ... ok
+test_write_all (nanovllm_selector.test_extract.TestRender.test_write_all) ... ok
+test_round_trip (nanovllm_selector.test_extract.TestSchema.test_round_trip) ... ok
+test_validate_catches_dangling_edge (nanovllm_selector.test_extract.TestSchema.test_validate_catches_dangling_edge) ... ok
+test_all_cache_reads_and_positions_across_two_steps (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_all_cache_reads_and_positions_across_two_steps) ... ok
+test_history_axis_and_holdout (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_history_axis_and_holdout) ... ok
+test_independent_sample_can_reject_fitted_rule (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_independent_sample_can_reject_fitted_rule) ... ok
+test_missing_or_swapped_cache_edges_fail (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_missing_or_swapped_cache_edges_fail) ... ok
+test_missing_or_swapped_outputs_fail_even_with_equal_shapes (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_missing_or_swapped_outputs_fail_even_with_equal_shapes) ... ok
+test_second_output_values_are_independently_compared (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_second_output_values_are_independently_compared) ... ok
+test_unimplemented_operation_does_not_count_as_passing (nanovllm_selector.test_graph_contracts.TestGraphContracts.test_unimplemented_operation_does_not_count_as_passing) ... ok
+test_batch_dependent_projection_layout (nanovllm_selector.test_mixed_state.TestMixedState.test_batch_dependent_projection_layout) ... ok
+test_cache_can_mix_instance_fields_and_inherited_slots (nanovllm_selector.test_mixed_state.TestMixedState.test_cache_can_mix_instance_fields_and_inherited_slots) ... ok
+test_model_owned_history_is_restored_between_input_probes (nanovllm_selector.test_mixed_state.TestMixedState.test_model_owned_history_is_restored_between_input_probes) ... ok
+test_named_leaves_and_shared_views (nanovllm_selector.test_mixed_state.TestMixedState.test_named_leaves_and_shared_views) ... ok
+test_only_active_layer_state_flows_across_steps (nanovllm_selector.test_mixed_state.TestMixedState.test_only_active_layer_state_flows_across_steps) ... ok
+test_two_distinct_cached_slices_of_one_operation (nanovllm_selector.test_mixed_state.TestMixedState.test_two_distinct_cached_slices_of_one_operation) ... ok
+test_two_renamed_states_in_one_layer_and_missing_edge (nanovllm_selector.test_mixed_state.TestMixedState.test_two_renamed_states_in_one_layer_and_missing_edge) ... ok
+test_cli_delivers_diagnostic_feedback_and_retries_candidate_once (nanovllm_selector.test_port_iterate.TestDiagnosticSubprocess.test_cli_delivers_diagnostic_feedback_and_retries_candidate_once) ... [1/2] 未通过（与 transformers 的 logits 对比）
+[2/2] 通过（与 transformers 的 logits 对比）
+结果：成功；明细见 /workspace/tmp/explore-regression/cache/tmp/tmps0eki_b0/trace.json
+ok
+test_only_opted_in_strict_numeric_mismatch_runs_diagnosis (nanovllm_selector.test_port_iterate.TestDiagnosticSubprocess.test_only_opted_in_strict_numeric_mismatch_runs_diagnosis) ... ok
+test_separate_diagnosis_keeps_official_verdict_even_if_diagnosis_fails (nanovllm_selector.test_port_iterate.TestDiagnosticSubprocess.test_separate_diagnosis_keeps_official_verdict_even_if_diagnosis_fails) ... ok
+test_sets_missing_and_keeps_existing (nanovllm_selector.test_port_iterate.TestDotenv.test_sets_missing_and_keeps_existing) ... ok
+test_compare_fails_on_argmax_mismatch (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_compare_fails_on_argmax_mismatch) ... ok
+test_compare_passes_on_identical (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_compare_passes_on_identical) ... ok
+test_compare_reports_shape_mismatch (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_compare_reports_shape_mismatch) ... ok
+test_exact_detects_one_changed_score_with_unchanged_top_token (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_exact_detects_one_changed_score_with_unchanged_top_token) ... ok
+test_pick_model_class_prefers_local (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_pick_model_class_prefers_local) ... ok
+test_pick_model_class_raises_when_absent (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_pick_model_class_raises_when_absent) ... ok
+test_pick_model_class_respects_arch (nanovllm_selector.test_port_iterate.TestEvaluateHelpers.test_pick_model_class_respects_arch) ... ok
+test_diagnostic_reports_verified_first_boundary_and_final_scores (nanovllm_selector.test_port_iterate.TestFeedback.test_diagnostic_reports_verified_first_boundary_and_final_scores) ... ok
+test_includes_decode_steps (nanovllm_selector.test_port_iterate.TestFeedback.test_includes_decode_steps) ... ok
+test_includes_numbers_when_compare_failed (nanovllm_selector.test_port_iterate.TestFeedback.test_includes_numbers_when_compare_failed) ... ok
+test_mentions_stage_and_error (nanovllm_selector.test_port_iterate.TestFeedback.test_mentions_stage_and_error) ... ok
+test_exhausts_and_keeps_every_attempt (nanovllm_selector.test_port_iterate.TestLoop.test_exhausts_and_keeps_every_attempt) ... ok
+test_messages_grow_with_feedback (nanovllm_selector.test_port_iterate.TestLoop.test_messages_grow_with_feedback) ... ok
+test_rejects_bad_max_iters (nanovllm_selector.test_port_iterate.TestLoop.test_rejects_bad_max_iters) ... ok
+test_retry_until_success (nanovllm_selector.test_port_iterate.TestLoop.test_retry_until_success) ... ok
+test_stops_on_evaluator_or_reference_failure_with_original_report (nanovllm_selector.test_port_iterate.TestLoop.test_stops_on_evaluator_or_reference_failure_with_original_report) ... ok
+test_damaged_branch_cannot_keep_a_green_graph (nanovllm_selector.test_program_variants.TestProgramVariants.test_damaged_branch_cannot_keep_a_green_graph) ... ok
+test_each_projection_matches_its_own_recording (nanovllm_selector.test_program_variants.TestProgramVariants.test_each_projection_matches_its_own_recording) ... ok
+test_duplicate_call_cannot_mask_missing_call_to_same_linear (nanovllm_selector.test_reconcile_calls.TestReconcileCalls.test_duplicate_call_cannot_mask_missing_call_to_same_linear) ... ok
+test_missing_functional_projection_and_entire_phase_still_fail (nanovllm_selector.test_reconcile_calls.TestReconcileCalls.test_missing_functional_projection_and_entire_phase_still_fail) ... ok
+test_projection_inside_composite_still_has_an_independent_witness (nanovllm_selector.test_reconcile_calls.TestReconcileCalls.test_projection_inside_composite_still_has_an_independent_witness) ... ok
+test_unused_experts_and_repeated_calls_are_counted_per_phase (nanovllm_selector.test_reconcile_calls.TestReconcileCalls.test_unused_experts_and_repeated_calls_are_counted_per_phase) ... ok
+test_advanced_index_preserves_full_axes_and_duplicate_choices (nanovllm_selector.test_routing_replay.TestRoutingReplay.test_advanced_index_preserves_full_axes_and_duplicate_choices) ... ok
+test_prefill_and_decode_replay_all_routing_operands_and_cache_outputs (nanovllm_selector.test_routing_replay.TestRoutingReplay.test_prefill_and_decode_replay_all_routing_operands_and_cache_outputs) ... ok
+test_safe_softmax_handles_only_fully_masked_rows_and_requested_dtype (nanovllm_selector.test_routing_replay.TestRoutingReplay.test_safe_softmax_handles_only_fully_masked_rows_and_requested_dtype) ... ok
+test_softmax_alone_is_not_an_attention_and_uncovered_routing_ops_remain_unknown (nanovllm_selector.test_routing_replay.TestRoutingReplay.test_softmax_alone_is_not_an_attention_and_uncovered_routing_ops_remain_unknown) ... ok
+test_changed_expert_set_keeps_each_observation_separate (nanovllm_selector.test_shape_probe_topology.TestShapeProbeTopology.test_changed_expert_set_keeps_each_observation_separate) ... ok
+test_changed_return_order_fails_even_with_identical_executed_nodes (nanovllm_selector.test_shape_probe_topology.TestShapeProbeTopology.test_changed_return_order_fails_even_with_identical_executed_nodes) ... ok
+test_constant_router_does_not_certify_unexecuted_experts (nanovllm_selector.test_shape_probe_topology.TestShapeProbeTopology.test_constant_router_does_not_certify_unexecuted_experts) ... ok
+test_same_selection_across_shapes_is_scoped_to_observed_inputs (nanovllm_selector.test_shape_probe_topology.TestShapeProbeTopology.test_same_selection_across_shapes_is_scoped_to_observed_inputs) ... ok
+test_actual_execution_paths_packed_slices_and_fused_residual (nanovllm_selector.port.test_diagnose.TestDiagnosis.test_actual_execution_paths_packed_slices_and_fused_residual) ... ok
+test_head_projects_all_hf_positions_and_only_last_engine_position (nanovllm_selector.port.test_diagnose.TestDiagnosis.test_head_projects_all_hf_positions_and_only_last_engine_position) ... ok
+test_joint_decode_reorders_live_requests_and_compares_each_row_to_hf (nanovllm_selector.port.test_evaluate_batch_order.TestBatchOrder.test_joint_decode_reorders_live_requests_and_compares_each_row_to_hf) ... ok
+test_demo_helper_does_not_substitute_another_prompt_of_equal_length (nanovllm_selector.port.test_evaluate_reference.TestReference.test_demo_helper_does_not_substitute_another_prompt_of_equal_length) ... ok
+test_extra_state_on_an_ordinary_dynamic_cache_uses_conservative_path (nanovllm_selector.port.test_evaluate_reference.TestReference.test_extra_state_on_an_ordinary_dynamic_cache_uses_conservative_path) ... ok
+test_non_finite_candidate_is_a_serializable_failure (nanovllm_selector.port.test_evaluate_reference.TestReference.test_non_finite_candidate_is_a_serializable_failure) ... ok
+test_prefix_report_checks_disabled_reuse_and_eligible_kv_hit (nanovllm_selector.port.test_evaluate_reference.TestReference.test_prefix_report_checks_disabled_reuse_and_eligible_kv_hit) ... ok
+test_pure_kv_cannot_pass_by_turning_off_eligible_prefix_hits (nanovllm_selector.port.test_evaluate_reference.TestReference.test_pure_kv_cannot_pass_by_turning_off_eligible_prefix_hits) ... ok
+test_real_lfm_reference_matches_clean_history_after_branch (nanovllm_selector.port.test_evaluate_reference.TestReference.test_real_lfm_reference_matches_clean_history_after_branch) ... ok
+test_score_only_reference_cannot_silently_drop_continuation_history (nanovllm_selector.port.test_evaluate_reference.TestReference.test_score_only_reference_cannot_silently_drop_continuation_history) ... ok
+test_shape_sensitive_kv_probes_preserve_the_original_segmented_oracle (nanovllm_selector.port.test_evaluate_reference.TestReference.test_shape_sensitive_kv_probes_preserve_the_original_segmented_oracle) ... ok
+test_standard_kv_snapshot_preserves_exact_segmented_scores (nanovllm_selector.port.test_evaluate_reference.TestReference.test_standard_kv_snapshot_preserves_exact_segmented_scores) ... ok
+test_unreliable_serial_continuation_is_diagnosed_without_candidate (nanovllm_selector.port.test_evaluate_reference.TestReference.test_unreliable_serial_continuation_is_diagnosed_without_candidate) ... ok
+test_unsafe_crop_and_chunk_have_independent_evidence (nanovllm_selector.port.test_evaluate_reference.TestReference.test_unsafe_crop_and_chunk_have_independent_evidence) ... ok
+test_verdict_distinguishes_candidate_and_reference_failures (nanovllm_selector.port.test_evaluate_reference.TestReference.test_verdict_distinguishes_candidate_and_reference_failures) ... ok
+test_dry_run_prints_stats_without_network (nanovllm_selector.port.test_port.CliTest.test_dry_run_prints_stats_without_network) ... ok
+test_generation_writes_file_with_injected_llm (nanovllm_selector.port.test_port.CliTest.test_generation_writes_file_with_injected_llm) ... ok
+test_missing_key_returns_2_without_raising (nanovllm_selector.port.test_port.CliTest.test_missing_key_returns_2_without_raising) ... ok
+test_missing_material_errors (nanovllm_selector.port.test_port.CliTest.test_missing_material_errors) ... ok
+test_choose_python_block_over_other_blocks (nanovllm_selector.port.test_port.FenceTest.test_choose_python_block_over_other_blocks) ... ok
+test_inline_fence_markers_removed (nanovllm_selector.port.test_port.FenceTest.test_inline_fence_markers_removed) ... ok
+test_no_fence_passthrough (nanovllm_selector.port.test_port.FenceTest.test_no_fence_passthrough) ... ok
+test_non_string_rejected (nanovllm_selector.port.test_port.FenceTest.test_non_string_rejected) ... ok
+test_python_fence_with_prose (nanovllm_selector.port.test_port.FenceTest.test_python_fence_with_prose) ... ok
+test_unterminated_fence (nanovllm_selector.port.test_port.FenceTest.test_unterminated_fence) ... ok
+test_empty_reply_raises (nanovllm_selector.port.test_port.GenerateTest.test_empty_reply_raises) ... ok
+test_fake_llm_round_trip (nanovllm_selector.port.test_port.GenerateTest.test_fake_llm_round_trip) ... ok
+test_invalid_generated_code_raises (nanovllm_selector.port.test_port.GenerateTest.test_invalid_generated_code_raises) ... ok
+test_non_string_reply_raises (nanovllm_selector.port.test_port.GenerateTest.test_non_string_reply_raises) ... ok
+test_all_sections_present_in_order (nanovllm_selector.port.test_port.PromptTest.test_all_sections_present_in_order) ... ok
+test_graph_dict_and_path_agree (nanovllm_selector.port.test_port.PromptTest.test_graph_dict_and_path_agree) ... ok
+test_graph_is_folded (nanovllm_selector.port.test_port.PromptTest.test_graph_is_folded) ... ok
+test_messages_shape (nanovllm_selector.port.test_port.PromptTest.test_messages_shape) ... ok
+test_prompt_length_is_bounded (nanovllm_selector.port.test_port.PromptTest.test_prompt_length_is_bounded) ... ok
+test_spec_and_kernels_rendered (nanovllm_selector.port.test_port.PromptTest.test_spec_and_kernels_rendered) ... ok
+test_stats (nanovllm_selector.port.test_port.PromptTest.test_stats) ... FAIL
+test_toolbox_can_be_omitted (nanovllm_selector.port.test_port.PromptTest.test_toolbox_can_be_omitted) ... ok
+test_annotated_class_attribute_passes (nanovllm_selector.port.test_port.ValidateTest.test_annotated_class_attribute_passes) ... ok
+test_empty_code (nanovllm_selector.port.test_port.ValidateTest.test_empty_code) ... ok
+test_good_code_passes (nanovllm_selector.port.test_port.ValidateTest.test_good_code_passes) ... ok
+test_missing_class (nanovllm_selector.port.test_port.ValidateTest.test_missing_class) ... ok
+test_missing_context_import (nanovllm_selector.port.test_port.ValidateTest.test_missing_context_import) ... ok
+test_missing_packed_mapping (nanovllm_selector.port.test_port.ValidateTest.test_missing_packed_mapping) ... ok
+test_syntax_error_reports_line (nanovllm_selector.port.test_port.ValidateTest.test_syntax_error_reports_line) ... ok
+test_decode_cases_select_their_own_program_and_weight_view (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_decode_cases_select_their_own_program_and_weight_view) ... ok
+test_dynamic_selection_exposes_index_computation_and_conditional_dispatch (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_dynamic_selection_exposes_index_computation_and_conditional_dispatch) ... ok
+test_engine_gaps_visible_even_with_toolbox_omitted (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_engine_gaps_visible_even_with_toolbox_omitted) ... ok
+test_external_tensor_literal_participates_in_program_identity (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_external_tensor_literal_participates_in_program_identity) ... ok
+test_failed_graph_reports_failed_check_and_next_step (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_failed_graph_reports_failed_check_and_next_step) ... ok
+test_generation_gate_checks_variant_samples_and_replay (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_generation_gate_checks_variant_samples_and_replay) ... ok
+test_incomplete_verified_artifact_is_rejected_before_call (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_incomplete_verified_artifact_is_rejected_before_call) ... ok
+test_interleaved_nodes_keep_the_global_write_order (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_interleaved_nodes_keep_the_global_write_order) ... ok
+test_no_call_when_graph_lacks_validation (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_no_call_when_graph_lacks_validation) ... ok
+test_rank_changes_keep_the_case_and_corresponding_shape (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_rank_changes_keep_the_case_and_corresponding_shape) ... ok
+test_rounding_evidence_comes_from_matching_local_source (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_rounding_evidence_comes_from_matching_local_source) ... ok
+test_shared_program_keeps_operand_order_constant_and_writes (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_shared_program_keeps_operand_order_constant_and_writes) ... ok
+test_stale_legacy_replay_coverage_blocks_generation (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_stale_legacy_replay_coverage_blocks_generation) ... ok
+test_state_update_and_readers_survive_grouping (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_state_update_and_readers_survive_grouping) ... ok
+test_variant_uses_its_own_producer_even_when_tensor_ids_agree (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_variant_uses_its_own_producer_even_when_tensor_ids_agree) ... ok
+test_variants_require_probe_evidence_even_on_a_legacy_graph (nanovllm_selector.port.test_prompt_contracts.PromptContractsTest.test_variants_require_probe_evidence_even_on_a_legacy_graph) ... ok
+
+======================================================================
+FAIL: test_stats (nanovllm_selector.port.test_port.PromptTest.test_stats)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/nanovllm_selector/port/test_port.py", line 218, in test_stats
+    self.assertEqual(stats["toolbox"], 18)
+AssertionError: 21 != 18
+
+----------------------------------------------------------------------
+Ran 151 tests in 105.357s
+
+FAILED (failures=1)

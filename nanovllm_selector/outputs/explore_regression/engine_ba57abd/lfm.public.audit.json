@@ -1,0 +1,26 @@
+{
+  "run": "run-20261125T062639336844Z",
+  "engine": "ba57abd1ecfc2acbbc43f04db667fad6f12a2149",
+  "model": "tmp/models/LFM2.5-1.2B-Base",
+  "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+  "input_files": {
+    "config.json": "15d6157fb6df3f8272e2fe90e18f57727ccf02a125c94469198b0f3281510185",
+    "generation_config.json": "5ffd97da1dec4308543894569662d96e923ed01f7a9d8c7ff5aea7f800738cbd",
+    "model.safetensors": "7678ab9546a0c51c1fca161876b1efc4f0906277f170b5822045f40fdaf9eeff"
+  },
+  "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+  "checkpoint_sha256": "7a662bf17061d8d72a0e0131188991d43797050fbd54e454b652ea03eebf9883",
+  "independent_checks": {
+    "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+    "checkpoint_sha256": "7a662bf17061d8d72a0e0131188991d43797050fbd54e454b652ea03eebf9883",
+    "request_sha256": "e8ba0974c91d13bf8df3bb9f096d99528f318c7df64dc7821d310bf894225f36",
+    "engine_json_sha256": "279582bd5603ea240e89021f5e1d787730dd4b46237430a19cc52c87236b2ebf",
+    "logits_sha256": "c6b13faa2de85d21b29da72de0d03e0f42a5cfb8e51525c020fd855d824b55ce"
+  },
+  "crosschecked": true,
+  "raw": "lfm.public.json",
+  "report_sha256": "ffa362ae6b83d08c409e828d52dd3dafbbd07091a9c54099fba5bceaa110f73c",
+  "render": "/dev/dri/renderD131",
+  "pci": "0000:27:00.0",
+  "rocr_uuid": "GPU-6fb1bbd498dc7bd1"
+}

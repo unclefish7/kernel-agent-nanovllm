@@ -1,0 +1,785 @@
+{
+  "verified_utc": "2026-11-25T06:00:47.136484+00:00",
+  "workspace": "/home/jerryjwc/_reps/kernel-agent-nanovllm",
+  "scope": "四个既有候选，严格单卡生产 judge；公共与独立输入的候选源文件相同。",
+  "gpu": {
+    "physical": 1,
+    "pci": "0000:27:00.0",
+    "render": "/dev/dri/renderD131",
+    "uuid": "GPU-6fb1bbd498dc7bd1",
+    "name": "AMD Instinct MI100",
+    "runtime_pci_verified_in_dev": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/dev_preflight.log",
+    "dev_visibility": "ROCR_VISIBLE_DEVICES=GPU-6fb1bbd498dc7bd1",
+    "isolated_workers": "每个进程仅绑定 KFD 和 renderD131；生产预检核对只有逻辑卡 0 且 PCI 正确。",
+    "observed_final_containers": 16,
+    "metadata": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/worker_devices.json"
+  },
+  "provenance": {
+    "parent_initial": "3f2f414812dc88c9a9076936ac0876b806dcee2f",
+    "parent_old_rerun": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+    "parent_heads_during_final_scoring": [
+      "5151383ad146a691c83029b6390d6ac33222947e",
+      "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+      "cb58ffb693dc176bd7af951e804cfee14c4cbc5b"
+    ],
+    "parent_at_report": "5151383ad146a691c83029b6390d6ac33222947e",
+    "parent_branch": "main",
+    "local_tracking_origin_main": "3f2f414812dc88c9a9076936ac0876b806dcee2f",
+    "engine_head": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+    "engine_branch": "main",
+    "engine_tracking": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+    "parent_gitlink_head": "160000 commit def3937e1c48bb7b5788ea07abe8898b766cfd07\tnano-vllm",
+    "parent_gitlink_index": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+    "engine_status": "",
+    "scoring_worktree_sha256": {
+      "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+      "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+      "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+    },
+    "runtime_hash_changes_in_background": [
+      {
+        "raw": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.3.json",
+        "before": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "after": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "current": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        }
+      },
+      {
+        "raw": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.2.json",
+        "before": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "after": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "current": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        }
+      },
+      {
+        "raw": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.2.json",
+        "before": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "after": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "current": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        }
+      },
+      {
+        "raw": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.2.json",
+        "before": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "after": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "current": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        }
+      },
+      {
+        "raw": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.2.json",
+        "before": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "after": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "current": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        }
+      }
+    ],
+    "frozen_scorer": "最终各阶段的 judge 和数值计算文件 SHA-256 一致。宿主编排代码在并行开发中更新，每次的开始、结束散列见事件日志。",
+    "scoring_contents_equal_parent_head": {
+      "nanovllm_selector/port/explore/runtime.py": false,
+      "nanovllm_selector/port/explore/judge.py": true,
+      "nanovllm_selector/port/evaluate.py": true
+    },
+    "scoring_git_status": "?? nanovllm_selector/port/explore/runtime.py",
+    "test_file_snapshot": {
+      "engine_branch": "main",
+      "engine_head": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+      "files": {
+        "nano-vllm/tests/test_attention_fallback.py": "50fed886142997bb3d64cb6743e7e67adff1d07229673548b532f35d324cbf1a",
+        "nano-vllm/tests/test_eos.py": "b0635745034b9677e25f081f3877d803c221f24e6a852cdd9f1c8912c4805d94",
+        "nano-vllm/tests/test_layernorm.py": "55981d1af363cfc2ea6db1d979de62538afc8609694ca32a6c8debbd4a61f66f",
+        "nano-vllm/tests/test_model_registry.py": "6c2b4d124f19e0c79cd51eb6cdcdcf9395f7bb6ce9034f0301b3eb6f51bbab56",
+        "nano-vllm/tests/test_request_state.py": "e9394788eefc33d41b1ebf0bb326c81d76d114ceb603b9489a11010472e3111e",
+        "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64",
+        "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+        "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+        "nanovllm_selector/port/generate.py": "41a79c550a43e24424cfe69f56a0fd043558992eaa4695c25a45c108dc14c42f",
+        "nanovllm_selector/port/iterate.py": "51b2068df00f97b049408af175fd977e9c5c58abc4a7ee48bd61f1a4366fd935",
+        "nanovllm_selector/port/prompt.py": "1bd518a25c9bd89391342657b00065e44b16a5d731a6240159f19b5944e106a5",
+        "nanovllm_selector/port/test_diagnose.py": "f0226044ca4d430e5786b40d1d9543bbd79832d368eaa74fbd1e3137415cc51e",
+        "nanovllm_selector/port/test_evaluate_batch_order.py": "f5365e11125f76b669bf3a6b33867afbd3507bc127ec9b29035735a40ff4924e",
+        "nanovllm_selector/port/test_evaluate_reference.py": "28f3f025616f6f9b37af443beb9fab42433dd912600874cb73ac78d19ad6aa5a",
+        "nanovllm_selector/port/test_port.py": "732ba7c41798f582903038903043d9de15ca1a782774a1259fcb0305304b2e66",
+        "nanovllm_selector/port/test_prompt_contracts.py": "0a3172ea10905300621df781fd2f13fedaa7f02047be89a019c566f5d3d19e59",
+        "nanovllm_selector/test_dispatch_program.py": "35be037317d23f0dcd97663bd7ee96da154a8e36f90ff3cc37fb70792065d462",
+        "nanovllm_selector/test_extract.py": "569b460604735205c3c3db4772b9043b3ae7745bf3ea023b84a9ec30f7b95b00",
+        "nanovllm_selector/test_graph_contracts.py": "6d870d0f76431eeafaef541ee8068e6c6846d0c518b20b0ca1a5aef5509878f3",
+        "nanovllm_selector/test_mixed_state.py": "c02021ec2f44a18fa9bf3ba29ffc968763c1e46655e41e55e87b6be37a398c73",
+        "nanovllm_selector/test_port_iterate.py": "63b1d4f716792763df601028ee2c4342100d7444b75bf861beafba472cb96e1c",
+        "nanovllm_selector/test_program_variants.py": "f9e6c24bfe3b3c549c9cfe6aa4e358242af5a1ade41ecf665ea50dfffb4e414e",
+        "nanovllm_selector/test_reconcile_calls.py": "202ca2c70382e7b684c953b18cc7273d0c6f04f65a131b94a41ecd3212ed576e",
+        "nanovllm_selector/test_routing_replay.py": "87368233b36f16dbdac3633b00c67b2e747f48ea5d0a5c7d94b88eab05cb6886",
+        "nanovllm_selector/test_selector.py": "1b8d79c3547cd4492d951cd84886409b6243c497a19f0797551816a78378e2e1",
+        "nanovllm_selector/test_shape_probe_topology.py": "cf27b8d879f2ba5edc23fbee61adaa33a60bcc6ea092ec998d689c970e18fac5"
+      },
+      "gitlink": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+      "parent_branch": "main",
+      "parent_head": "9f875f23da79feb648943c57b0e91bf9e0a4ee90"
+    },
+    "test_or_import_source_changes_during_final_suite": {},
+    "dev_container_id": "d49e7a88f45ac7d4288c40f80374d4b71cdc8f2e9608928d08d26e365cba9d20",
+    "dev_image": "sha256:1a5af9603e9dc4db8a18bd87180760678b654f5260fcc63f1bda8304953e03d5",
+    "worker_image": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+    "versions": "Python 3.12.3, torch 2.12.0+rocm10.0.0, Transformers 4.57.3",
+    "spec_host": "/home/jerryjwc/_reps/kernel-agent-nanovllm/contracts/nanovllm/spec.yaml",
+    "spec_dev": "/workspace/tmp/port-deps/contracts/nanovllm/spec.yaml",
+    "spec_sha256": "a483bbf55e20f4298350a927fa06e194af307c9ffc7913f511a7e239eb97b0dd",
+    "kernel_index_sha256": "243ebd7ce118e39ca7e6b9b5bdf5e161248748e086e611e97fc2b4e55472557f",
+    "engine_dev_bind": "/workspace/nano-vllm (ro)",
+    "selector_dev_bind": "/workspace/nanovllm_selector",
+    "repo_tmp_dev_bind": "/workspace/tmp"
+  },
+  "model_input_manifest": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/inputs.json",
+  "weights_and_candidate_symlinks": 0,
+  "results": {
+    "Qwen3-0.6B": {
+      "candidate": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/model_qwen3.py",
+      "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+      "checkpoint": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/Qwen3-0.6B",
+      "public": {
+        "exact_positions": 12,
+        "positions": 12,
+        "vocab_width": 151936,
+        "vocab_values": 1823232,
+        "max_abs_diff": 0.0,
+        "prefill": 3,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0,
+          256,
+          512
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.3.json",
+        "report_sha256": "c64c6588f976eb00632a753e7a03e5631f6777b9a80904e08d88cd9dea312562",
+        "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 36.00183508079499,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/strict.json",
+        "historical_exact_positions": 12,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "same_text_as_historical": true,
+        "argmax_changes_on_same_text": 0,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      },
+      "holdout": {
+        "exact_positions": 10,
+        "positions": 10,
+        "vocab_width": 151936,
+        "vocab_values": 1519360,
+        "max_abs_diff": 0.0,
+        "prefill": 1,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.2.json",
+        "report_sha256": "95e35aa635810e6d0493e22a12a4d27a4b503f63d748ed8a5d235f26b4b48fd3",
+        "prompt_sha256": "a4bb40baf366243ca753e62a555ba29a02fed096e90e65a71aba94ac9da0c15c",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 35.83530285395682,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/qwen3_exact/holdout.json",
+        "historical_exact_positions": 10,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+        "same_text_as_historical": false,
+        "argmax_changes_on_same_text": null,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      }
+    },
+    "llama-3.2-1B": {
+      "candidate": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+      "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+      "checkpoint": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/llama-3.2-1B",
+      "public": {
+        "exact_positions": 12,
+        "positions": 12,
+        "vocab_width": 128256,
+        "vocab_values": 1539072,
+        "max_abs_diff": 0.0,
+        "prefill": 3,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0,
+          256,
+          512
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.2.json",
+        "report_sha256": "d10f0bba0c696e03d9b53c5c1e524efef73f2347a0650a00eec88666f9ee4065",
+        "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 36.79617395438254,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/llama_regression.json",
+        "historical_exact_positions": 12,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "same_text_as_historical": true,
+        "argmax_changes_on_same_text": 0,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      },
+      "holdout": {
+        "exact_positions": 10,
+        "positions": 10,
+        "vocab_width": 128256,
+        "vocab_values": 1282560,
+        "max_abs_diff": 0.0,
+        "prefill": 1,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.2.json",
+        "report_sha256": "ee7168dbce24f6e1b52101931b7ae9294b1788a1ec73bec5c03f4122f0cee055",
+        "prompt_sha256": "a4bb40baf366243ca753e62a555ba29a02fed096e90e65a71aba94ac9da0c15c",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 37.41754475235939,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/iter_llama4/cold_255.json",
+        "historical_exact_positions": 10,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": null,
+        "same_text_as_historical": null,
+        "argmax_changes_on_same_text": null,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      }
+    },
+    "MiniCPM5-1B": {
+      "candidate": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+      "checkpoint": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/MiniCPM5-1B",
+      "public": {
+        "exact_positions": 12,
+        "positions": 12,
+        "vocab_width": 130560,
+        "vocab_values": 1566720,
+        "max_abs_diff": 0.0,
+        "prefill": 3,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0,
+          256,
+          512
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.2.json",
+        "report_sha256": "445716ebed0367564cfa5dcabfa7972794f49dd6046eb167a16426ac1c5d3fd5",
+        "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "b3d43a7ad2cf6ec2edb3bece8f3e8561fba5ac0154d9c237e4040fca76d3c01b",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 35.890217375941575,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/minicpm_regression.json",
+        "historical_exact_positions": 12,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "same_text_as_historical": true,
+        "argmax_changes_on_same_text": 0,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      },
+      "holdout": {
+        "exact_positions": 10,
+        "positions": 10,
+        "vocab_width": 130560,
+        "vocab_values": 1305600,
+        "max_abs_diff": 0.0,
+        "prefill": 1,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0
+        ],
+        "prefix_strategy": "full_kv_snapshot",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.holdout.2.json",
+        "report_sha256": "7f04ce5013ad92b7916adc4fff06ad799ca6c2296134e9d7939cefc49988c815",
+        "prompt_sha256": "a4bb40baf366243ca753e62a555ba29a02fed096e90e65a71aba94ac9da0c15c",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "9f875f23da79feb648943c57b0e91bf9e0a4ee90",
+        "parent_head_at_end": "cb58ffb693dc176bd7af951e804cfee14c4cbc5b",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 35.2933462029323,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/minicpm5_1b/holdout.json",
+        "historical_exact_positions": 10,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+        "same_text_as_historical": false,
+        "argmax_changes_on_same_text": null,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      }
+    },
+    "LFM2.5-1.2B-Base": {
+      "candidate": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+      "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+      "checkpoint": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/models/LFM2.5-1.2B-Base",
+      "public": {
+        "exact_positions": 12,
+        "positions": 12,
+        "vocab_width": 65536,
+        "vocab_values": 786432,
+        "max_abs_diff": 0.0,
+        "prefill": 3,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "prefix_strategy": "rebuild_and_step",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.public.2.json",
+        "report_sha256": "973d24ca3a19f58c07641101809e6ff9ab32c3f12f71d463cdc4f5260359044b",
+        "prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "cb58ffb693dc176bd7af951e804cfee14c4cbc5b",
+        "parent_head_at_end": "cb58ffb693dc176bd7af951e804cfee14c4cbc5b",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 53.96276825387031,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/deepseek_v3_tiny/lfm_regression.json",
+        "historical_exact_positions": 12,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "59e199e0d98936db1bf32d808661f43007c974541e0819e826a8d43c69f1fe70",
+        "same_text_as_historical": true,
+        "argmax_changes_on_same_text": 0,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      },
+      "holdout": {
+        "exact_positions": 10,
+        "positions": 10,
+        "vocab_width": 65536,
+        "vocab_values": 655360,
+        "max_abs_diff": 0.0,
+        "prefill": 1,
+        "generation_prefill": 1,
+        "decode": 8,
+        "dtype": "torch.bfloat16",
+        "attention_backend": "sdpa",
+        "cached_prefix_tokens": [
+          0,
+          0
+        ],
+        "prefix_strategy": "rebuild_and_step",
+        "raw_trusted_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.holdout.2.json",
+        "report_sha256": "3084f57cb444623f66dda1005cc67fa16f1b86bb943d035759f0bf67ceb8fe88",
+        "prompt_sha256": "a4bb40baf366243ca753e62a555ba29a02fed096e90e65a71aba94ac9da0c15c",
+        "source_sha256_at_start": {
+          "nanovllm_selector/port/explore/runtime.py": "fb89705e9581db351ffd3f2caae6b205247a898e98d1788db287425abbdf84ac",
+          "nanovllm_selector/port/explore/judge.py": "390d485c9e513fbac35bbecb16e3f904ae0a8e0baca719a5c5cf6e8afe50ffc4",
+          "nanovllm_selector/port/evaluate.py": "7900ce47108138f8626c33b5660dee29c04bffad2d290120c2342ea9b365cb64"
+        },
+        "parent_head_at_start": "cb58ffb693dc176bd7af951e804cfee14c4cbc5b",
+        "parent_head_at_end": "5151383ad146a691c83029b6390d6ac33222947e",
+        "worker_image_id": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+        "elapsed_s": 53.94552385434508,
+        "historical_report": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/lfm25_1_2b/holdout.json",
+        "historical_exact_positions": 10,
+        "historical_max_abs_diff": 0.0,
+        "historical_prompt_sha256": "dca8825da6113bbc98ce8c71e12d4535b35d7ac78af3dba9c400aacc0770b708",
+        "same_text_as_historical": false,
+        "argmax_changes_on_same_text": null,
+        "delta_exact_positions": 0,
+        "delta_max_abs_diff": 0.0
+      }
+    }
+  },
+  "bit_identical_repeat_reports": {
+    "qwen3/public": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.2.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.3.json",
+      "same_report_bytes": true
+    },
+    "qwen3/holdout": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.2.json",
+      "same_report_bytes": true
+    },
+    "llama/public": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.2.json",
+      "same_report_bytes": true
+    },
+    "llama/holdout": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.2.json",
+      "same_report_bytes": true
+    },
+    "minicpm/public": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.2.json",
+      "same_report_bytes": true
+    },
+    "minicpm/holdout": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.holdout.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.holdout.2.json",
+      "same_report_bytes": true
+    },
+    "lfm/public": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.public.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.public.2.json",
+      "same_report_bytes": true
+    },
+    "lfm/holdout": {
+      "first_success": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.holdout.json",
+      "final": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.holdout.2.json",
+      "same_report_bytes": true
+    }
+  },
+  "totals": {
+    "public": {
+      "matched": 48,
+      "positions": 48,
+      "vocab_values": 5715456
+    },
+    "holdout": {
+      "matched": 40,
+      "positions": 40,
+      "vocab_values": 4762880
+    }
+  },
+  "combined": {
+    "matched": 88,
+    "positions": 88,
+    "vocab_values": 10478336,
+    "max_abs_diff": 0.0,
+    "public_delta_exact_positions": 0,
+    "public_delta_max_abs_diff": 0.0,
+    "public_argmax_changes": 0
+  },
+  "holdout_comparability": "独立文本由新 judge 生成。历史 holdout 的相同位置数和误差仅作汇总比较，不能逐位置对照不同文本。",
+  "old_suites": {
+    "initial": [
+      {
+        "passed": 150,
+        "run": 151,
+        "skipped": 0,
+        "failures": [
+          "test_stats (nanovllm_selector.port.test_port.PromptTest.test_stats)"
+        ],
+        "rc": 1,
+        "duration_s": 105.357,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project.log",
+        "sha256": "81b1e7ec0bed466a4e8e8a44f7d029109c61948f2d0df54e28b2d55aea72189b"
+      },
+      {
+        "passed": 5,
+        "run": 5,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 2.124,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector.log",
+        "sha256": "6c3e7cfdb60d23443157e247d8760892b30e0ff9bcda530f90ef1d5712d6660c"
+      },
+      {
+        "passed": 30,
+        "run": 30,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 5.047,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine.log",
+        "sha256": "30ec61b86106ce5c89af630fd53657c65cb23c9bf9ae2e6a1b0c301f316534c5"
+      }
+    ],
+    "repeat_after_stale_assertion_fix": [
+      {
+        "passed": 151,
+        "run": 151,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 103.916,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_rerun.log",
+        "sha256": "24f2751ea3e15e621abab273417e8a9cec26f189de26188867fc4379be5cfa27"
+      },
+      {
+        "passed": 5,
+        "run": 5,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 1.861,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector_rerun.log",
+        "sha256": "5e6212171d4170700f93bd7cc8c37ebef4cf583a6a79e60a0007a75ee8d104ff"
+      },
+      {
+        "passed": 30,
+        "run": 30,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 2.867,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine_rerun.log",
+        "sha256": "47404f6844f8a4b398644c23f847bd41dec0279953daa8b9730ea296fab8890c"
+      }
+    ],
+    "final": [
+      {
+        "passed": 151,
+        "run": 151,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 105.102,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_final.log",
+        "sha256": "207249abe9689c48b161ddf38c1005861968116d0891ba3148ee5dfa70d4833e"
+      },
+      {
+        "passed": 5,
+        "run": 5,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 1.855,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector_final.log",
+        "sha256": "430d802b12340f6690ec7c550aa88af23853f92a781766078a673678d395a5c6"
+      },
+      {
+        "passed": 30,
+        "run": 30,
+        "skipped": 0,
+        "failures": [],
+        "rc": 0,
+        "duration_s": 2.933,
+        "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine_final.log",
+        "sha256": "5f4a075c6a7000d531c4b7714de59ba5afe247123f6b6228afa0c0598e9185eb"
+      }
+    ],
+    "final_project_total": 156,
+    "final_engine_total": 30,
+    "delta_passed_after_fix": 1,
+    "delta_passed_vs_historical_green": {
+      "project": 0,
+      "engine": 0
+    },
+    "initial_failure": {
+      "repro": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_stats_repro.log",
+      "spec_toolbox_actual_expected": [
+        21,
+        18
+      ],
+      "spec_context_actual_expected": [
+        9,
+        8
+      ]
+    }
+  },
+  "initial_jit_failure": {
+    "stage": "engine",
+    "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.json",
+    "diagnosis": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/tmpfs_diagnosis.log",
+    "reason": "旧私有 /tmp 默认 noexec，Triton 共享对象无法加载。系统 libm 复现；新生产挂载将编译缓存移至 /jit。"
+  },
+  "scope_update": {
+    "host_tool_orchestration": {
+      "passed": 15,
+      "run": 15,
+      "skipped": 0,
+      "failures": [],
+      "rc": 0,
+      "duration_s": 3.6,
+      "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/new_host.log",
+      "sha256": "b9cd7ebede8f04e6adf6f8d258f2cfbd9838fcbdc07777e6fe5f5f4a9ef92bbb"
+    },
+    "new_cpu_final_owner": "父任务",
+    "interrupted_dev_attempt": {
+      "log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/new_dev.log",
+      "rc": 134,
+      "cause": "HIP_VISIBLE_DEVICES=-1 导致 ROCm SIGABRT",
+      "global_pid": 1245810,
+      "container_pid": 64429,
+      "utc": "2026-11-25T05:54:45Z",
+      "apport_log": "/var/log/apport.log",
+      "recorded_core": "/var/lib/apport/coredump/core._usr_bin_python3_12.0.6baad563-26a3-43d4-b3c1-7cb4529cdfa5.1245810.614479632",
+      "confirmed_size_bytes": 568479744,
+      "present_at_report": false,
+      "host_core_removed_by_this_task": false,
+      "cleanup_if_approved": null,
+      "fixture_removed": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/explore-evidence-cpu/fixture-nvwdtf46"
+    }
+  },
+  "cleanup": {
+    "temporary_tree_removed": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/explore-regression",
+    "dev_cache_removed": "/workspace/tmp/explore-regression/cache",
+    "repo_temp_fixture_removed": "/home/jerryjwc/_reps/kernel-agent-nanovllm/tmp/explore-evidence-cpu/fixture-nvwdtf46",
+    "worker_containers_removed": true,
+    "worker_private_tmpfs": [
+      "/tmp",
+      "/jit",
+      "/dev/shm",
+      "/trial (engine)"
+    ],
+    "local_results": [
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/dev_preflight.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine_final.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/engine_rerun.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/inputs.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/judge.jsonl",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.holdout.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.holdout.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.public.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/lfm.public.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.holdout.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/llama.public.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.holdout.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.holdout.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/minicpm.public.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/new_dev.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/new_host.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_final.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_rerun.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/project_stats_repro.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.holdout.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.2.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.3.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/qwen3.public.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/report.json",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector_final.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/selector_rerun.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/tmpfs_diagnosis.log",
+      "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/worker_devices.json"
+    ],
+    "local_cleanup": "仅删除 local_results 枚举的文件。目录中还包含其他并行任务的产物。",
+    "core_still_exists": false,
+    "cache_size_before_cleanup_dev_du": "24 MiB (du -sh)",
+    "snapshot_directory_symlinks_created_by_this_task": 0,
+    "repo_result_cleanup_command": "先进入仓库根目录，再执行 python3 -B -c 'import json,pathlib; r=pathlib.Path(\"nanovllm_selector/outputs/explore_regression/report.json\").resolve(); files=[pathlib.Path(p) for p in json.loads(r.read_text())[\"cleanup\"][\"local_results\"]]; assert all(p.parent==r.parent for p in files); [p.unlink(missing_ok=True) for p in files]'"
+  },
+  "judge_event_log": "/home/jerryjwc/_reps/kernel-agent-nanovllm/nanovllm_selector/outputs/explore_regression/judge.jsonl"
+}

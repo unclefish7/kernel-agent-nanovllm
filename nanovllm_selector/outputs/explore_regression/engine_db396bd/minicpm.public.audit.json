@@ -1,0 +1,27 @@
+{
+  "run": "run-20261125T061813818099Z",
+  "engine": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "model": "tmp/models/MiniCPM5-1B",
+  "candidate": "nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+  "input_files": {
+    "config.json": "6a6509b646cb3169616c5ffc3196e7ccaf9d4d6bc17b266581d241a31c217714",
+    "generation_config.json": "92afd6424501426eddcf7e1542f013d19e5987544977b4ee7bd26359bd5fd2ab",
+    "model-00000-of-00001.safetensors": "7ab8fd86563125929be78aeec8cb3969c7ed2ead3be1ab9d3ec0a9fa69c8660d",
+    "model.safetensors.index.json": "162add042e75abc3d571c4a8679523fa4f1ffc55d1fea25fc6658a19d6e957ee"
+  },
+  "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+  "checkpoint_sha256": "e58d35fb94527c4f593214714f0a6b2f63d68a8fed1f1308782a541784a9f4cd",
+  "independent_checks": {
+    "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+    "checkpoint_sha256": "e58d35fb94527c4f593214714f0a6b2f63d68a8fed1f1308782a541784a9f4cd",
+    "request_sha256": "a48aa492b3ece5bbac6f3041f8f672f660ad3b3c191d011dfaf6c1104be7ccbf",
+    "engine_json_sha256": "7b59472636e2a29557939ae25b8089c6bae5b736bca87904dc32ec04b02dc52e",
+    "logits_sha256": "ec1804adff9d2c78b2999583cdecb90d187f54102c46036ca301cd5d9dda38d3"
+  },
+  "crosschecked": true,
+  "raw": "minicpm.public.json",
+  "report_sha256": "4e372d8c6de0fd8e119faef008b1497556be5ce498414d69b7572c8592940d42",
+  "render": "/dev/dri/renderD131",
+  "pci": "0000:27:00.0",
+  "rocr_uuid": "GPU-6fb1bbd498dc7bd1"
+}

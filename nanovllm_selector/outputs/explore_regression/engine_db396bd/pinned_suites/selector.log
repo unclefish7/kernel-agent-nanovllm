@@ -1,0 +1,10 @@
+test_agent_parses_json_without_recording_secret (nanovllm_selector.test_selector.SelectorTest.test_agent_parses_json_without_recording_secret) ... ok
+test_gpu_interface_and_current_stream (nanovllm_selector.test_selector.SelectorTest.test_gpu_interface_and_current_stream) ... ok
+test_install_preserves_weights_and_restore_identity (nanovllm_selector.test_selector.SelectorTest.test_install_preserves_weights_and_restore_identity) ... ok
+test_reject_invalid_decision (nanovllm_selector.test_selector.SelectorTest.test_reject_invalid_decision) ... ok
+test_unsupported_input_records_fallback (nanovllm_selector.test_selector.SelectorTest.test_unsupported_input_records_fallback) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.115s
+
+OK

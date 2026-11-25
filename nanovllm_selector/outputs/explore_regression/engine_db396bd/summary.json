@@ -1,0 +1,256 @@
+{
+  "schema": 1,
+  "engine_git": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "engine_source_tree_git": "4dd6b9a0a09cba7d4a0affe1f6c3a3eff74d260e",
+  "registry_sha256": "32a36db2307c8915ba3e2715a44b478e200bdb69a881ee5c8d700a15e06e83b7",
+  "loader_sha256": "decdab5c56734d91c54a0cd17e6b22032a2aa5e2135474cc2e7fb35b725fc2e5",
+  "parent_git_at_model_run": ["08132e35082fd2903f9a90d4768eac698270aa98"],
+  "parent_gitlink_at_model_run": ["db396bd0276b797bd491282e4f1fb5aaa9cbde55"],
+  "scorer_source_sha256": {
+    "nanovllm_selector/port/evaluate.py": "4e10ba6159253b7e787ed2cc4033a9c2927a152f60b14c81d5fa520f56908e7d",
+    "nanovllm_selector/port/explore/evidence.py": "cb6e6395d1ed205b5153b08ce6588ca5e7622184fee92e35455f3282fcc1d8e1",
+    "nanovllm_selector/port/explore/judge.py": "1d9c40ae704dbff45a614188c4a09df0973e641a16fbbb77371ae66d30345097",
+    "nanovllm_selector/port/explore/runtime.py": "1abc5b5522037daf3a2dbf58e8f3ea008c78c7a5c6bc399300392d4bce4d361a"
+  },
+  "worker_image": "sha256:ce081f15b24b286c742cdd49eebd786419c30f2d64dc1a9bfad34a6f6582e0c4",
+  "gpu": {
+    "device": 1,
+    "pci": "0000:27:00.0",
+    "render": "renderD131",
+    "rocr_uuid": "GPU-6fb1bbd498dc7bd1",
+    "core_limit": 0,
+    "model": "AMD Instinct MI100"
+  },
+  "cases": {"public_prompt_lengths":[128,256,768],"holdout_prompt_lengths":[255],"decode_steps":8,"criterion":"exact"},
+  "totals": {
+    "public_positions": 48,
+    "holdout_positions": 40,
+    "elements": 10478336,
+    "max_abs_diff": 0.0,
+    "matched_delta_vs_prior": 0,
+    "max_abs_diff_delta_vs_prior": 0.0,
+    "argmax_changes_vs_prior_public": 0,
+    "argmax_changes_vs_prior_holdout": 0
+  },
+  "models": [
+    {
+      "model": "Qwen3-0.6B",
+      "checkpoint": "tmp/models/Qwen3-0.6B",
+      "candidate": "nanovllm_selector/outputs/qwen3_exact/model_qwen3.py",
+      "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+      "checkpoint_sha256": "da1660eb40bc069707b41c3991966a6a89c0d25e1332bc183efe5d211be50070",
+      "weights_sha256": {"model.safetensors":"f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"},
+      "architecture": "Qwen3ForCausalLM",
+      "dtype": "torch.bfloat16",
+      "vocab_size": 151936,
+      "public": {
+        "report": "qwen3.public.json",
+        "matched": 12,
+        "total": 12,
+        "max_abs_diff": 0.0,
+        "request_sha256": "3d30dff837b73de81167b89488f71140a0686a3bc84d648f5320845802b1f94e",
+        "engine_json_sha256": "e3a549d42d81c80f7502e453542acda21b8295636ede5b2b5c61de829ef881fb",
+        "logits_sha256": "7312aa50b4e3e22e84d96bb956b3b7d23ca66c2aac72a71d22128c8022f7d7ef",
+        "audit": "qwen3.public.audit.json",
+        "report_sha256": "2a7fead3f17348a77590bd50accb494dc5f58ce82d9f75561ab160b150504753",
+        "logit_elements": 1823232
+      },
+      "holdout": {
+        "report": "qwen3.holdout.json",
+        "matched": 10,
+        "total": 10,
+        "max_abs_diff": 0.0,
+        "request_sha256": "a0970eeab9affa2d93bfa934733a97ce5d94c7d62b27865eb396e0bfc3e631ba",
+        "engine_json_sha256": "e5065321f527b3fce88e82c894f59e85091ba375d213c70f162faf8191e34c15",
+        "logits_sha256": "3cf97a6f9459b517540dd63be2fd692fa7209c38161915b358d8ceb874643b38",
+        "audit": "qwen3.holdout.audit.json",
+        "report_sha256": "aea2359028555c65e94a748e7916b06a786f19db2a0665ff9c897af9589b3692",
+        "logit_elements": 1519360
+      }
+    },
+    {
+      "model": "llama-3.2-1B",
+      "checkpoint": "tmp/models/llama-3.2-1B",
+      "candidate": "nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+      "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+      "checkpoint_sha256": "128a16f7f38d8c43511977967e8d46fbeedc28d1454f4ed3beed10876c58f0c4",
+      "weights_sha256": {"model.safetensors":"68a2e4be76fa709455a60272fba8e512c02d81c46e6c671cc9449e374fd6809a"},
+      "architecture": "LlamaForCausalLM",
+      "dtype": "torch.bfloat16",
+      "vocab_size": 128256,
+      "public": {
+        "report": "llama.public.json",
+        "matched": 12,
+        "total": 12,
+        "max_abs_diff": 0.0,
+        "request_sha256": "2c6e280a261e28df226b5457251bcde96fe32c3432af68b22e20f89d25ce0595",
+        "engine_json_sha256": "ffa07edda876a5f42961b9281bb02ad5617a9957c921764824d3c4ad9c062d43",
+        "logits_sha256": "175a8ebde178b521b543c239b69f65096cf3575be7a28b31034ee94b000fde1e",
+        "audit": "llama.public.audit.json",
+        "report_sha256": "b192bc440a98f73808478f7198e851e454d4a26dd45b58b2c94404b48618ff63",
+        "logit_elements": 1539072
+      },
+      "holdout": {
+        "report": "llama.holdout.json",
+        "matched": 10,
+        "total": 10,
+        "max_abs_diff": 0.0,
+        "request_sha256": "709a56b8169ef9043d48614c42ef85c88ffd8bc46dab1957d1c1f0dad5432cc2",
+        "engine_json_sha256": "0aa0a01b4a6b24a2ef0c876cc3a971261cb2d17d6faefaad4043bcac890a04d6",
+        "logits_sha256": "459e02c5ba392f736f8681a78458d4b37265e27422e4b4e2bdc3b0d0b568407b",
+        "audit": "llama.holdout.audit.json",
+        "report_sha256": "3511e042020a6718f0d567d2ec4b872e657f9cc9b79938d4edeef0a4333e9354",
+        "logit_elements": 1282560
+      }
+    },
+    {
+      "model": "MiniCPM5-1B",
+      "checkpoint": "tmp/models/MiniCPM5-1B",
+      "candidate": "nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+      "checkpoint_sha256": "e58d35fb94527c4f593214714f0a6b2f63d68a8fed1f1308782a541784a9f4cd",
+      "weights_sha256": {"model-00000-of-00001.safetensors":"7ab8fd86563125929be78aeec8cb3969c7ed2ead3be1ab9d3ec0a9fa69c8660d"},
+      "architecture": "LlamaForCausalLM",
+      "dtype": "torch.bfloat16",
+      "vocab_size": 130560,
+      "public": {
+        "report": "minicpm.public.json",
+        "matched": 12,
+        "total": 12,
+        "max_abs_diff": 0.0,
+        "request_sha256": "a48aa492b3ece5bbac6f3041f8f672f660ad3b3c191d011dfaf6c1104be7ccbf",
+        "engine_json_sha256": "7b59472636e2a29557939ae25b8089c6bae5b736bca87904dc32ec04b02dc52e",
+        "logits_sha256": "ec1804adff9d2c78b2999583cdecb90d187f54102c46036ca301cd5d9dda38d3",
+        "audit": "minicpm.public.audit.json",
+        "report_sha256": "4e372d8c6de0fd8e119faef008b1497556be5ce498414d69b7572c8592940d42",
+        "logit_elements": 1566720
+      },
+      "holdout": {
+        "report": "minicpm.holdout.json",
+        "matched": 10,
+        "total": 10,
+        "max_abs_diff": 0.0,
+        "request_sha256": "d435e1f81083ba882807cf1f889fdfab3eeab213dbb46a71156893459e0230f3",
+        "engine_json_sha256": "42a48ea99ac13c6e01fec3a6d3da1cf3482f9479c45362d1543a9228950dc13d",
+        "logits_sha256": "9878217f53ba58b92088221f7d529e8ac5e9e2a8a7b01f14f43a17d71267e38d",
+        "audit": "minicpm.holdout.audit.json",
+        "report_sha256": "790c908492378480cd3e565b7bed59a2dc3e7129ca940d8e31cce225b4a8dbb0",
+        "logit_elements": 1305600
+      }
+    },
+    {
+      "model": "LFM2.5-1.2B-Base",
+      "checkpoint": "tmp/models/LFM2.5-1.2B-Base",
+      "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+      "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+      "checkpoint_sha256": "7a662bf17061d8d72a0e0131188991d43797050fbd54e454b652ea03eebf9883",
+      "weights_sha256": {"model.safetensors":"7678ab9546a0c51c1fca161876b1efc4f0906277f170b5822045f40fdaf9eeff"},
+      "architecture": "Lfm2ForCausalLM",
+      "dtype": "torch.bfloat16",
+      "vocab_size": 65536,
+      "public": {
+        "report": "lfm.public.json",
+        "matched": 12,
+        "total": 12,
+        "max_abs_diff": 0.0,
+        "request_sha256": "e8ba0974c91d13bf8df3bb9f096d99528f318c7df64dc7821d310bf894225f36",
+        "engine_json_sha256": "459d5422ad301fed6a06f0d21868509b3f7e1c8c58c3c37f2e399e11f0768b49",
+        "logits_sha256": "9cfb83d9a139142b975818798de4357e9bc47c3571ab3ee6dd96b100a851e1ad",
+        "audit": "lfm.public.audit.json",
+        "report_sha256": "e4613b8ee575071f2f543c2d36d6bd43ffb7fc80147072149f539fc7c172551c",
+        "logit_elements": 786432
+      },
+      "holdout": {
+        "report": "lfm.holdout.json",
+        "matched": 10,
+        "total": 10,
+        "max_abs_diff": 0.0,
+        "request_sha256": "7e97e7fdf55b2c8483b1cb6277d568f54afa9f51cf5e797f2fbdef35c577258b",
+        "engine_json_sha256": "db212063d5883b2da541a033d7cbce82af648b4ddd661496daf0be7b996bcde7",
+        "logits_sha256": "5119376e2b66cf3f34847ea8e0aaaed2e5d99d82e87bb1f36c88235485e05958",
+        "audit": "lfm.holdout.audit.json",
+        "report_sha256": "50a94275da0ac25566a53495261692dedb9dab757f168e0da35b0b3a1f657f69",
+        "logit_elements": 655360
+      }
+    }
+  ],
+  "suites": {
+    "parent_git": "901b212d09b7fc875be2c1bd93f56d8d9aaa79cc",
+    "selector_project_total": 159,
+    "engine_total": 32,
+    "skipped": 0,
+    "logs": {"engine":"pinned_suites/engine.log","project":"pinned_suites/project.log","selector":"pinned_suites/selector.log"},
+    "counts": {"engine":32,"project":154,"selector":5},
+    "failures": 0,
+    "source_log": "pinned_suites/suite_sources.log",
+    "gpu_preflight_log": "pinned_suites/gpu-preflight.log",
+    "input_sha256": {
+      "nanovllm/models/__init__.py": "32a36db2307c8915ba3e2715a44b478e200bdb69a881ee5c8d700a15e06e83b7",
+      "nanovllm/utils/loader.py": "decdab5c56734d91c54a0cd17e6b22032a2aa5e2135474cc2e7fb35b725fc2e5",
+      "tests/test_model_registry.py": "8b66f1440f7445a47a6c9a108c280cb1f42c07fd01b8566d33170a67e49ce0c3",
+      "contracts/nanovllm/spec.yaml": "287ad5f7495d6dd6ce9e4a33434c57c6d3fe3c9b496858c3ba917f8a3119903a",
+      "kernels/index.md": "243ebd7ce118e39ca7e6b9b5bdf5e161248748e086e611e97fc2b4e55472557f"
+    },
+    "tests_added_since_historical_baseline": {
+      "engine": [
+        "test_model_registry.TestLoader.test_checkpoint_loads_persistent_buffer_and_preserves_computed_cache",
+        "test_model_registry.TestLoader.test_missing_persistent_buffer_and_incorrect_shape_are_reported"
+      ],
+      "project": [
+        "nanovllm_selector.port.test_port.ValidateTest.test_exploration_accepts_declared_class_without_template_naming_or_packing",
+        "nanovllm_selector.port.test_evaluate_reference.TestReference.test_generation_initialized_caches_match_independent_forced_histories",
+        "nanovllm_selector.port.test_port.FenceTest.test_trailing_provider_answer_marker_is_not_python"
+      ],
+      "selector": []
+    },
+    "earlier_live_checkout": {
+      "counts": {"engine":32,"project":153,"selector":5},
+      "logs": {"engine":"engine.log","project":"project.log","selector":"selector.log"}
+    }
+  },
+  "verified_bindings": ["candidate_sha256","checkpoint_sha256","request_sha256","engine_json_sha256","logits_sha256"],
+  "reproduce": {
+    "models": "ulimit -c 0 && /usr/bin/python3 -B nanovllm_selector/outputs/explore_regression/engine_db396bd/verify_models.py --engine db396bd0276b797bd491282e4f1fb5aaa9cbde55 --out nanovllm_selector/outputs/explore_regression/engine_db396bd/recheck",
+    "suites": "bash nanovllm_selector/outputs/explore_regression/engine_db396bd/verify_suites.sh nanovllm_selector/outputs/explore_regression/engine_db396bd/recheck/suites db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+    "scorer_versions": "运行时将当前父仓工作树的评分代码复制到独立目录。实际源码 SHA-256 见 source_manifest_paths。"
+  },
+  "path_roots": {"reports_and_logs":"summary.json 所在目录","candidate_and_checkpoint":"仓库根目录","reproduce":"仓库根目录"},
+  "source_manifest_paths": ["run-20261125T061813818099Z.json"],
+  "initial_source_snapshot": "sources.json",
+  "scorer_package_manifest_sha256": "fc4f730bc7fb75dcd4b33d0443e62654381f05c9296850708c52e2d6b28ece17",
+  "worker_versions": {
+    "python": "3.12.3",
+    "torch": "2.12.0+rocm10.0.0",
+    "hip": "7.15.26333",
+    "transformers": "4.57.3",
+    "safetensors": "0.8.0",
+    "tokenizers": "0.22.2",
+    "triton": "3.8.0+git4cff872c.rocm10.0.0"
+  },
+  "historical_baseline": {
+    "engine_git": "def3937e1c48bb7b5788ea07abe8898b766cfd07",
+    "summary": "../report.json",
+    "initial_test_stats_failure": "../project.log",
+    "after_test_stats_fix": "../project_rerun.log"
+  },
+  "inputs": {
+    "candidate_paths_resolve_to_self": true,
+    "candidate_link_count": 1,
+    "model_tree_symlinks": 0,
+    "candidate_and_weight_files_read_only_in_workers": true
+  },
+  "cleanup": {
+    "temporary_source_and_job_dirs_removed": ["tmp/db396bd-score-k0sjfmax"],
+    "results_retained": ".",
+    "suite_cache_removed": true,
+    "temporary_suite_and_cache_dirs_removed": ["tmp/db396bd-suite-b3QFJazV","tmp/db396bd-suite-dPYoB6ID"],
+    "private_worker_mount_paths_relative_to_container_root": ["tmp","jit","dev/shm","trial"],
+    "workers_removed": true
+  },
+  "committed_scorer_sources": {
+    "judge_evaluate_evidence_git": "512a22ae07741e2d91950e3c288af80bfe7950f4",
+    "worker_git_compared": "7c07f2e800690cd953adb7d5b68ba6bf86747e85",
+    "worker_commit_matches_all_four_scoring_sources": false,
+    "files_with_other_run_sha256": ["nanovllm_selector/port/explore/runtime.py"]
+  }
+}

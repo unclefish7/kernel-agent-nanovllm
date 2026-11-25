@@ -1,0 +1,26 @@
+{
+  "run": "run-20261125T061813818099Z",
+  "engine": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "model": "tmp/models/Qwen3-0.6B",
+  "candidate": "nanovllm_selector/outputs/qwen3_exact/model_qwen3.py",
+  "input_files": {
+    "config.json": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+    "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+    "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+  },
+  "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+  "checkpoint_sha256": "da1660eb40bc069707b41c3991966a6a89c0d25e1332bc183efe5d211be50070",
+  "independent_checks": {
+    "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+    "checkpoint_sha256": "da1660eb40bc069707b41c3991966a6a89c0d25e1332bc183efe5d211be50070",
+    "request_sha256": "a0970eeab9affa2d93bfa934733a97ce5d94c7d62b27865eb396e0bfc3e631ba",
+    "engine_json_sha256": "e5065321f527b3fce88e82c894f59e85091ba375d213c70f162faf8191e34c15",
+    "logits_sha256": "3cf97a6f9459b517540dd63be2fd692fa7209c38161915b358d8ceb874643b38"
+  },
+  "crosschecked": true,
+  "raw": "qwen3.holdout.json",
+  "report_sha256": "aea2359028555c65e94a748e7916b06a786f19db2a0665ff9c897af9589b3692",
+  "render": "/dev/dri/renderD131",
+  "pci": "0000:27:00.0",
+  "rocr_uuid": "GPU-6fb1bbd498dc7bd1"
+}

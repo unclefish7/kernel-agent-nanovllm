@@ -1,0 +1,26 @@
+{
+  "run": "run-20261125T061813818099Z",
+  "engine": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "model": "tmp/models/llama-3.2-1B",
+  "candidate": "nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+  "input_files": {
+    "config.json": "bfb5d39c327ee5c3a65e3574596ff30b052a445cfc59a25bdf3b4c0c5a44f4d2",
+    "generation_config.json": "da81b0dd4001a8e19fb5840d2b524f6957f44ddde6f5c3fe32b1f36cef5205bf",
+    "model.safetensors": "68a2e4be76fa709455a60272fba8e512c02d81c46e6c671cc9449e374fd6809a"
+  },
+  "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+  "checkpoint_sha256": "128a16f7f38d8c43511977967e8d46fbeedc28d1454f4ed3beed10876c58f0c4",
+  "independent_checks": {
+    "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+    "checkpoint_sha256": "128a16f7f38d8c43511977967e8d46fbeedc28d1454f4ed3beed10876c58f0c4",
+    "request_sha256": "2c6e280a261e28df226b5457251bcde96fe32c3432af68b22e20f89d25ce0595",
+    "engine_json_sha256": "ffa07edda876a5f42961b9281bb02ad5617a9957c921764824d3c4ad9c062d43",
+    "logits_sha256": "175a8ebde178b521b543c239b69f65096cf3575be7a28b31034ee94b000fde1e"
+  },
+  "crosschecked": true,
+  "raw": "llama.public.json",
+  "report_sha256": "b192bc440a98f73808478f7198e851e454d4a26dd45b58b2c94404b48618ff63",
+  "render": "/dev/dri/renderD131",
+  "pci": "0000:27:00.0",
+  "rocr_uuid": "GPU-6fb1bbd498dc7bd1"
+}

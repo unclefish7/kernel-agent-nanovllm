@@ -1,0 +1,67 @@
+{
+  "utc": "2026-11-25T06:14:56.559571+00:00",
+  "parent_head": "08132e35082fd2903f9a90d4768eac698270aa98",
+  "parent_branch": "main",
+  "engine_head": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "engine_origin_main": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "engine_branch": "main",
+  "engine_status": "",
+  "engine_gitlink": "db396bd0276b797bd491282e4f1fb5aaa9cbde55",
+  "parent_tracked_and_untracked": [
+    "M nanovllm_selector/README.md",
+    " M nanovllm_selector/port/evaluate.py",
+    " M nanovllm_selector/port/explore/evidence.py",
+    " M nanovllm_selector/port/explore/judge.py",
+    " M nanovllm_selector/port/explore/session.py",
+    " M nanovllm_selector/port/explore/test_evidence.py",
+    " M nanovllm_selector/port/explore/test_judge.py",
+    " M nanovllm_selector/port/explore/test_session.py",
+    " M nanovllm_selector/port/explore/worker.py",
+    " M nanovllm_selector/port/generate.py",
+    " M nanovllm_selector/port/iterate.py",
+    " M nanovllm_selector/port/test_evaluate_reference.py",
+    " M nanovllm_selector/port/test_port.py",
+    "?? docs/superpowers/plans/2026-11-25-model-exploration.md",
+    "?? nanovllm_selector/port/explore/Dockerfile",
+    "?? nanovllm_selector/port/explore/requirements.lock",
+    "?? nanovllm_selector/port/explore/runtime.py",
+    "?? nanovllm_selector/port/explore/test_runtime.py"
+  ],
+  "source_sha256": {
+    "nanovllm_selector/port/explore/runtime.py": "1abc5b5522037daf3a2dbf58e8f3ea008c78c7a5c6bc399300392d4bce4d361a",
+    "nanovllm_selector/port/explore/judge.py": "504162c0a9cce2559558934879763afa236f9efbb34f498b0171a47629cec65e",
+    "nanovllm_selector/port/explore/evidence.py": "71d7d2db61c968c31cda3a7d68d12d4cb7654ce082dfa334066fbbc8c291c5a4",
+    "nanovllm_selector/port/evaluate.py": "f822e19b10a71b79bcb580b20fbde4fdf7f8f256d1dd71b0d75e0bdf6b4bbbcc",
+    "nanovllm_selector/port/explore/Dockerfile": "a67e110810b13623c816f68e38b6c8bcc338afffcc56560943c83c11da864607",
+    "nanovllm_selector/port/explore/requirements.lock": "75908b9a95e55916131c85994553e5938c31a656dd70b251c2317fd6e73223cf",
+    "contracts/nanovllm/spec.yaml": "24e8faa850e0f80f4f1d8ee740070990c746995ec432dc16f1ef8dddb36298ca",
+    "kernels/index.md": "243ebd7ce118e39ca7e6b9b5bdf5e161248748e086e611e97fc2b4e55472557f",
+    "nano-vllm/nanovllm/utils/loader.py": "decdab5c56734d91c54a0cd17e6b22032a2aa5e2135474cc2e7fb35b725fc2e5"
+  },
+  "models": {
+    "Qwen3-0.6B": {
+      "candidate": "nanovllm_selector/outputs/qwen3_exact/model_qwen3.py",
+      "model": "tmp/models/Qwen3-0.6B",
+      "candidate_sha256": "297e7b281771b56ea34332f0ee3ff04b4b3b32286ce229ebce278aff55e4571a",
+      "model_tree_symlinks": []
+    },
+    "llama-3.2-1B": {
+      "candidate": "nanovllm_selector/outputs/iter_llama4/attempt_4.py",
+      "model": "tmp/models/llama-3.2-1B",
+      "candidate_sha256": "d9a24240745ed9b48254a8764a555b462ac723226fffc91beb24300f60a54fa3",
+      "model_tree_symlinks": []
+    },
+    "MiniCPM5-1B": {
+      "candidate": "nanovllm_selector/outputs/minicpm5_1b/agent/attempt_1.py",
+      "model": "tmp/models/MiniCPM5-1B",
+      "candidate_sha256": "0297e0645919ed064fe652d23eeebea55392484ceea8841d576822d5f186dbff",
+      "model_tree_symlinks": []
+    },
+    "LFM2.5-1.2B-Base": {
+      "candidate": "nanovllm_selector/outputs/lfm25_1_2b/agent_repair/attempt_1.py",
+      "model": "tmp/models/LFM2.5-1.2B-Base",
+      "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+      "model_tree_symlinks": []
+    }
+  }
+}

@@ -1,0 +1,38 @@
+test_cpu (test_attention_fallback.AttentionFallbackTest.test_cpu) ... ok
+test_cuda (test_attention_fallback.AttentionFallbackTest.test_cuda) ... ok
+test_warmup_chunk_boundary (test_attention_fallback.AttentionFallbackTest.test_warmup_chunk_boundary) ... ok
+test_fallback_to_single_model_or_tokenizer_stop_id (test_eos.TestEndOfSequence.test_fallback_to_single_model_or_tokenizer_stop_id) ... ok
+test_generation_settings_take_precedence_and_match_every_stop_id (test_eos.TestEndOfSequence.test_generation_settings_take_precedence_and_match_every_stop_id) ... ok
+test_fp32_preserves_residual (test_layernorm.RMSNormTest.test_fp32_preserves_residual) ... ok
+test_missing_compute_logits (test_model_registry.TestContract.test_missing_compute_logits) ... ok
+test_qwen3_satisfies_contract (test_model_registry.TestContract.test_qwen3_satisfies_contract) ... ok
+test_wrong_forward_signature (test_model_registry.TestContract.test_wrong_forward_signature) ... ok
+test_checkpoint_loads_persistent_buffer_and_preserves_computed_cache (test_model_registry.TestLoader.test_checkpoint_loads_persistent_buffer_and_preserves_computed_cache) ... ok
+test_ignored_weight_keys_are_skipped (test_model_registry.TestLoader.test_ignored_weight_keys_are_skipped) ... ok
+test_loads_every_tensor (test_model_registry.TestLoader.test_loads_every_tensor) ... ok
+test_missing_persistent_buffer_and_incorrect_shape_are_reported (test_model_registry.TestLoader.test_missing_persistent_buffer_and_incorrect_shape_are_reported) ... ok
+test_packed_mapping_fills_slices (test_model_registry.TestLoader.test_packed_mapping_fills_slices) ... ok
+test_unfilled_parameter_raises (test_model_registry.TestLoader.test_unfilled_parameter_raises) ... ok
+test_unknown_checkpoint_key_raises (test_model_registry.TestLoader.test_unknown_checkpoint_key_raises) ... ok
+test_config_resolves_local_model_by_declared_name_and_contract (test_model_registry.TestRegistry.test_config_resolves_local_model_by_declared_name_and_contract) ... ok
+test_empty_architectures (test_model_registry.TestRegistry.test_empty_architectures) ... ok
+test_qwen3_is_registered (test_model_registry.TestRegistry.test_qwen3_is_registered) ... ok
+test_resolves_qwen3 (test_model_registry.TestRegistry.test_resolves_qwen3) ... ok
+test_unknown_architectures_reports_both_sides (test_model_registry.TestRegistry.test_unknown_architectures_reports_both_sides) ... ok
+test_actual_kv_modules_and_state_bytes (test_request_state.RequestStateTest.test_actual_kv_modules_and_state_bytes) ... ok
+test_budget_rejects_fixed_states_or_insufficient_kv_space (test_request_state.RequestStateTest.test_budget_rejects_fixed_states_or_insufficient_kv_space) ... ok
+test_graph_capture_and_padded_replay_isolate_live_rows (test_request_state.RequestStateTest.test_graph_capture_and_padded_replay_isolate_live_rows) ... ok
+test_hybrid_attention_and_window_match_full_history_after_automatic_preemption (test_request_state.RequestStateTest.test_hybrid_attention_and_window_match_full_history_after_automatic_preemption) ... ok
+test_incompatible_kv_shapes_rejected_before_binding (test_request_state.RequestStateTest.test_incompatible_kv_shapes_rejected_before_binding) ... ok
+test_legacy_cache_module_uses_config_geometry (test_request_state.RequestStateTest.test_legacy_cache_module_uses_config_geometry) ... ok
+test_padded_decode_attention_reads_an_isolated_zero_page (test_request_state.RequestStateTest.test_padded_decode_attention_reads_an_isolated_zero_page) ... ok
+test_padded_values_match_unpadded_attention_across_kv_pages (test_request_state.RequestStateTest.test_padded_values_match_unpadded_attention_across_kv_pages) ... ok
+test_prefix_hits_only_for_pure_kv (test_request_state.RequestStateTest.test_prefix_hits_only_for_pure_kv) ... ok
+test_single_kv_page_stays_available_for_requests (test_request_state.RequestStateTest.test_single_kv_page_stays_available_for_requests) ... ok
+test_state_only_reorder_chunk_preempt_finish_and_recycle (test_request_state.RequestStateTest.test_state_only_reorder_chunk_preempt_finish_and_recycle) ... ok
+test_warmup_uses_independent_initialized_rows (test_request_state.RequestStateTest.test_warmup_uses_independent_initialized_rows) ... ok
+
+----------------------------------------------------------------------
+Ran 33 tests in 4.895s
+
+OK

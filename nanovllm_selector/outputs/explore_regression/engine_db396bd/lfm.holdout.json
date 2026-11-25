@@ -1,0 +1,354 @@
+{
+  "ok": true,
+  "stage": "compare",
+  "outcome": "passed",
+  "criterion": "exact",
+  "tensor_parallel_size": 1,
+  "lengths": [
+    255
+  ],
+  "holdout": true,
+  "matched": 10,
+  "total": 10,
+  "prompt_sha256": "a4bb40baf366243ca753e62a555ba29a02fed096e90e65a71aba94ac9da0c15c",
+  "candidate_sha256": "60390812f73f5fc8ef5e0b22d96c853721d55ca49f92ac0eb05578e1c6b6db7b",
+  "checkpoint_sha256": "7a662bf17061d8d72a0e0131188991d43797050fbd54e454b652ea03eebf9883",
+  "request_sha256": "7e97e7fdf55b2c8483b1cb6277d568f54afa9f51cf5e797f2fbdef35c577258b",
+  "deterministic_algorithms": true,
+  "cached_prefix_tokens": [
+    0,
+    0
+  ],
+  "prefix_reuse": {
+    "enabled": false,
+    "block_size": 256,
+    "reason": "固定请求状态没有前缀块快照，无法从共享 KV 前缀恢复。"
+  },
+  "generated_ids": [
+    24825,
+    5110,
+    2566,
+    1317,
+    28862,
+    5216,
+    1780,
+    25466,
+    730
+  ],
+  "reference": {
+    "dtype": "torch.bfloat16",
+    "attention_backend": "sdpa",
+    "cache_class": "Lfm2HybridConvCache",
+    "prefix_strategy": "rebuild_and_step",
+    "reason": "缓存含其他或未知状态，独立重建目标前缀",
+    "crop": {
+      "ok": false,
+      "max_abs_diff": 2.80859375,
+      "limit": 0.3359375
+    },
+    "multi_token": {
+      "ok": false,
+      "max_abs_diff": 8.2734375,
+      "limit": 0.5546875
+    },
+    "probe_prefix_tokens": 6
+  },
+  "logits_sha256": "5119376e2b66cf3f34847ea8e0aaaed2e5d99d82e87bb1f36c88235485e05958",
+  "engine_json_sha256": "db212063d5883b2da541a033d7cbce82af648b4ddd661496daf0be7b996bcde7",
+  "architecture": "Lfm2ForCausalLM",
+  "comparisons": [
+    {
+      "argmax_actual": 24825,
+      "argmax_expected": 24825,
+      "argmax_match": true,
+      "max_abs_diff": 0.0,
+      "cosine": 1.0000039339065552,
+      "vocab_size": 65536,
+      "exact": true,
+      "dtype_actual": "torch.bfloat16",
+      "dtype_expected": "torch.bfloat16",
+      "top5_actual": [
+        24825,
+        15650,
+        14313,
+        17219,
+        19469
+      ],
+      "top5_expected": [
+        24825,
+        15650,
+        14313,
+        17219,
+        19469
+      ],
+      "ok": true,
+      "length": 255
+    }
+  ],
+  "generation_prefill": {
+    "argmax_actual": 24825,
+    "argmax_expected": 24825,
+    "argmax_match": true,
+    "max_abs_diff": 0.0,
+    "cosine": 1.0000039339065552,
+    "vocab_size": 65536,
+    "exact": true,
+    "dtype_actual": "torch.bfloat16",
+    "dtype_expected": "torch.bfloat16",
+    "top5_actual": [
+      24825,
+      15650,
+      14313,
+      17219,
+      19469
+    ],
+    "top5_expected": [
+      24825,
+      15650,
+      14313,
+      17219,
+      19469
+    ],
+    "ok": true
+  },
+  "decode": {
+    "steps": 8,
+    "matched": 8,
+    "expected_steps": 8,
+    "items": [
+      {
+        "argmax_actual": 5110,
+        "argmax_expected": 5110,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000134706497192,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          5110,
+          63330,
+          42000,
+          14624,
+          2646
+        ],
+        "top5_expected": [
+          5110,
+          63330,
+          42000,
+          14624,
+          2646
+        ],
+        "ok": true,
+        "step": 1,
+        "position": 255,
+        "input_token": 24825
+      },
+      {
+        "argmax_actual": 2566,
+        "argmax_expected": 2566,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000014305114746,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          2566,
+          6865,
+          45592,
+          3607,
+          5110
+        ],
+        "top5_expected": [
+          2566,
+          6865,
+          45592,
+          3607,
+          5110
+        ],
+        "ok": true,
+        "step": 2,
+        "position": 256,
+        "input_token": 5110
+      },
+      {
+        "argmax_actual": 1317,
+        "argmax_expected": 1317,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000028610229492,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          1317,
+          1084,
+          60157,
+          2736,
+          28862
+        ],
+        "top5_expected": [
+          1317,
+          1084,
+          60157,
+          2736,
+          28862
+        ],
+        "ok": true,
+        "step": 3,
+        "position": 257,
+        "input_token": 2566
+      },
+      {
+        "argmax_actual": 28862,
+        "argmax_expected": 28862,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.000010371208191,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          28862,
+          5293,
+          20615,
+          15650,
+          24825
+        ],
+        "top5_expected": [
+          28862,
+          5293,
+          20615,
+          15650,
+          24825
+        ],
+        "ok": true,
+        "step": 4,
+        "position": 258,
+        "input_token": 1317
+      },
+      {
+        "argmax_actual": 5216,
+        "argmax_expected": 5216,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.000009536743164,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          5216,
+          8598,
+          5794,
+          2971,
+          5293
+        ],
+        "top5_expected": [
+          5216,
+          8598,
+          5794,
+          2971,
+          5293
+        ],
+        "ok": true,
+        "step": 5,
+        "position": 259,
+        "input_token": 28862
+      },
+      {
+        "argmax_actual": 1780,
+        "argmax_expected": 1780,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000101327896118,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          1780,
+          1147,
+          819,
+          708,
+          523
+        ],
+        "top5_expected": [
+          1780,
+          1147,
+          819,
+          708,
+          523
+        ],
+        "ok": true,
+        "step": 6,
+        "position": 260,
+        "input_token": 5216
+      },
+      {
+        "argmax_actual": 25466,
+        "argmax_expected": 25466,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          25466,
+          1098,
+          13878,
+          1505,
+          17994
+        ],
+        "top5_expected": [
+          25466,
+          1098,
+          13878,
+          1505,
+          17994
+        ],
+        "ok": true,
+        "step": 7,
+        "position": 261,
+        "input_token": 1780
+      },
+      {
+        "argmax_actual": 730,
+        "argmax_expected": 730,
+        "argmax_match": true,
+        "max_abs_diff": 0.0,
+        "cosine": 1.0000028610229492,
+        "vocab_size": 65536,
+        "exact": true,
+        "dtype_actual": "torch.bfloat16",
+        "dtype_expected": "torch.bfloat16",
+        "top5_actual": [
+          730,
+          835,
+          2050,
+          13878,
+          534
+        ],
+        "top5_expected": [
+          730,
+          835,
+          2050,
+          13878,
+          534
+        ],
+        "ok": true,
+        "step": 8,
+        "position": 262,
+        "input_token": 25466
+      }
+    ],
+    "ok": true
+  }
+}
