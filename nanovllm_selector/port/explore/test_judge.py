@@ -2,9 +2,11 @@
 
 import copy
 import hashlib
+import inspect
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import unittest
@@ -14,6 +16,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import torch
+from safetensors import safe_open
 from safetensors.torch import load_file, save_file
 from tokenizers import Tokenizer, models, pre_tokenizers
 from transformers import AutoModelForCausalLM, LlamaConfig, LlamaForCausalLM, PreTrainedTokenizerFast
@@ -69,6 +72,62 @@ class ReferenceDtypeTests(unittest.TestCase):
         json.dumps(report, allow_nan=False)
 
 
+class CheckpointIdentityTests(unittest.TestCase):
+    def test_shards_use_content_and_unchanged_files_are_read_once_per_process(self):
+        from nanovllm_selector.port.explore.judge import checkpoint_sha256
+
+        with temporary_directory() as tmp:
+            model = Path(tmp) / "checkpoint"
+            model.mkdir()
+            (model / "config.json").write_text("{}")
+            parts = {"a": "part-1.safetensors", "b": "part-2.safetensors"}
+            (model / "model.safetensors.index.json").write_text(json.dumps({"weight_map": parts}))
+            for key, filename in parts.items():
+                save_file({key: torch.ones(1)}, model / filename)
+            reads = []
+            path_open = Path.open
+
+            def observe(path, *args, **kwargs):
+                if path.suffix == ".safetensors":
+                    reads.append(path.name)
+                return path_open(path, *args, **kwargs)
+
+            with patch.object(Path, "open", observe):
+                original = checkpoint_sha256(model)
+                self.assertEqual(original, checkpoint_sha256(model))
+                self.assertCountEqual(reads, parts.values())
+                (model / "config.json").write_text('{"use_cache": true}')
+                self.assertNotEqual(original, checkpoint_sha256(model))
+                self.assertCountEqual(reads, parts.values())
+                (model / "config.json").write_text("{}")
+                save_file({"a": torch.zeros(1)}, model / parts["a"])
+                updated = checkpoint_sha256(model)
+                self.assertNotEqual(updated, original)
+                self.assertCountEqual(reads, [*parts.values(), parts["a"]])
+            # 宿主能在没有任何第三方包的解释器中求出与 worker 相同的摘要。
+            script = """import sys
+from pathlib import Path
+from nanovllm_selector.port.explore.judge import checkpoint_sha256
+print(checkpoint_sha256(Path(sys.argv[1])))
+"""
+            proc = subprocess.run([sys.executable, "-BS", "-c", script, str(model)],
+                                  capture_output=True, text=True, check=True)
+            self.assertEqual(proc.stdout.strip(), updated)
+
+    def test_reference_fallback_weights_also_contribute_to_checkpoint_identity(self):
+        from nanovllm_selector.port.explore.judge import checkpoint_sha256
+
+        with temporary_directory() as tmp:
+            model = Path(tmp)
+            (model / "config.json").write_text("{}")
+            save_file({"engine": torch.zeros(1)}, model / "engine.safetensors")
+            # 此布局中 nano-vLLM 读 safetensors，Transformers 选择标准 PyTorch 权重。
+            torch.save({"hf": torch.zeros(1)}, model / "pytorch_model.bin")
+            before = checkpoint_sha256(model)
+            torch.save({"hf": torch.ones(1)}, model / "pytorch_model.bin")
+            self.assertNotEqual(checkpoint_sha256(model), before)
+
+
 class JudgeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -81,7 +140,9 @@ class JudgeTests(unittest.TestCase):
         tokenizer.pre_tokenizer = pre_tokenizers.Whitespace()
         PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token="[UNK]").save_pretrained(cls.model)
         cls.candidate = root / "candidate.py"
-        cls.candidate.write_text("class LlamaForCausalLM: pass\n", encoding="utf-8")
+        cls.candidate.write_text("import os\nif os.getenv('JUDGE_TEST_REFERENCE_ONLY'):\n"
+                                 "    raise AssertionError('参照导入了候选')\n"
+                                 "class LlamaForCausalLM: pass\n", encoding="utf-8")
 
     def setUp(self):
         self.trial = self.new_trial()
@@ -96,10 +157,15 @@ class JudgeTests(unittest.TestCase):
     def cpu_engine(cls, model_dir, sequences, arch, **options):
         # 手动按串行请求留下的 KV 裁出完整页，独立产生引擎夹具，不调用参照打分函数。
         # 真实引擎在 inference_mode 外构造参数，CPU 的矩阵乘法也会区分这两类张量。
+        if cls.__name__ != arch:
+            raise AssertionError("引擎用不同的架构名登记了候选")
         with torch.inference_mode(False):
             model = AutoModelForCausalLM.from_pretrained(model_dir, local_files_only=True).eval()
+        keep = {"logits_to_keep": 1} if "logits_to_keep" in inspect.signature(model.forward).parameters else {}
+
         def sample(row):
             return int(torch.multinomial((row == row.max()).float(), 1).item())
+
         prompts = [*sequences, sequences[-1]]
         hits = [0, 0, 256, 512] if len(prompts) == 4 else [0, 0]
         past = None
@@ -110,7 +176,7 @@ class JudgeTests(unittest.TestCase):
                 past.crop(hit)
             else:
                 past = None
-            out = model(torch.tensor([prompt[hit:]]), past_key_values=past, use_cache=True, logits_to_keep=1)
+            out = model(torch.tensor([prompt[hit:]]), past_key_values=past, use_cache=True, **keep)
             past = out.past_key_values
             row = out.logits[0, -1].clone()
             prefill.append(row)
@@ -118,7 +184,7 @@ class JudgeTests(unittest.TestCase):
         generated = [sampled.pop()]
         decode = []
         for _ in range(8):
-            out = model(torch.tensor([[generated[-1]]]), past_key_values=past, use_cache=True, logits_to_keep=1)
+            out = model(torch.tensor([[generated[-1]]]), past_key_values=past, use_cache=True, **keep)
             past = out.past_key_values
             decode.append(out.logits[0, -1].clone())
             generated.append(sample(decode[-1]))
@@ -127,9 +193,11 @@ class JudgeTests(unittest.TestCase):
                 "decode": {"prefill": prefill[-1], "logits": decode, "generated": generated,
                            "ids": prompts[-1] + generated}}
 
-    def invoke(self, phase, *args, success=True):
+    def invoke(self, phase, *args, success=True, trusted_candidate=True):
         from nanovllm_selector.port.explore import judge
 
+        if phase == "reference" and trusted_candidate and not {"--candidate", "--candidate-sha256"}.intersection(args):
+            args = (*args, "--candidate-sha256", hashlib.sha256(self.candidate.read_bytes()).hexdigest())
         stdout = io.StringIO()
         with redirect_stdout(stdout), patch.object(ev, "engine_run", self.cpu_engine), patch.object(
             torch.cuda, "get_device_capability", return_value=(9, 0)
@@ -143,8 +211,9 @@ class JudgeTests(unittest.TestCase):
         return report
 
     def capture(self, *args):
-        self.invoke("engine", "--candidate", self.candidate, *args)
+        result = self.invoke("engine", "--candidate", self.candidate, *args)
         self.assertEqual({p.name for p in self.trial.iterdir()}, {"engine.json", "engine.safetensors"})
+        return result
 
     def read_meta(self):
         return json.loads((self.trial / "engine.json").read_bytes())
@@ -154,17 +223,20 @@ class JudgeTests(unittest.TestCase):
 
     def write_rows(self, rows):
         path = self.trial / "engine.safetensors"
-        save_file(rows, path)
+        with safe_open(path, framework="pt") as handle:
+            binding = handle.metadata()
+        save_file(rows, path, metadata=binding)
         meta = self.read_meta()
         meta["logits_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         self.write_meta(meta)
 
     def test_real_hf_replays_all_default_and_independent_holdout_rows(self):
         self.capture()
-        default = self.invoke("reference", "--candidate-sha256", "a" * 64)
+        digest = hashlib.sha256(self.candidate.read_bytes()).hexdigest()
+        default = self.invoke("reference", "--candidate-sha256", digest)
         self.assertEqual((default["matched"], default["total"], default["lengths"]), (12, 12, [128, 256, 768]))
         self.assertEqual(default["cached_prefix_tokens"], [0, 0, 256, 512])
-        self.assertEqual(default["candidate_sha256"], "a" * 64)
+        self.assertEqual(default["candidate_sha256"], digest)
         self.assertEqual(default["reference"]["dtype"], "torch.float32")
         self.assertTrue(default["reference"]["attention_backend"])
         self.assertEqual([item["step"] for item in default["decode"]["items"]], list(range(1, 9)))
@@ -174,31 +246,182 @@ class JudgeTests(unittest.TestCase):
         self.assertEqual((holdout["matched"], holdout["total"], holdout["lengths"]), (10, 10, [255]))
         self.assertNotEqual(default["prompt_sha256"], holdout["prompt_sha256"])
 
-    def test_reference_only_reads_and_hashes_candidate_and_ignores_claimed_verdict(self):
-        self.capture("--holdout")
-        trap = self.trial / "attachment.py"
-        trap.write_text("raise AssertionError('参照导入了候选')\n", encoding="utf-8")
-        meta = self.read_meta()
-        meta.update(ok=False, candidate_sha256="f" * 64)
-        self.write_meta(meta)
-        before = {p.name: p.read_bytes() for p in self.trial.iterdir()}
-        # 新解释器只将硬件和搬运替换成 CPU，按模块的真实入口读取已完成的试验。
+    def cli(self, phase, *args, success=True):
+        # 两阶段均在独立解释器运行真实入口；仅用 CPU 等价夹具代替引擎设备。
         entry = """import runpy, torch
 from unittest.mock import patch
-with patch.object(torch.cuda, "get_device_capability", return_value=(9, 0)), patch.object(torch.nn.Module, "cuda", lambda m: m):
+from nanovllm_selector.port import evaluate
+from nanovllm_selector.port.explore.test_judge import JudgeTests
+with (
+    patch.object(evaluate, "engine_run", JudgeTests.cpu_engine),
+    patch.object(torch.cuda, "get_device_capability", return_value=(9, 0)),
+    patch.object(torch.nn.Module, "cuda", lambda m: m),
+):
     runpy.run_module("nanovllm_selector.port.explore.judge", run_name="__main__")
 """
-        proc = subprocess.run([sys.executable, "-B", "-c", entry, "reference", "--model", str(self.model),
-                               "--trial", str(self.trial), "--holdout", "--candidate", str(trap)],
-                              env={**os.environ, "NANOVLLM_MODEL_FILE": str(trap)},
-                              capture_output=True, text=True, timeout=60)
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        env = os.environ.copy()
+        if phase == "reference":
+            env.update(JUDGE_TEST_REFERENCE_ONLY="1", NANOVLLM_MODEL_FILE=str(self.candidate))
+        proc = subprocess.run([sys.executable, "-B", "-c", entry, phase, "--model", str(self.model),
+                               "--trial", str(self.trial), *map(str, args)],
+                              env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0 if success else 1, proc.stdout + proc.stderr)
         self.assertEqual(len(proc.stdout.splitlines()), 1)
-        report = json.loads(proc.stdout)
+        return json.loads(proc.stdout)
+
+    def host_binding(self, engine):
+        return {"version": 1, "candidate_sha256": hashlib.sha256(self.candidate.read_bytes()).hexdigest(),
+                "checkpoint_sha256": engine["checkpoint_sha256"], "holdout": True,
+                "engine_json_sha256": hashlib.sha256((self.trial / "engine.json").read_bytes()).hexdigest(),
+                "logits_sha256": hashlib.sha256((self.trial / "engine.safetensors").read_bytes()).hexdigest()}
+
+    def test_real_cli_rejects_candidate_b_for_a_and_accepts_the_frozen_candidate(self):
+        engine = self.cli("engine", "--holdout", "--candidate", self.candidate)
+        other = self.new_trial() / "candidate.py"
+        other.write_text("class LlamaForCausalLM:\n    revision = 2\n", encoding="utf-8")
+        for args in (("--candidate", other), ("--candidate-sha256", hashlib.sha256(other.read_bytes()).hexdigest())):
+            with self.subTest(args=args):
+                failed = self.cli("reference", "--holdout", *args, success=False)
+                self.assertEqual(failed["stage"], "trial")
+                self.assertIn("candidate_sha256", failed["error"])
+        self.invoke("reference", "--holdout", trusted_candidate=False, success=False)
+        binding = self.trial / "binding.json"
+        binding.write_text(json.dumps(self.host_binding(engine)), encoding="utf-8")
+        before = {p.name: p.read_bytes() for p in self.trial.iterdir()}
+        report = self.cli("reference", "--holdout", "--candidate", self.candidate, "--binding", binding)
         self.assertEqual((report["matched"], report["total"]), (10, 10))
-        self.assertEqual(report["candidate_sha256"], hashlib.sha256(before["attachment.py"]).hexdigest())
-        self.assertNotIn("candidate_sha256", self.invoke("reference", "--holdout"))
+        for key, expected in self.host_binding(engine).items():
+            if key != "version":
+                self.assertEqual(engine[key], expected)
+                self.assertEqual(report[key], expected)
+        self.assertEqual(engine["request_sha256"], report["request_sha256"])
         self.assertEqual({p.name: p.read_bytes() for p in self.trial.iterdir()}, before)
+
+    def test_reference_binds_checkpoint_contents_request_and_both_artifacts_before_scoring(self):
+        engine = self.capture("--holdout")
+        original = self.read_meta()
+        for field in ("candidate_sha256", "checkpoint_sha256", "request_sha256"):
+            with self.subTest(field=field):
+                self.write_meta({**original, field: "f" * 64})
+                result = self.invoke("reference", "--holdout", success=False)
+                self.assertIn(field, result["error"])
+        self.write_meta(original)
+        host = self.host_binding(engine)
+        binding = self.trial / "binding.json"
+        for field in ("candidate_sha256", "checkpoint_sha256", "holdout", "engine_json_sha256", "logits_sha256"):
+            with self.subTest(host_field=field):
+                binding.write_text(json.dumps({**host, field: False if field == "holdout" else "0" * 64}))
+                result = self.invoke("reference", "--holdout", "--binding", binding, success=False)
+                self.assertIn(field, result["error"])
+        # 语义完全相同的 JSON 也必须与宿主收集时的实际字节一致。
+        binding.write_text(json.dumps(host))
+        with (self.trial / "engine.json").open("ab") as stream:
+            stream.write(b"\n")
+        self.assertIn("engine_json_sha256", self.invoke("reference", "--holdout", "--binding", binding,
+                                                       success=False)["error"])
+        self.model = Path(shutil.copytree(self.model, self.new_trial() / "copy"))
+        path = self.model / "model.safetensors"
+        data = path.read_bytes()
+        path.write_bytes(data[:-1] + bytes([data[-1] ^ 1]))
+        with patch.object(ev, "reference_steps", side_effect=AssertionError("不应开始数值验收")):
+            self.assertIn("checkpoint_sha256", self.invoke("reference", "--holdout", success=False)["error"])
+
+    def test_relabeling_only_the_manifest_does_not_rebind_the_tensor_payload(self):
+        self.capture("--holdout")
+        other = self.new_trial() / "candidate.py"
+        other.write_text("class LlamaForCausalLM: revision = 2\n")
+        self.write_meta({**self.read_meta(), "candidate_sha256": hashlib.sha256(other.read_bytes()).hexdigest()})
+        failed = self.invoke("reference", "--holdout", "--candidate", other, success=False)
+        self.assertIn("candidate_sha256", failed["error"])
+
+    def test_checkpoint_changed_during_capture_does_not_publish_a_trial(self):
+        self.model = Path(shutil.copytree(self.model, self.new_trial() / "model"))
+        run = self.cpu_engine
+
+        def changed_after_loading(*args, **kwargs):
+            result = run(*args, **kwargs)
+            path = self.model / "model.safetensors"
+            with path.open("r+b") as stream:
+                stream.seek(-1, os.SEEK_END)
+                byte = stream.read(1)[0]
+                stream.seek(-1, os.SEEK_END)
+                stream.write(bytes([byte ^ 1]))
+            return result
+
+        self.cpu_engine = changed_after_loading
+        result = self.invoke("engine", "--holdout", "--candidate", self.candidate, success=False)
+        self.assertIn("checkpoint_sha256", result["error"])
+        self.assertEqual(list(self.trial.iterdir()), [])
+
+    def test_strict_engine_requires_a_locally_defined_declared_architecture(self):
+        src = self.new_trial() / "candidate.py"
+        for code in ("class OtherForCausalLM: pass\n",
+                     "class OtherForCausalLM: pass\nLlamaForCausalLM = OtherForCausalLM\n",
+                     "from transformers import LlamaForCausalLM\n"):
+            with self.subTest(code=code):
+                src.write_text(code)
+                result = self.invoke("engine", "--candidate", src, "--holdout", success=False)
+                self.assertIn("architectures", result["error"])
+                self.assertFalse((self.trial / "engine.json").exists())
+        self.model = Path(shutil.copytree(self.model, self.new_trial() / "model"))
+        path = self.model / "config.json"
+        config = json.loads(path.read_bytes())
+        config["architectures"].insert(0, "OtherForCausalLM")
+        path.write_text(json.dumps(config))
+        self.capture("--holdout")
+        self.assertEqual(self.read_meta()["architecture"], "LlamaForCausalLM")
+        # 历史评测与诊断继续允许从候选中推断未登记的类。
+        src.write_text("class AdaptedForCausalLM: pass\n")
+        legacy = ev.pick_model_class(ev.load_candidate(src), "LlamaForCausalLM")
+        self.assertEqual(legacy.__name__, "AdaptedForCausalLM")
+
+    def test_gpt2_checkpoint_architecture_without_a_causal_lm_suffix_passes_both_phases(self):
+        from transformers import GPT2Config, GPT2LMHeadModel
+
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(self.model, local_files_only=True)
+        self.model = self.new_trial()
+        config = GPT2Config(vocab_size=16, n_positions=512, n_embd=8, n_layer=1, n_head=2,
+                            bos_token_id=0, eos_token_id=0)
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(17)
+            GPT2LMHeadModel(config).save_pretrained(self.model)
+        tokenizer.save_pretrained(self.model)
+        self.candidate = self.new_trial() / "candidate.py"
+        self.candidate.write_text("from torch import nn\nclass GPT2LMHeadModel(nn.Module): pass\n")
+        engine = self.capture("--holdout")
+        report = self.invoke("reference", "--holdout", "--candidate", self.candidate)
+        self.assertEqual(engine["architecture"], "GPT2LMHeadModel")
+        self.assertEqual((report["architecture"], report["matched"], report["total"]),
+                         ("GPT2LMHeadModel", 10, 10))
+
+    def test_legacy_cli_preserves_fallback_selection_and_both_scoring_modes(self):
+        src = self.trial / "candidate.py"
+        src.write_text("class AdaptedForCausalLM: pass\n")
+        path = self.trial / "legacy.json"
+
+        def slightly_changed(cls, model_dir, sequences, arch, **options):
+            self.assertEqual((cls.__name__, arch), ("AdaptedForCausalLM", "LlamaForCausalLM"))
+            output = self.cpu_engine(cls, model_dir, sequences, cls.__name__, **options)
+            row = output["prefill"][0].clone()
+            row[row.argmin()] -= 1e-5
+            output["prefill"][0] = row
+            return output
+
+        for flag, status in (("--exact", 1), ("--no-exact", 0)):
+            with (
+                self.subTest(flag=flag),
+                patch.dict(os.environ),
+                patch.object(ev, "engine_run", slightly_changed),
+                patch.object(torch.cuda, "get_device_capability", return_value=(9, 0)),
+                patch.object(torch.nn.Module, "cuda", lambda m: m),
+                redirect_stdout(io.StringIO()),
+            ):
+                rc = ev.main(["--model", str(self.model), "--candidate", str(src), "--arch", "LlamaForCausalLM",
+                              "--lengths", "16", "--report", str(path), flag])
+                report = json.loads(path.read_bytes())
+                self.assertEqual(rc, status, report)
+                self.assertEqual(report["stage"], "compare")
+                self.assertTrue(report["comparisons"][0]["argmax_match"])
 
     def test_tied_maxima_replay_the_same_nonfirst_samples(self):
         path = self.model
