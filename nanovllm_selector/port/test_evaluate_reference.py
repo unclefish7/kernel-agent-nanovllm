@@ -180,6 +180,54 @@ class TestReference(unittest.TestCase):
         torch.testing.assert_close(a[-1], full[-2], atol=1e-5, rtol=1e-5)
         torch.testing.assert_close(b[0], full[-1], atol=1e-5, rtol=1e-5)
 
+    def test_generation_initialized_caches_match_independent_forced_histories(self):
+        from transformers import (
+            JambaConfig, JambaForCausalLM, MambaConfig, MambaForCausalLM, ZambaConfig, ZambaForCausalLM,
+        )
+
+        def generate_rows(model, prompt, suffix):
+            ids = torch.tensor([prompt])
+            forced = suffix + [1]  # 最后一个采样用于取得最后一个输入位置的原始分数。
+            generated = model.generate(
+                ids, attention_mask=torch.ones_like(ids), use_cache=True, do_sample=False,
+                max_new_tokens=len(forced), return_dict_in_generate=True, output_logits=True,
+                prefix_allowed_tokens_fn=lambda _, history: [forced[len(history) - len(prompt)]],
+            )
+            self.assertEqual(generated.sequences[0].tolist(), prompt + forced)
+            return [row[0] for row in generated.logits]
+
+        jamba = JambaConfig(vocab_size=37, hidden_size=16, intermediate_size=32, num_hidden_layers=2,
+                            num_attention_heads=4, num_key_value_heads=2, attn_layer_period=2, attn_layer_offset=1,
+                            num_experts=1, num_experts_per_tok=1, mamba_d_state=4, use_mamba_kernels=False)
+        mamba = MambaConfig(vocab_size=37, hidden_size=16, state_size=4, num_hidden_layers=2)
+        zamba = ZambaConfig(vocab_size=37, hidden_size=16, intermediate_size=32, num_hidden_layers=3,
+                            num_attention_heads=4, num_key_value_heads=2, mamba_d_state=4, use_mamba_kernels=False)
+        first, branch = [5, 7, 11, 13, 17], [5, 7, 11, 19, 23]
+        continuation = [29, 8, 3, 21, 4, 12, 6, 10]
+        histories = [first, branch] + [branch + continuation[:i] for i in range(1, len(continuation) + 1)]
+        for cls, config, cache_name in [(JambaForCausalLM, jamba, "past_key_values"),
+                                        (ZambaForCausalLM, zamba, "past_key_values"),
+                                        (MambaForCausalLM, mamba, "cache_params")]:
+            with self.subTest(model=config.model_type), torch.random.fork_rng(devices=[]), torch.inference_mode():
+                torch.manual_seed(41)
+                model = cls(config).eval()
+                first_rows = generate_rows(model, first, [])
+                full_rows = [model(torch.tensor([history]), use_cache=False).logits[0, -1] for history in histories]
+                for hit in (0, 3):
+                    with self.subTest(hit=hit):
+                        start = hit or len(branch)
+                        suffix = branch[start:]
+                        native = generate_rows(model, branch[:start], suffix + continuation)
+                        expected = first_rows + native[len(suffix):]
+                        prefill, decode, info = self.trace(model, [first, branch], [0, hit], continuation)
+                        self.assertEqual((len(prefill), len(decode)), (2, 8))
+                        self.assertEqual(info["cache_name"], cache_name)
+                        for row, cached, full in zip(prefill + decode, expected, full_rows, strict=True):
+                            self.assertEqual(row.shape, (37,))
+                            self.assertTrue(torch.isfinite(row).all())
+                            torch.testing.assert_close(row, cached, atol=0, rtol=0)
+                            torch.testing.assert_close(row, full, atol=1e-5, rtol=1e-5)
+
     def test_verdict_distinguishes_candidate_and_reference_failures(self):
         # 仅替代引擎和权重装载，保留 evaluate 的完整判定。
         cls = type("FakeForCausalLM", (), {})

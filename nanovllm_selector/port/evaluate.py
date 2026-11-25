@@ -42,7 +42,11 @@ def load_candidate(path: Path):
 
 
 def pick_model_class(module, arch: str | None = None) -> type:
-    """在候选模块里找模型类：优先本文件定义的 `*ForCausalLM`。"""
+    """优先选配置指定的本地类，兼容未指定架构的历史候选。"""
+    if arch:
+        declared = vars(module).get(arch)
+        if isinstance(declared, type) and declared.__module__ == module.__name__:
+            return declared
     candidates = []
     for name, value in vars(module).items():
         if isinstance(value, type) and name.endswith("ForCausalLM"):
@@ -205,20 +209,53 @@ def _probe_reuse(call, tokens, info, model_dtype):
     info["probe_prefix_tokens"] = n
 
 
+def _generation_steps(model, history, prompt_length, supports_keep, diagnostics):
+    """由 HF 初始化本次请求并逐步接回其状态。每次只向模型暴露已消费的词元。"""
+    from transformers.generation.configuration_utils import GenerationMode
+    from transformers.generation.utils import ALL_CACHE_NAMES
+
+    ids = torch.tensor([history], device=model.device)
+    config = copy.deepcopy(model.generation_config)
+    config.use_cache = True
+    config.num_beams = config.num_return_sequences = 1
+    kwargs = {"use_cache": True, "attention_mask": torch.ones_like(ids[:, :prompt_length])}
+    if supports_keep:
+        kwargs["logits_to_keep"] = 1
+    model._prepare_cache_for_generation(config, kwargs, GenerationMode.GREEDY_SEARCH, 1, len(history))
+    kwargs = model._get_initial_cache_position(prompt_length, model.device, kwargs)
+    for end in range(prompt_length, len(history) + 1):
+        inputs = model.prepare_inputs_for_generation(ids[:, :end], **kwargs)
+        inputs["return_dict"] = True
+        out = model(**inputs)
+        cache_name = next((name for name in ALL_CACHE_NAMES if out.get(name) is not None), None)
+        if cache_name is not None:
+            diagnostics.update(cache_name=cache_name, cache_class=type(out[cache_name]).__name__)
+        if end < len(history):
+            kwargs = model._update_model_kwargs_for_generation(out, kwargs, is_encoder_decoder=False)
+            if cache_name is None or not any(kwargs.get(name) is not None for name in ALL_CACHE_NAMES):
+                raise ValueError(f"HF 生成接口在长度 {end} 处未传回续写状态")
+        yield end, out
+
+
 @torch.inference_mode()
 def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
     """按请求顺序计算各提示末位、最后一个提示的逐词续写。仅接受词元与命中长度。"""
     if not prompts or len(prefix_lengths) != len(prompts):
         raise ValueError("前缀长度记录与实际请求数不符")
-    supports_keep = "logits_to_keep" in inspect.signature(model.forward).parameters
+    for seq, prefix in zip(prompts, prefix_lengths):
+        if not 0 <= prefix < len(seq):
+            raise ValueError(f"非法前缀长度 {prefix}，本次提示长度 {len(seq)}")
+    forward_params = inspect.signature(model.forward).parameters
+    supports_keep = "logits_to_keep" in forward_params
     model_dtype = getattr(model, "dtype", None)
     diagnostics["dtype"] = str(model_dtype) if model_dtype is not None else None
     diagnostics["attention_backend"] = getattr(getattr(model, "config", None), "_attn_implementation", None)
 
     def call(ids, past=None, *, keep=1, use_cache=True):
         options = {"logits_to_keep": keep} if supports_keep else {}
-        return model(input_ids=torch.tensor([ids], device=model.device), past_key_values=past,
-                     use_cache=use_cache, **options)
+        if past is not None or "past_key_values" in forward_params:
+            options["past_key_values"] = past
+        return model(input_ids=torch.tensor([ids], device=model.device), use_cache=use_cache, **options)
 
     def score(output):
         row = output.logits[0, -1]
@@ -233,7 +270,21 @@ def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
             raise ValueError(f"HF 逐词缓存与从头计算在长度 {len(history)} 处不一致：{check}")
 
     sample = max(prompts, key=len)[:8]
-    cache = call(sample).past_key_values
+    cache = getattr(call(sample), "past_key_values", None)
+    if cache is None and callable(getattr(model, "prepare_inputs_for_generation", None)):
+        diagnostics.update(prefix_strategy="rebuild_and_step", cache_class=None,
+                           reason="通过原生生成接口重建前缀并逐词续写")
+        for name in ("crop", "multi_token"):
+            diagnostics[name] = {"ok": None, "reason": "该路径按原生生成协议逐词续写"}
+        prefill, decode = [], []
+        for index, (seq, prefix) in enumerate(zip(prompts, prefix_lengths)):
+            history = [*seq, *continuation] if index == len(prompts) - 1 else seq
+            for end, out in _generation_steps(model, history, prefix or len(seq), supports_keep, diagnostics):
+                if end >= len(seq):
+                    check_history(out, history[:end])
+                    rows = prefill if end == len(seq) else decode
+                    rows.append(score(out))
+        return prefill, decode
     if cache is None and (continuation or any(prefix_lengths)):
         raise ValueError("HF 未返回续写所需的历史缓存")
     full_kv = _full_kv(cache)
@@ -247,8 +298,6 @@ def reference_trace(model, prompts, prefix_lengths, continuation, diagnostics):
     saved = []
     prefill, decode = [], []
     for seq, prefix in zip(prompts, prefix_lengths):
-        if not 0 <= prefix < len(seq):
-            raise ValueError(f"非法前缀长度 {prefix}，本次提示长度 {len(seq)}")
         if not prefix:
             out = call(seq)
         elif full_kv:
