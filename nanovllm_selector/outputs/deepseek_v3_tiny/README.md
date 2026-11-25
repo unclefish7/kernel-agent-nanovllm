@@ -1,6 +1,23 @@
 # DeepSeek-V3 tiny-random 单卡适配进度
 
-已完成两个公开检查点的原生参考，并在物理 GPU 0（MI100，PCI `0000:03:00.0`）验证了 nano-vLLM 的分页注意力。当前整模型的生成候选和逐步完整词表验收仍待完成。
+有限 FP32 检查点已在单张 AMD Instinct MI100 上完成整模型适配。Codex 使用项目的四个探索接口，从本地配置、引擎规约和 Python 模板开始，实现了两层网络的 MLA（多头潜在注意力）、稠密前馈网络、按词元选择的专家和共享专家。发布文件与首次通过验收的候选逐字节一致。[完整模型](model_deepseek_v3.py) · [移植记录](codex_explore/process.md)
+
+## 主动探索与端到端结果
+
+编码 agent 先读源码，再用四个提示词元、两个后续词元运行 Transformers。它编写了一个独立的 PyTorch 探针，重算归一化、带历史的注意力和专家加权输出。9 次完整张量对照都逐项相等，随后生成候选。[工具证据摘要](codex_explore/evidence.json) · [原样探针](codex_explore/probe.py)
+
+| 冻结候选的用例 | 比较位置 | 词表与精度 | 最大绝对差 |
+| --- | ---: | --- | ---: |
+| 常规文本，提示长度 128、256、768，含前缀复用及随后 8 步生成 | 12/12 | 每位置 102,400 个 FP32 分数 | 0 |
+| 独立文本，255 词元起步，随后 8 步生成并跨过 256 词元的 KV 页边界 | 10/10 | 每位置 102,400 个 FP32 分数 | 0 |
+
+在物理 GPU2 的两次验收中，候选 SHA-256 均为 `195ac1ad4f8baba576476f37054a58e79e4c99ff1ef15662c34c5ce61ef6774d`。引擎与 Transformers 分别在独立进程中计算，参照沿用引擎实际生成的词元历史。两个输入组合计比较 2,252,800 个分数。[常规报告](codex_explore/attempt_1.report.json) · [独立报告](codex_explore/attempt_1.holdout.json)
+
+同一份发布文件还经过两次补充验证。物理 GPU1 通过正式 CLI 重验，常规 12/12、独立 10/10。物理 GPU2 将两条长度不同的请求同时送入引擎，生成期间调换请求所在的行，再让较长的请求单独继续。交换初始提交顺序重做一遍，共有 16 个位置的完整 FP32 分数与各自历史的 Transformers 参照逐项相等。[CLI 复验](verified/trace.json) · [批次换序](batch_order.json)
+
+已配置的 DeepSeek 生成后端在物理 GPU0 上也独立尝试了移植。它最初把展平的引擎输入当成三维张量。修订后能完整生成，公开输入通过 5/12。利用逐层诊断，它改写了查询低秩投影后的 RMSNorm（均方根归一化），提升到 7/12。之后首次可对齐的数值差异出现在第一层注意力输出投影的输入。它多次尝试在原生模型中查询候选自己定义的 `attn` 属性，未取得该探针的数值。到本次轮次上限，严格公开验收仍为 7/12，未进入独立输入验收。[生成记录摘要](deepseek_agent.json) · [7/12 的逐层诊断](active_repair/attempt_2.diagnosis.json)
+
+引擎侧补了一个通用缺口。PyTorch 的持久缓冲区是随模型权重保存的张量，DeepSeek 的路由器用它存放专家选择的校正值。装载器现在从 checkpoint 填充参数和持久缓冲区，校验目标形状，并跳过由模型计算得到的非持久缓冲区。模型侧的路由公式和注意力仍由 agent 在候选 Python 中实现。引擎也按配置声明的架构名匹配本地模型类并核对接口。[nano-vLLM 装载器](../../../nano-vllm/nanovllm/utils/loader.py) · [vLLM 的权重装载实现](https://docs.vllm.ai/en/latest/api/vllm/model_executor/models/utils/#vllm.model_executor.models.utils.AutoWeightsLoader)
 
 ## 选择数值参考
 
@@ -22,7 +39,7 @@
 
 修改后，检查使用本次调用的模块路径与执行区间核对投影。路由保留 top-k（选取得分最高的若干项）的值和编号，后续取数和原位累加都逐条复算。参考提示及两步 decode 的 370 个计算节点全部通过，底层算子均有重放规则。用另外三种输入规模运行时，三个样本的节点或连线都发生变化，抽取器记录每次差异，停止将这些样本合并成同一条路径。有限权重最终通过 33/34 项。原版 268 个节点重放通过，所测三阶段均只读了 256 个专家中的 8 个。[有限权重最终日志](finite_extract_final.log) · [原版最终日志](extract_final.log)
 
-正式生成入口在组装上下文时拦下了有限权重的图。要进入整模型验收，图还需表达可由 agent 实现的同一个循环：路由器算出编号和权重，按编号调用对应专家、取该专家的参数，再按 token 位置累加。可以用已记录的多条轨迹验证这个循环；每个编号的来源及每个专家的权重绑定均须可核对。当前的分支差异清单只能指出哪里变了。[入口实际结果](agent_gate.log)
+图驱动入口在组装上下文时拦下了有限权重的图。跨输入合并的图仍缺少一个可执行的专家选择循环。主动探索入口允许 agent 查询原生实现、实际发生的分支及其数值，直接走完整模型验收。这次适配沿用了现有计算图格式。[图驱动入口记录](agent_gate.log)
 
 ## 分页注意力
 
@@ -33,11 +50,20 @@
 | 原版 32/16 | 2 层 × 3 阶段，两种精度的缓存内容均逐项相等 | 1.49e-8 | 0.0009765625 |
 | 有限版 4/2 | 2 层 × 3 阶段，两种精度的缓存内容均逐项相等 | 3.73e-9 | 0.000244140625 |
 
-FP32 和 BF16 对照的绝对容差分别设为 2e-6 和 2e-3。两个注意力后端的舍入结果有差异；项目端到端逐项相等的标准仍需独立检验。[GPU 脚本](paged_mla.py) · [原版结果](paged_mla_original.json) · [有限版结果](paged_mla.json)
+早期分页注意力对照分别使用 2e-6 和 2e-3 的绝对容差。整模型候选从分页缓存读出 V 后恢复每头的实际宽度，再调用原生参照使用的注意力运算。上方端到端报告记录了该候选在有限 FP32 权重上的严格结果。[GPU 脚本](paged_mla.py) · [原版结果](paged_mla_original.json) · [有限版结果](paged_mla.json)
 
-引擎现在按注意力模块声明的本地头数和物理头宽分配缓存。项目 156 项测试、引擎 30 项测试通过。单卡对已有模型各比较 12 组完整词表分数，覆盖 128、256、768 词提示和后续 8 步。Llama、MiniCPM、LFM 均逐项相等，Qwen3 达到原有近似验收标准，最大绝对差为 0.3447265625。[项目测试](project_tests_final.log) · [引擎测试](engine_tests.log) · [Llama](llama_regression.json) · [MiniCPM](minicpm_regression.json) · [LFM](lfm_regression.json) · [Qwen3](qwen_regression.json)
+在当前引擎 `ba57abd` 上，Qwen3 的严格版候选、Llama、MiniCPM 和 LFM 各通过 12 个常规位置和 10 个独立位置，最大绝对差均为零。项目原有套件通过 159 项，引擎通过 33 项。早期使用另一份 Qwen3 候选的容差记录保留用于追溯。[当前四模型回归](../explore_regression/engine_ba57abd/summary.json) · [早期 Qwen3 记录](qwen_regression.json)
 
 ## 复现与产物
+
+在仓库根目录，用已构建的执行镜像复验发布文件。选择新的输出目录保存这次报告。`--from-candidate` 会先验收输入的 Python，若两组通过就直接结束，本次 GPU1 复验的模型接口调用数为零。
+
+```sh
+/usr/bin/python3 -B -u -m nanovllm_selector.port.iterate --explore \
+  --model tmp/models/deepseek-v3-tiny-katuni4ka --device 1 \
+  --from-candidate nanovllm_selector/outputs/deepseek_v3_tiny/model_deepseek_v3.py \
+  --out-dir nanovllm_selector/outputs/deepseek_v3_tiny/recheck --max-iters 2 --max-turns 1
+```
 
 从仓库根目录下载有限权重及分词器，校验结果应为 `OK`。
 

@@ -3,11 +3,13 @@
 **一句话**：给一个 HuggingFace 模型目录和一个推理引擎，产出一份该引擎能直接加载运行的模型文件，
 并用引擎里的数值证明它算得对。
 
-当前目标引擎是 `nano-vllm/` 子模块，第一个新模型是 Llama-3.2-1B。
+当前目标引擎是 `nano-vllm/` 子模块。项目支持从已验证的参考图移植，也支持 agent 从本地 Transformers 源码和真实前向自行取证。首个主动探索跑通的模型是 DeepSeek-V3 tiny 的 FP32 检查点。[模型文件与验收](outputs/deepseek_v3_tiny/README.md)
 
 ---
 
-## 1. 三步主线
+## 1. 模型移植
+
+### 参考图驱动的入口
 
 ```
 HF 模型目录 ──① 抽参考图──> graph.json ──┐
@@ -26,15 +28,69 @@ nano-vLLM 源码 ──② 引擎规约──> spec.yaml ┤──③ 交给 age
 
 引擎已提供注册表、模型契约检查、权重装载核对和缓存绑定。新模型的计算若超出现有接口，在该模型的报告中记录可复现的缺口。
 
+### 让 agent 主动探查模型
+
+入口为 `nanovllm_selector.port.iterate --explore`。宿主机将引擎规约、Python 模板与模型配置交给 agent。agent 可以多次调用下列工具，按每次的结果决定下一步查什么。已有的计算图可用 `--graph` 作为补充材料。遇到输入相关的分支，agent 可用多组词元分别观察实际执行。
+
+| 工具 | agent 给出的输入 | 返回的证据 |
+| --- | --- | --- |
+| `read_code` | HF 或引擎、模块路径或符号、视图、可选方法名 | 模块树、配置、权重名和形状，或带文件位置与摘要的已安装源码 |
+| `run_model` | 提示词元、逐个输入的后续词元、要记录的模块，可选 Python 探针 | 本次运行编号。第 0 步处理整个提示，后续每步消费一个词元并继承上一步的状态 |
+| `observe` | 运行编号，可选步数、模块、该模块第几次调用、端口 | 按地址查看各个输出的形状、类型和部分数值，也可以列出实际保存的张量 |
+| `compare` | 两个已记录张量的完整地址 | 对完整张量核对形状、类型、有限性和逐项数值，指出差异位置 |
+
+在 DeepSeek-V3 tiny 上，给 `run_model` 的提示词元是 `[2, 7, 9]`，随后依次输入 `[3, 11]`。监看 `model.layers.1.mlp.gate`（第二层的专家路由器）时，运行结果中有这样一个张量地址。
+
+```text
+step=0  module=model.layers.1.mlp.gate  call=0  port=output.0
+```
+
+加上本次 `run_id` 就能查看数值。`output.0` 形状为 `[3, 6]`，每行是一个提示词元实际选出的 6 个专家编号。第一行是 `[82, 119, 156, 90, 141, 152]`。`output.1` 是同形状的专家混合权重。`step=1` 对应第一次逐词生成，此时每个输出形状为 `[1, 6]`。模块重复调用时由 `call` 区分同一步内的不同调用。[原生观测](outputs/deepseek_v3_tiny/tool_check/smoke.json)
+
+agent 还可提交 Python 探针，自己实现一个待验证的计算，用 `compare` 将完整输出与原生模块的独立记录逐项对照。工具自测中，探针复制路由结果后将一个专家编号加一，预填充和两步生成都找到了具体行列，未改动的编号与混合权重均逐项相等。每次原生观测还会与移除记录钩子后的同输入前向对照，核对整步词表分数和可见状态。探针产生的张量带有来源标签。正式验收在两个独立进程运行 nano-vLLM 和 Transformers，对齐词元历史，逐项比完整词表。通过公开用例的同一份候选再使用独立输入复验。[探针对照结果](outputs/deepseek_v3_tiny/tool_check/controls.json)
+
+**项目与容器。** 源码位于 `port/explore/`。原有 `nanovllm-selector-rocm-dev` 用于日常开发和既有回归。隔离执行镜像沿用开发容器的 ROCm 基础层，额外安装锁定的 Python 依赖。构建命令和离线 wheel 准备方法见 [Dockerfile](port/explore/Dockerfile)。宿主机进程持有接口配置，临时容器只取得此次调用需要的只读代码、模型和本次写入位置。更换模型时可复用该镜像。
+
+当前模型入口使用 Transformers 的 `AutoModelForCausalLM`，验收范围是单卡文本自回归推理。新架构需要更高版本的 Transformers 时，更新锁定依赖并重建共享执行镜像，再对既有模型运行同一套验收。
+
+从仓库根目录运行，宿主机 Python 需要 PyYAML 和 Docker CLI。
+
+```sh
+/usr/bin/python3 -B -u -m nanovllm_selector.port.iterate --explore \
+  --model tmp/models/deepseek-v3-tiny-katuni4ka --device 0 \
+  --out-dir nanovllm_selector/outputs/deepseek_v3_tiny/active \
+  --max-iters 6 --max-turns 44
+```
+
+每次使用新的输出目录，保留最初的上下文 `prompt.json`、逐次工具调用 `tools.jsonl`、各版 `attempt_N.py`、常规与独立验收报告和会话汇总 `trace.json`。两个用例均通过后，宿主在同一目录生成最终 `model_<model_type>.py`，并在汇总的 `accepted_model` 字段记录文件名。运行记录和张量也归入本次输出目录。
+
+构建用的 wheel 在 `tmp/explore-worker-build/`，本次 Docker 构建客户端的临时数据在 `tmp/explore-worker-client/`。需要回收空间时可删除这两个目录。执行镜像可留给下个模型复用，也可用 `docker image rm nanovllm-explore-worker:local` 单独移除。完整本地张量在各次运行的 `runs/`，删除某次运行的该目录后可保留候选和最终报告，但该次张量地址将无法再查询。
+
+恢复中断的探索时，使用原命令、相同的输出目录并加 `--resume`。`--max-turns` 和 `--max-iters` 是整个会话的累计上限。宿主重建已完成的工具对话，复用同一批张量地址，并为产生候选和根据验收报告修订代码留出轮次。
+
+引擎版本更新后，可以指定一个新输出目录并加 `--from-candidate 上一轮/attempt_N.py`。宿主会原样保存这份文件，在新环境重新验收，再把真实失败反馈给 agent。公开输入出现数值差异时，额外的 `attempt_N.diagnosis.json` 会给出第一个可对齐但结果不同的模块、输入或输出的形状、数值和前一个相等的边界。独立输入只用于检验冻结候选。
+
+外部编码 agent 可以使用同一套命令行接口。用 `--context` 取得与在线后端相同的初始上下文和四个工具定义，再按需要向 `--tool 工具名` 的标准输入写入一组 JSON 参数。每次调用输出一个 JSON 对象，同一输出目录保留观测张量与 `external_tools.jsonl`。例如下面两条命令分别获取上下文与原生模块树的前八项。
+
+```sh
+model=tmp/models/deepseek-v3-tiny-katuni4ka
+out=nanovllm_selector/outputs/deepseek_v3_tiny/external
+/usr/bin/python3 -B -m nanovllm_selector.port.explore --model "$model" --out-dir "$out" --context
+printf '%s\n' '{"target":"hf","view":"tree","limit":8}' | \
+  /usr/bin/python3 -B -m nanovllm_selector.port.explore --model "$model" --out-dir "$out" --device 0 --tool read_code
+```
+
+编码 agent 将生成的 Python 交给 `iterate --explore --from-candidate` 做统一验收。实测中，独立 Codex 编码 agent 用四个接口生成的第一份候选通过了 DeepSeek-V3 tiny 的两组严格用例。已配置的 DeepSeek 生成后端在同一目标上的公开最佳为 7/12。[两条路径的实测](outputs/deepseek_v3_tiny/README.md)
+
 ### 三种新注意力模型
 
 | 顺序 | 模型 | 本轮关注的行为 | 进度 |
 | --- | --- | --- | --- |
-| 1 | DeepSeek-V3 tiny-random | MLA 的内容键与位置键、宽度不同的 K/V、MoE 专家路由 | 两份权重已做原生对照，物理 GPU 0 已测两层分页注意力。动态专家路由的跨样本图仍在适配。[进度与复现](outputs/deepseek_v3_tiny/README.md) |
+| 1 | DeepSeek-V3 tiny-random | MLA 的内容键与位置键、宽度不同的 K/V、MoE 专家路由 | 有限 FP32 权重已通过主动探索移植，公开 12/12、独立 10/10，完整词表逐项相等。旧跨样本图通过 33/34 项。[候选与复现](outputs/deepseek_v3_tiny/README.md) |
 | 2 | Qwen3.5-0.8B-Base | Gated DeltaNet 跨步读写矩阵状态，完整注意力的输出门控 | 待执行，先用纯文本 tiny，再验官方 0.8B 文本路径 |
 | 3 | GLM-5 架构 tiny-random | DSA 索引器按当前输入筛选历史位置 | 待执行，覆盖 64 个可见位置前后 |
 
-每个模型独立经过计算图、引擎能力、agent 生成与单卡数值验收。[分阶段计划与用例](../docs/superpowers/plans/2026-11-23-attention-models.md)
+每个模型分别记录结构证据、引擎能力、agent 生成结果与单卡数值验收。Qwen3、Llama-3.2、MiniCPM5、LFM2.5 的既有候选已在同一引擎 main 复验，共 88/88 个位置，10,478,336 个 BF16 分数逐项相等。[既有模型回归](outputs/explore_regression/engine_ba57abd/summary.json) · [分阶段计划与用例](../docs/superpowers/plans/2026-11-23-attention-models.md)
 
 ---
 
@@ -49,6 +105,7 @@ nanovllm_selector/
 │   ├── cli.py           单次生成（--dry-run 可只看 prompt）
 │   ├── evaluate.py      在真实引擎里跑候选，抓 prefill logits 与 HF 比（子进程）
 │   ├── iterate.py       生成 → 评测 → 回灌真实报错 → 重试，轮数封顶
+│   ├── explore/         主动查源码、取观测、保存张量、隔离执行与验收
 │   └── demo.py          用生成的模型真生成一段文字，并与 HF 对照
 ├── outputs/           模型、计算图和验收结果
 ├── fixtures/          测试夹具（Llama-3.2-1B 的 config.json）
@@ -102,7 +159,7 @@ python -B -m nanovllm_selector.port.demo \
 | 参数 | 默认 | 说明 |
 | --- | --- | --- |
 | `--model` | 必填 | HF 模型目录，**必须含权重**（demo 要真跑） |
-| `--candidate` | 必填 | 候选 `.py` 文件，里面要有 `*ForCausalLM` 类 |
+| `--candidate` | 必填 | 候选 `.py` 文件，在文件中定义 checkpoint 配置声明的模型类 |
 | `--arch` | 候选类名 | 注册到 `models.ARCH` 的名字 |
 | `--prompt` | `The capital of France is` | 提示词 |
 | `--max-tokens` | `40` | 生成多少个 token |
@@ -211,7 +268,9 @@ python -B -m nanovllm_selector.port.cli \
 省略 `--out` 时写入 `nanovllm_selector/outputs/generated.py`。从环境变量取 `DEEPSEEK_API_KEY` / `DEEPSEEK_API_BASE` / `DEEPSEEK_MODEL`；
 `.env` 里的值需要先 `export`，`make_llm()` 不读 `.env`。
 
-### 6.3 迭代生成（推荐）
+### 6.3 计算图驱动的迭代生成
+
+下面的入口使用已验证计算图和原有评测进程。主动调用工具与双容器验收的入口见上文“让 agent 主动探查模型”。
 
 ```bash
 python -B -m nanovllm_selector.port.iterate \
