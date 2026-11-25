@@ -78,11 +78,23 @@ class Capture:
         self.active.clear()
 
     def instrument(self, stack, model, watch):
+        from .evidence import alias_index
+
         modules = dict(model.named_modules(remove_duplicate=False))
+        by_object = {}
         for path in watch:
             if path not in modules:
                 raise ValueError(f"watch 找不到模块 {path!r}，请用 read_code 查询模块树")
-            self.attach(stack, path, modules[path])
+            by_object[id(modules[path])] = []
+        # 规范名取注册树中第一次出现的路径，独立于 watch 的顺序。
+        for path, module in modules.items():
+            if id(module) in by_object:
+                by_object[id(module)].append(path)
+        aliases = {paths[0]: paths for paths in by_object.values()}
+        alias_index(aliases, watch)
+        for canonical in aliases:
+            self.attach(stack, canonical, modules[canonical])
+        return aliases
 
     def attach(self, stack, path, module):
         def record_inputs(call, prefix, args, kwargs):
@@ -230,8 +242,7 @@ def forwards(model, prompt, decode, writer, watch, callback, calibration):
     kwargs = model._get_initial_cache_position(length, sequence.device, kwargs)
     capture = Capture(writer) if writer is not None else None
     with ExitStack() as stack:
-        if capture is not None:
-            capture.instrument(stack, model, watch)
+        aliases = capture.instrument(stack, model, watch) if capture is not None else {}
         for step in range(len(decode) + 1):
             inputs = model.prepare_inputs_for_generation(sequence[:, :length + step], **kwargs)
             inputs["return_dict"] = True
@@ -254,6 +265,7 @@ def forwards(model, prompt, decode, writer, watch, callback, calibration):
                 if (not any(output.get(k) is not None for k in ALL_CACHE_NAMES)
                         and not any(v is state for v in kwargs.values() for state in carried)):
                     raise ValueError("模型未向下一步传递可确认的返回状态")
+    return aliases
 
 
 def execute(model_dir, arguments, device, writer, calibration):
@@ -279,15 +291,37 @@ def execute(model_dir, arguments, device, writer, calibration):
         info["device_name"] = torch.cuda.get_device_name(actual_device)
     with torch.inference_mode():
         probe = prepare_probe(arguments["probe"], model) if arguments["target"] == "probe" else None
-        forwards(model, arguments["prompt_ids"], arguments.get("decode_ids", []), writer,
-                 arguments.get("watch", [""]), probe, calibration)
+        info["module_aliases"] = forwards(model, arguments["prompt_ids"], arguments.get("decode_ids", []),
+                                          writer, arguments.get("watch", [""]), probe, calibration)
     return info
+
+
+def compact_run_reply(reply):
+    """聊天工具在 30000 字符处折叠结果。优先保留可直接调用的键和逐步校准结论。"""
+    if len(json.dumps(reply, ensure_ascii=False)) <= 28000:
+        return reply
+    run_id = reply["run_id"]
+    full = reply["provenance"]
+    provenance = {k: v for k, v in full.items() if len(json.dumps(v, ensure_ascii=False)) <= 1024}
+    provenance["omitted_fields"] = sorted(full.keys() - provenance.keys())
+    if "module_aliases" not in provenance:
+        provenance["aliases_observe"] = dict(run_id=run_id, view="aliases")
+    calibration = reply["calibration"]
+    if "steps" in calibration:
+        steps = []
+        for row in calibration["steps"]:
+            facts = {k: row[k] for k in ("step", "finite", "dtype_match", "shape_match", "exact")}
+            facts["state"] = {k: row["state"][k] for k in ("status", "tensors", "changed_count", "unknown_count")}
+            steps.append(facts)
+        calibration = dict(calibration, steps=steps)
+    return dict(reply, provenance=provenance, calibration=calibration,
+                details_observe=dict(run_id=run_id, limit=0))
 
 
 def run_model(model_dir, runs, arguments):
     import torch
 
-    from .evidence import MAX_RUN_BYTES, MAX_TENSOR_BYTES, Writer, check_ids, check_watch, run_directory
+    from .evidence import MAX_RUN_BYTES, MAX_TENSOR_BYTES, Writer, check_ids, check_watch, run_directory, selector_page
 
     allowed = {"run_id", "target", "prompt_ids", "decode_ids", "watch", "probe"}
     if set(arguments) - allowed or not {"run_id", "target", "prompt_ids"} <= arguments.keys():
@@ -320,9 +354,11 @@ def run_model(model_dir, runs, arguments):
                           probe_sha256=hashlib.sha256(source.encode()).hexdigest() if source else None,
                           tensor_limit_bytes=MAX_TENSOR_BYTES, run_limit_bytes=MAX_RUN_BYTES, **info)
         writer.finish(run_id, provenance, result)
-        return dict(ok=True, status="unreliable" if reliable is False else "ok", hf_reliable=reliable,
-                    run_id=run_id, steps=len(decode) + 1, item_count=len(writer.items),
-                    provenance=provenance, calibration=result)
+        reply = dict(ok=True, status="unreliable" if reliable is False else "ok", hf_reliable=reliable,
+                     run_id=run_id, steps=len(decode) + 1, item_count=len(writer.items),
+                     **selector_page(writer.items, {"run_id": run_id}, provenance),
+                     provenance=provenance, calibration=result)
+        return compact_run_reply(reply)
 
 
 def dispatch(model_dir: Path, runs: Path, request: dict) -> dict:

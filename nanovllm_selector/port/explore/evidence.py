@@ -25,6 +25,8 @@ MAX_STEPS = 65
 MAX_TOKENS = 2048
 MAX_WATCH = 64
 MAX_PAGE = 256
+SELECTOR_PAGE_SIZE = 8
+INDEX_PAGE_BYTES = 8192
 KEY = ("step", "module", "call", "port")
 FORMAT = "nanovllm-explore-v1"
 DIGEST = re.compile(r"[0-9a-f]{64}")
@@ -56,6 +58,26 @@ def check_watch(watch):
             or any(not module_name(path) or path == "@probe" for path in watch)
             or len(set(watch)) != len(watch)):
         raise ValueError(f"watch 需要最多 {MAX_WATCH} 个互异的原生模块路径")
+
+
+def alias_index(groups, watch):
+    """校验注册路径的分组，并建立从任一别名到规范路径的索引。"""
+    if not isinstance(groups, dict) or len(groups) > len(watch):
+        raise ValueError("模块别名表无效")
+    index = {}
+    watched = set(watch)
+    for canonical, paths in groups.items():
+        if not isinstance(paths, list) or not paths or paths[0] != canonical or len(index) + len(paths) > MAX_ITEMS:
+            raise ValueError("模块别名组无效或过大")
+        for path in paths:
+            if not module_name(path) or path == "@probe" or path in index:
+                raise ValueError("模块别名重复或无效")
+            index[path] = canonical
+        if watched.isdisjoint(paths):
+            raise ValueError("模块别名组缺少被监视的注册路径")
+    if watched - index.keys():
+        raise ValueError("模块别名表缺少被监视的路径")
+    return index
 
 
 def validate_selector(selector, *, partial=False):
@@ -266,7 +288,7 @@ def validate_item(item, index, run_id, provenance):
     if item["module"] == "@probe":
         if provenance["target"] != "probe" or item["call"] != 0:
             raise ValueError("探针端口来源无效")
-    elif item["module"] not in provenance["watch"]:
+    elif item["module"] not in provenance.get("module_aliases", provenance["watch"]):
         raise ValueError("模块未在 watch 中声明")
     kind = item["kind"]
     fields = {"tensor": {"file", "size", "sha256", "shape", "dtype", "nbytes"},
@@ -372,6 +394,8 @@ class Archive:
         self.provenance = data["provenance"]
         self.calibration = data["calibration"]
         validate_provenance(run_id, self.provenance, self.calibration)
+        groups = self.provenance.get("module_aliases", {})
+        self.registered = alias_index(groups, self.provenance["watch"]) if "module_aliases" in self.provenance else {}
         items = data["items"]
         if not isinstance(items, list) or len(items) > MAX_ITEMS:
             raise ValueError("端口清单超限")
@@ -400,8 +424,25 @@ class Archive:
 
     def metadata(self, item):
         public = {k: v for k, v in item.items() if k not in ("file", "size", "sha256", "value")}
-        return dict(public, run_id=self.run_id, probe_derived=self.provenance["target"] == "probe",
+        module = item["module"]
+        if module == "@probe":
+            public["origin"] = "probe_callback"
+        else:
+            # hook 收到模块对象。共享模块本次调用使用的注册别名无法从对象推断。
+            aliases = self.provenance.get("module_aliases", {}).get(module)
+            public.update(origin="forward_hook", canonical_module=self.registered.get(module),
+                          aliases=aliases, caller_path=None, caller_status="unknown")
+            if aliases and (len(aliases) > 32 or len(json_bytes(aliases)) > 2048):
+                public.update(aliases=aliases[:4], alias_count=len(aliases),
+                              aliases_observe=dict(run_id=self.run_id, view="aliases", module=module))
+        return dict(public, run_id=self.run_id, selector=item_selector(self.run_id, item),
+                    probe_derived=self.provenance["target"] == "probe",
                     hf_reliable=self.provenance["hf_reliable"])
+
+    def resolve(self, selector):
+        if "module" in selector:
+            return dict(selector, module=self.registered.get(selector["module"], selector["module"]))
+        return selector
 
     def tensor(self, item):
         raw = read_file(self.fd, item["file"], item["size"])
@@ -424,10 +465,85 @@ def open_archive(stack, runs, run_id):
     return Archive(fd, run_id)
 
 
+def item_selector(run_id, item):
+    return {"run_id": run_id, **{field: item[field] for field in KEY}}
+
+
+def ranked_tensors(items):
+    """首页给出具名探针、公开 logits 和各模块输出的样例，后续页覆盖所有张量。"""
+    probe, logits, outputs, other = [], [], [], []
+    first_probes, first_outputs = {}, {}
+    for item in items:
+        if item["kind"] != "tensor":
+            continue
+        module, port = item["module"], item["port"]
+        if module == "@probe":
+            probe.append(item)
+            if len(first_probes) < 4:
+                first_probes.setdefault(port, item)
+        elif module == "" and port == "output.logits":
+            logits.append(item)
+        elif port == "output" or port.startswith("output."):
+            outputs.append(item)
+            first_outputs.setdefault(module, item)
+        else:
+            other.append(item)
+    if logits:
+        first_outputs.pop("", None)
+    featured = [*first_probes.values(), *logits[:1], *first_outputs.values()]
+    seen = {id(item) for item in featured}
+    return featured + [item for group in (probe, logits, outputs, other) for item in group if id(item) not in seen]
+
+
+def index_page(rows, render, query, offset, limit):
+    page = []
+    size = 0
+    for row in rows[offset:offset + limit]:
+        value = render(row)
+        size += len(json_bytes(value)) + 1
+        if page and size > INDEX_PAGE_BYTES:
+            break
+        page.append(value)
+    end = offset + len(page)
+    next_observe = None
+    if page and end < len(rows):
+        next_observe = dict(query, offset=end, limit=limit)
+    return page, dict(offset=offset, total=len(rows), next_observe=next_observe)
+
+
+def selector_provenance(provenance):
+    return dict(target=provenance["target"], probe_derived=provenance["target"] == "probe",
+                hf_reliable=provenance["hf_reliable"], probe_sha256=provenance.get("probe_sha256"),
+                module_paths="canonical_registration" if "module_aliases" in provenance else "as_recorded",
+                caller_status="unknown")
+
+
+def selector_page(items, query, provenance, offset=0, limit=SELECTOR_PAGE_SIZE):
+    keys, info = index_page(ranked_tensors(items), lambda item: item_selector(query["run_id"], item),
+                            dict(query, view="selectors"), offset, limit)
+    return dict(selectors=keys, selector_page=dict(info, provenance=selector_provenance(provenance)))
+
+
+def alias_page(archive, selector, offset, limit):
+    if set(selector) - {"module"}:
+        raise ValueError("注册路径只按 module 筛选")
+    if "module_aliases" not in archive.provenance:
+        return dict(status="not_captured", run_id=archive.run_id, reason="此运行没有记录模块别名")
+    rows = [(canonical, path) for path, canonical in archive.registered.items()
+            if "module" not in selector or selector["module"] == canonical]
+    page, info = index_page(rows, lambda row: dict(canonical_module=row[0], alias=row[1]),
+                            dict(run_id=archive.run_id, view="aliases", **selector), offset, limit)
+    return dict(status="ok", run_id=archive.run_id, aliases=page,
+                alias_page=dict(info, caller_path=None, caller_status="unknown"))
+
+
 def observe(runs, arguments):
     selector = dict(arguments)
+    view = selector.pop("view", None)
+    if view not in (None, "selectors", "aliases"):
+        raise ValueError("observe 的可选 view 为 selectors 或 aliases")
     offset = selector.pop("offset", 0)
-    limit = selector.pop("limit", 48)
+    limit = selector.pop("limit", SELECTOR_PAGE_SIZE if view == "selectors" else 48)
     if not integer(offset, 2**63 - 1) or not integer(limit, MAX_PAGE):
         raise ValueError(f"offset 需要非负整数，limit 范围为 0 到 {MAX_PAGE}")
     validate_selector(selector, partial=True)
@@ -436,10 +552,18 @@ def observe(runs, arguments):
         archive = open_archive(stack, runs, run_id)
         if archive is None:
             return {"status": "not_captured", "run_id": run_id}
-        if len(selector) == len(KEY):
-            item = archive.items.get(tuple(selector[k] for k in KEY))
-            if item is None:
-                return {"status": "not_captured", "run_id": run_id, **selector}
+        selector = archive.resolve(selector)
+        if view == "aliases":
+            return alias_page(archive, selector, offset, limit)
+        found = [item for item in archive.items.values() if all(item[k] == v for k, v in selector.items())]
+        if view == "selectors":
+            page = selector_page(found, dict(run_id=run_id, **selector), archive.provenance, offset, limit)
+            return dict(status="ok", run_id=run_id, **page)
+        qualified = {"step", "module", "port"} <= selector.keys()
+        if qualified and not found:
+            return {"status": "not_captured", "run_id": run_id, **selector}
+        if qualified and len(found) == 1 and ("call" in selector or found[0]["kind"] == "tensor"):
+            item = found[0]
             result = {"status": "ok", "item": archive.metadata(item), "offset": offset}
             if item["kind"] == "tensor":
                 flat = archive.tensor(item).reshape(-1)
@@ -454,7 +578,11 @@ def observe(runs, arguments):
                             if k[:3] == scope and k[3].rpartition(".")[0] == item["port"]]
                 result.update(total=len(children), items=[archive.metadata(i) for i in children[offset:offset + limit]])
             return result
-        found = [item for item in archive.items.values() if all(item[k] == v for k, v in selector.items())]
+        if qualified and len(found) > 1:
+            found.sort(key=lambda item: item["call"])
+            choices, info = index_page(found, archive.metadata, dict(run_id=run_id, **selector), offset, limit)
+            return dict(status="ambiguous", run_id=run_id, items=choices, **info,
+                        provenance=selector_provenance(archive.provenance))
         return dict(status="ok", run_id=run_id, total=len(found), offset=offset,
                     items=[archive.metadata(i) for i in found[offset:offset + limit]],
                     provenance=archive.provenance, calibration=archive.calibration)
@@ -510,8 +638,10 @@ def compare(runs, arguments):
             if run_id not in opened:
                 opened[run_id] = open_archive(stack, runs, run_id)
             archive = opened[run_id]
-            key = tuple(selector[k] for k in KEY)
-            item = archive.items.get(key) if archive else None
+            item = None
+            if archive is not None:
+                resolved = archive.resolve(selector)
+                item = archive.items.get(tuple(resolved[k] for k in KEY))
             details[side] = archive.metadata(item) if item else selector
             if item is None or item["kind"] not in ("scalar", "tensor"):
                 missing.append(side)

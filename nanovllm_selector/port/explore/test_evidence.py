@@ -147,6 +147,144 @@ class EvidenceTests(unittest.TestCase):
                           actual=key("probe", 2, "@probe", "output.logits"))
         self.assertEqual(result["status"], "match")
 
+    def test_run_result_delivers_copyable_ranked_tensor_selectors_and_complete_pages(self):
+        (self.runs / "receipt").mkdir()
+        result = self.cli("run_model", target="probe", run_id="receipt", prompt_ids=[1, 4, 7],
+                          decode_ids=[2], watch=["", "pair"], probe=PROBE)
+        self.assertIn("selectors", result)
+        first = result["selectors"]
+        self.assertLessEqual(len(first), 8)
+        self.assertEqual(first[0], key("receipt", 0, "@probe", "output.ids"))
+        root_logits = key("receipt", 0, "", "output.logits")
+        probe_logits = key("receipt", 0, "@probe", "output.logits")
+        self.assertLess(first.index(probe_logits), first.index(root_logits))
+        self.assertLess(first.index(root_logits), first.index(key("receipt", 0, "pair", "output.0")))
+        self.assertEqual(self.request("observe", **first[0])["values"], [1, 4, 7])
+        self.assertEqual(self.request("compare", reference=first[first.index(root_logits)],
+                                      actual=first[first.index(probe_logits)])["status"], "match")
+
+        collected = []
+        while True:
+            page = result["selector_page"]
+            self.assertEqual(page["offset"], len(collected))
+            self.assertEqual(page["provenance"]["target"], "probe")
+            self.assertIs(page["provenance"]["probe_derived"], True)
+            collected.extend(result["selectors"])
+            if page["next_observe"] is None:
+                break
+            self.assertTrue(result["selectors"])
+            result = self.request("observe", **page["next_observe"])
+        manifest = json.loads((self.runs / "receipt" / "manifest.json").read_bytes())
+        expected = [key("receipt", row["step"], row["module"], row["port"], row["call"])
+                    for row in manifest["items"] if row["kind"] == "tensor"]
+        self.assertCountEqual(collected, expected)
+        self.assertEqual(len(collected), page["total"])
+
+    def test_unique_tensor_query_reads_values_and_repeated_calls_require_disambiguation(self):
+        self.capture()
+        unique = dict(run_id="probe", step=0, module="@probe", port="output.ids")
+        result = self.request("observe", **unique, offset=1, limit=1)
+        self.assertEqual(result.get("values"), [4])
+        self.assertEqual(result["item"]["selector"], dict(unique, call=0))
+        listing = self.request("observe", **unique, view="selectors")
+        self.assertEqual(listing["selectors"], [dict(unique, call=0)])
+        self.assertEqual(self.request("observe", **dict(unique, step=9))["status"], "not_captured")
+
+        repeated = dict(run_id="probe", step=0, module="pair", port="output.0")
+        ambiguous = self.request("observe", **repeated, offset=1, limit=1)
+        self.assertEqual((ambiguous["status"], ambiguous["total"]), ("ambiguous", 2))
+        self.assertNotIn("values", ambiguous)
+        chosen = ambiguous["items"][0]["selector"]
+        self.assertEqual(chosen, dict(repeated, call=1))
+        self.assertEqual(self.request("observe", **chosen)["values"], [3, 4])
+
+    def test_shared_object_has_one_hook_pair_all_registration_paths_and_one_ordinal_per_call(self):
+        source = """
+def setup(model):
+    model.first = torch.nn.Identity()
+    model.second = model.first
+    model.third = model.first
+    def before(module, args):
+        module.second(torch.tensor(7))
+        module.first(torch.tensor(13))
+        module.second(torch.tensor(5))
+    model.register_forward_pre_hook(before)
+
+def probe(model, step, inputs, output):
+    return {"hooks": torch.tensor([len(model.first._forward_pre_hooks), len(model.first._forward_hooks)])}
+"""
+        for run_id, watch in [("aliases", ["second", "first"]), ("one-alias", ["second"])]:
+            with self.subTest(watch=watch):
+                (self.runs / run_id).mkdir()
+                result = self.request("run_model", target="probe", run_id=run_id, prompt_ids=[1],
+                                      decode_ids=[2], watch=watch, probe=source)
+                counts = self.request("observe", **key(run_id, 0, "@probe", "output.hooks"))
+                self.assertEqual(counts["values"], [1, 1])
+                self.assertEqual(result["provenance"]["module_aliases"], {"first": ["first", "second", "third"]})
+                for step in (0, 1):
+                    query = dict(run_id=run_id, step=step, module="second", port="output")
+                    listing = self.request("observe", **query)
+                    self.assertEqual(listing["status"], "ambiguous")
+                    self.assertEqual([row["call"] for row in listing["items"]], [0, 1, 2])
+                    for row, value in zip(listing["items"], [7, 13, 5]):
+                        self.assertEqual(row["canonical_module"], "first")
+                        self.assertEqual(row["aliases"], ["first", "second", "third"])
+                        self.assertEqual(row["caller_status"], "unknown")
+                        self.assertIsNone(row["caller_path"])
+                        self.assertEqual(row["selector"]["module"], "first")
+                        self.assertEqual(self.request("observe", **row["selector"])["values"], [value])
+                one = key(run_id, 0, "first", "output", call=2)
+                self.assertEqual(self.request("compare", reference=one, actual=dict(one, module="third"))["status"],
+                                 "match")
+                manifest = json.loads((self.runs / run_id / "manifest.json").read_bytes())
+                outputs = [row for row in manifest["items"] if row["port"] == "output" and row["kind"] == "tensor"]
+                self.assertEqual([(r["step"], r["module"], r["call"]) for r in outputs],
+                                 [(s, "first", c) for s in range(2) for c in range(3)])
+
+    def test_long_alias_registry_keeps_structured_selectors_in_the_actual_tool_message(self):
+        from nanovllm_selector.port.explore.session import _tool_reply
+
+        source = """
+def setup(model):
+    model.tap = torch.nn.Identity()
+    for i in range(320):
+        setattr(model, "branch_" + str(i) + "_" + "x" * 100, model.tap)
+    def before(module, args):
+        module.tap(torch.tensor([3]))
+        module.tap(torch.tensor([9]))
+    model.register_forward_pre_hook(before)
+
+def probe(model, step, inputs, output):
+    return {"score": output.logits[0, -1, :1]}
+"""
+        (self.runs / "long-aliases").mkdir()
+        result = self.cli("run_model", target="probe", run_id="long-aliases", prompt_ids=[1],
+                          watch=["tap"], probe=source)
+
+        def delivered(response):
+            return json.loads(_tool_reply({"id": "test-call", "result": response})["content"])
+
+        message = delivered(result)
+        self.assertFalse(message.get("truncated"), "别名表挤掉了传给 agent 的结构化字段")
+        self.assertEqual(message["selectors"][0]["module"], "@probe")
+        self.assertEqual(message["selector_page"]["provenance"]["caller_status"], "unknown")
+        native = next(k for k in message["selectors"] if k["module"] == "tap")
+        value = delivered(self.request("observe", **native))
+        self.assertEqual(value["values"], [3])
+        repeated = {k: v for k, v in native.items() if k != "call"}
+        choices = delivered(self.request("observe", **repeated, limit=1))
+        self.assertEqual((choices.get("status"), choices.get("total")), ("ambiguous", 2))
+        more = delivered(self.request("observe", **choices["next_observe"]))
+        self.assertEqual(more["items"][0]["selector"], dict(native, call=1))
+        names = []
+        page_args = dict(value["item"]["aliases_observe"], limit=128)
+        while page_args:
+            response = delivered(self.request("observe", **page_args))
+            names.extend(row["alias"] for row in response["aliases"])
+            self.assertTrue(all(row["canonical_module"] == "tap" for row in response["aliases"]))
+            page_args = response["alias_page"]["next_observe"]
+        self.assertEqual(names, ["tap"] + ["branch_" + str(i) + "_" + "x" * 100 for i in range(320)])
+
     def test_hook_sensitive_forward_marks_saved_hf_evidence_unreliable(self):
         original = LlamaForCausalLM.forward
 
