@@ -228,14 +228,14 @@ DEFAULT_MODEL = "deepseek-flash"
 DEFAULT_KEY_ENV = "DEEPSEEK_API_KEY"
 
 
-def make_llm(
+def make_chat(
     *,
     api_key_env: str = DEFAULT_KEY_ENV,
     api_base: str | None = None,
     model: str | None = None,
     timeout: float = 180.0,
-) -> LLMFn:
-    """从环境变量装配一个 chat completions 调用函数；缺 key 时抛 LLMNotConfigured。"""
+) -> Callable:
+    """组装文本或原生工具调用。返回可直接放回下一轮对话的公开消息。"""
     api_key = os.environ.get(api_key_env, "").strip()
     if not api_key:
         raise LLMNotConfigured(
@@ -246,10 +246,11 @@ def make_llm(
     model_id = model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
     url = base + "/chat/completions"
 
-    def call(messages: list[dict]) -> str:
-        payload = json.dumps(
-            {"model": model_id, "messages": messages, "temperature": 0.0, "stream": False}
-        ).encode("utf-8")
+    def call(messages: list[dict], tools: list[dict] | None = None) -> dict:
+        body = {"model": model_id, "messages": messages, "temperature": 0.0, "stream": False}
+        if tools:
+            body.update(tools=tools, thinking={"type": "disabled"}, max_tokens=16384)
+        payload = json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             url,
             data=payload,
@@ -272,14 +273,26 @@ def make_llm(
             raise PortError(f"响应里没有 choices：{json.dumps(body, ensure_ascii=False)[:500]}")
         choice = choices[0]
         finish = choice.get("finish_reason")
-        if finish not in (None, "stop"):
+        if finish not in ((None, "stop", "tool_calls") if tools else (None, "stop")):
             raise PortError(f"生成被截断（finish_reason={finish}）；本次输出不可用")
-        content = (choice.get("message") or {}).get("content")
-        if not isinstance(content, str):
-            raise PortError("响应里没有 message.content 文本")
-        return content
+        message = choice.get("message") or {}
+        content = message.get("content")
+        if tools and message.get("tool_calls"):
+            return {"role": "assistant", "content": content, "tool_calls": message["tool_calls"]}
+        if not isinstance(content, str) or finish == "tool_calls":
+            raise PortError("响应缺少完整的工具调用或 message.content 文本")
+        return {"role": "assistant", "content": content}
 
     return call
+
+
+def make_llm(
+    *, api_key_env: str = DEFAULT_KEY_ENV, api_base: str | None = None,
+    model: str | None = None, timeout: float = 180.0,
+) -> LLMFn:
+    """单次代码生成沿用只返回字符串的接口。"""
+    chat = make_chat(api_key_env=api_key_env, api_base=api_base, model=model, timeout=timeout)
+    return lambda messages: chat(messages)["content"]
 
 
 __all__ = [
@@ -291,6 +304,7 @@ __all__ = [
     "check_importable",
     "generate_model",
     "make_llm",
+    "make_chat",
     "strip_code_fence",
     "validate_model_code",
 ]
