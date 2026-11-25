@@ -12,7 +12,7 @@
 meta:
   engine: nano-vLLM
   source_root: nano-vllm/nanovllm
-  commit: db396bd0276b797bd491282e4f1fb5aaa9cbde55
+  commit: ba57abd1ecfc2acbbc43f04db667fad6f12a2149
   scope: "models/<model>.py 与引擎之间的接口"
   note: >
     分页 KV、请求状态和权重装载接口对应上述子模块版本。与源码冲突时以源码为准。
@@ -49,12 +49,15 @@ must:
   - id: M1
     title: 入口与返回
     statement: >
-      模型类必须能被这样调用：hidden = model(input_ids, positions)，
+      候选文件中应定义 checkpoint.architectures 声明的模型类。引擎按配置名称解析该类，
+      构造前检查 nn.Module 的接口。模型类必须能被这样调用：hidden = model(input_ids, positions)，
       logits = model.compute_logits(hidden)。
       forward 只有这两个张量参数——没有 attention_mask、没有 past_key_values、
       没有 use_cache。返回的 hidden 是 [T, hidden]（T 是本轮所有请求的 token 总数），
       不含 logits；logits 由 compute_logits 单独算。
     evidence:
+      - models/__init__.py:22        # 从候选文件登记提供 compute_logits 的本地 nn.Module
+      - models/__init__.py:56        # 按 checkpoint 架构名解析入口
       - engine/model_runner.py:273   # logits = self.model.compute_logits(self.model(input_ids, positions))
       - engine/model_runner.py:299   # CUDA graph 路径同样是这两步
       - models/qwen3.py:205
