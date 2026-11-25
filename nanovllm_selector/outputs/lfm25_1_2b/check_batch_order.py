@@ -11,7 +11,7 @@ from unittest.mock import patch
 import torch
 
 from nanovllm_selector.port.evaluate import (
-    GREEDY_TEMPERATURE, compare_logits, engine_prefix_reuse, load_candidate,
+    GREEDY_TEMPERATURE, compare_logits, engine_prefix_reuse, load_candidate, load_reference_model,
     pick_model_class, reference_trace,
 )
 
@@ -103,7 +103,7 @@ def compare_round(model, captured, *, exact):
 
 
 def verify(model_dir, candidate, exact=True):
-    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoConfig, AutoTokenizer
     from nanovllm import LLM
     from nanovllm.models import ARCH
 
@@ -137,7 +137,8 @@ def verify(model_dir, candidate, exact=True):
         del engine
         torch.cuda.empty_cache()
         report["outcome"] = "reference_unreliable"
-        model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, local_files_only=True).cuda().eval()
+        model = load_reference_model(model_dir)
+        report["reference_dtype"] = str(model.dtype)
         for captured in captures:
             report["rounds"].append(compare_round(model, captured, exact=exact))
         report["ok"] = all(r["ok"] for r in report["rounds"])
